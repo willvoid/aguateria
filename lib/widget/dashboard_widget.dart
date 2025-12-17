@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
+import 'package:myapp/vista/inmueblepage.dart';
 import 'package:myapp/vista/tarifa_page.dart';
 
 class DashboardWidget extends StatefulWidget {
@@ -60,7 +61,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
         if (selectedSubIndex != null) {
           switch (selectedSubIndex) {
             case 0:
-              return const Center(child: Text('Casas'));
+              return const InmueblesPage();
             case 1:
               return const CategoriaServicioPage();
             case 2:
@@ -69,7 +70,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
               return const TarifaPage();
           }
         }
-        return const Center(child: Text('Seleccione un submenú'));
+        
+        return const InmueblesPage();
       case 2:
         return Container(
           padding: const EdgeInsets.all(24),
@@ -238,7 +240,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                   if (_sidebarAnimation.value > 180)
                                     const Expanded(
                                       child: Text(
-                                        'SERVICIO DE AGUA - C.F.',
+                                        'SERVICIO DE AGUA SANTA ROSA - C.F.',
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,
