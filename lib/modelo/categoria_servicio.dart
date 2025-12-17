@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 class CategoriaServicio {
   int? id;
   String nombre;
@@ -20,11 +18,11 @@ class CategoriaServicio {
   factory CategoriaServicio.fromMap(Map<String, dynamic> map) {
     return CategoriaServicio(
       id: map['id'],
-      nombre: map['nombre'],
-      tarifa_fija: map['tarifa_fija'],
-      m2_min: map['m2_min'],
-      m2_max: map['m2_max'],
-      descripcion: map['descripcion'],
+      nombre: map['nombre'] ?? '',
+      tarifa_fija: (map['tarifa_fija'] ?? 0).toDouble(),
+      m2_min: (map['m2_min'] ?? 0).toDouble(),
+      m2_max: (map['m2_max'] ?? 0).toDouble(),
+      descripcion: map['descripcion'] ?? '',
     );
   }
 
@@ -37,5 +35,28 @@ class CategoriaServicio {
       'm2_max': m2_max,
       'descripcion': descripcion,
     };
+  }
+
+  @override
+  String toString() {
+    return 'CategoriaServicio{id: $id, nombre: $nombre, tarifa_fija: $tarifa_fija, m2_min: $m2_min, m2_max: $m2_max, descripcion: $descripcion}';
+  }
+
+  CategoriaServicio copyWith({
+    int? id,
+    String? nombre,
+    double? tarifa_fija,
+    double? m2_min,
+    double? m2_max,
+    String? descripcion,
+  }) {
+    return CategoriaServicio(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      tarifa_fija: tarifa_fija ?? this.tarifa_fija,
+      m2_min: m2_min ?? this.m2_min,
+      m2_max: m2_max ?? this.m2_max,
+      descripcion: descripcion ?? this.descripcion,
+    );
   }
 }

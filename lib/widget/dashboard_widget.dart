@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
-
 
 class DashboardWidget extends StatefulWidget {
   const DashboardWidget({Key? key}) : super(key: key);
@@ -24,14 +24,10 @@ class _DashboardWidgetState extends State<DashboardWidget>
       duration: const Duration(milliseconds: 250),
       vsync: this,
     );
-    _sidebarAnimation = Tween<double>(
-      begin: 0.0,
-      end: 240.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
+    _sidebarAnimation = Tween<double>(begin: 0.0, end: 240.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     // Iniciar con el sidebar visible
     _animationController.forward();
   }
@@ -58,26 +54,19 @@ class _DashboardWidgetState extends State<DashboardWidget>
       case 0:
         return const ClientesPage();
       case 1:
+        //return const CategoriaServicioPage();
         // Sub-items de Deudas
-        /*if (selectedSubIndex != null) {
+        if (selectedSubIndex != null) {
           switch (selectedSubIndex) {
             case 0:
-              return const CasasPage();
+              return const Center(child: Text('Casas'));
             case 1:
-              return const CuentaConsumoPage();
+              return const CategoriaServicioPage();
             case 2:
-              return const CuentaConexionPage();
+              return const Center(child: Text('Medidores'));
           }
-        }*/
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: const Center(
-            child: Text(
-              'Gestión de Deudas - Selecciona una opción',
-              style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-            ),
-          ),
-        );
+        }
+        return const Center(child: Text('Seleccione un submenú'));
       case 2:
         return Container(
           padding: const EdgeInsets.all(24),
@@ -89,7 +78,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
           ),
         );
       case 3:
-        //return const NuevaFacturaPage();
+      //return const NuevaFacturaPage();
       case 4:
         return Container(
           padding: const EdgeInsets.all(24),
@@ -152,11 +141,25 @@ class _DashboardWidgetState extends State<DashboardWidget>
   }
 
   final List<SidebarItem> sidebarItems = [
-    SidebarItem(icon: Icons.account_circle, title: 'Clientes'),
+    SidebarItem(
+      icon: Icons.account_circle,
+      title: 'Clientes',
+      isSelected: true,
+    ),
+    SidebarItem(
+      icon: Icons.home,
+      title: 'Inmuebles',
+      subItems: [
+        SidebarSubItem(icon: Icons.home, title: 'Casas'),
+        SidebarSubItem(icon: Icons.category, title: 'Categorías de Inmuebles'),
+        SidebarSubItem(icon: Icons.rule_rounded, title: 'Medidores'),
+        SidebarSubItem(icon: Icons.calculate, title: 'Tarifa de Servicio'),
+      ],
+    ),
     SidebarItem(
       icon: Icons.receipt_long,
       title: 'Deudas',
-      isSelected: true,
+      isSelected: false,
       subItems: [
         SidebarSubItem(icon: Icons.home, title: 'Casas'),
         SidebarSubItem(icon: Icons.water_drop, title: 'Cuentas Consumo'),
@@ -208,7 +211,9 @@ class _DashboardWidgetState extends State<DashboardWidget>
                               decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                      color: Color(0xFF3A4553), width: 1),
+                                    color: Color(0xFF3A4553),
+                                    width: 1,
+                                  ),
                                 ),
                               ),
                               child: Row(
@@ -245,8 +250,9 @@ class _DashboardWidgetState extends State<DashboardWidget>
                             // Sidebar Items
                             Expanded(
                               child: ListView.builder(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
                                 itemCount: _getTotalItemCount(),
                                 itemBuilder: (context, index) {
                                   return _buildSidebarItem(index);
