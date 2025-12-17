@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
+import 'package:myapp/vista/tarifa_page.dart';
 
 class DashboardWidget extends StatefulWidget {
   const DashboardWidget({Key? key}) : super(key: key);
@@ -64,6 +65,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
               return const CategoriaServicioPage();
             case 2:
               return const Center(child: Text('Medidores'));
+            case 3:
+              return const TarifaPage();
           }
         }
         return const Center(child: Text('Seleccione un submenú'));
