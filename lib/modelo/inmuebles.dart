@@ -25,7 +25,9 @@ class Inmuebles {
       estado: map['estado'],
       direccion: map['direccion'],
       cliente: Cliente.fromMap(map['fk_cliente']),
-      categoriaServicio: CategoriaServicio.fromMap(map['fk_categoria_servicio']),
+      categoriaServicio: CategoriaServicio.fromMap(
+        map['fk_categoria_servicio'],
+      ),
     );
   }
 
@@ -39,5 +41,4 @@ class Inmuebles {
       'fk_categoria_servicio': categoriaServicio.toMap(),
     };
   }
-
 }

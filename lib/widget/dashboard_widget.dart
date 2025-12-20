@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
+import 'package:myapp/vista/medidor_page.dart';
 import 'package:myapp/vista/tarifa_page.dart';
 
 class DashboardWidget extends StatefulWidget {
@@ -65,12 +66,12 @@ class _DashboardWidgetState extends State<DashboardWidget>
             case 1:
               return const CategoriaServicioPage();
             case 2:
-              return const Center(child: Text('Medidores'));
+              return const MedidoresPage();
             case 3:
               return const TarifaPage();
           }
         }
-        
+
         return const InmueblesPage();
       case 2:
         return Container(
@@ -157,7 +158,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
       subItems: [
         SidebarSubItem(icon: Icons.home, title: 'Casas'),
         SidebarSubItem(icon: Icons.category, title: 'Categorías de Inmuebles'),
-        SidebarSubItem(icon: Icons.rule_rounded, title: 'Medidores'),
+        SidebarSubItem(icon: Icons.speed, title: 'Medidores'),
         SidebarSubItem(icon: Icons.calculate, title: 'Tarifa de Servicio'),
       ],
     ),
