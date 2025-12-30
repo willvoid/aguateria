@@ -2,7 +2,7 @@ import 'package:myapp/modelo/inmuebles.dart';
 
 class Medidor {
   int? idMedidor;
-  int nro;
+  String nro;
   DateTime fechaInstalacion;
   String estado;
   Inmuebles inmueble;

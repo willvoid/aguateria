@@ -102,12 +102,14 @@ class _MedidoresPageState extends State<MedidoresPage> {
           return;
         }
 
-        final medidorCreado = await _medidorCrud.crearMedidor(medidor);
-        exito = medidorCreado != null;
+        //final medidorCreado = await _medidorCrud.crearMedidor(medidor);
+        //exito = medidorCreado != null;
+        exito = await _medidorCrud.crearMedidor(medidor);
+
       } else {
         final numeroExiste = await _medidorCrud.verificarNumeroMedidorExistente(
           medidor.nro,
-          idMedidorExcluir: medidor.idMedidor,
+          idExcluir: medidor.idMedidor,
         );
         
         if (numeroExiste) {
@@ -461,7 +463,7 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
                         keyboardType: TextInputType.number,
                         validator: (value) {
                           if (value?.isEmpty ?? true) return 'Campo requerido';
-                          if (int.tryParse(value!) == null) return 'Debe ser un número';
+                          //if (int.tryParse(value!) == null) return 'Debe ser un número';
                           return null;
                         },
                       ),
@@ -629,7 +631,7 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
     if (_formKey.currentState!.validate()) {
       final medidor = Medidor(
         idMedidor: widget.medidor?.idMedidor,
-        nro: int.parse(_nroController.text),
+        nro: _nroController.text,
         fechaInstalacion: _fechaInstalacion,
         estado: _estadoSeleccionado,
         inmueble: _inmuebleSeleccionado,
