@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
+import 'package:myapp/vista/facturacionvista/concepto_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
 import 'package:myapp/vista/medidor_page.dart';
 import 'package:myapp/vista/tarifa_page.dart';
@@ -85,16 +86,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
         );
       case 3:
       //return const NuevaFacturaPage();
-      case 4:
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: const Center(
-            child: Text(
-              'Contabilidad',
-              style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-            ),
-          ),
-        );
+      case 4: //Facturacion
+        return const ConceptosPage();
       case 5:
         return Container(
           padding: const EdgeInsets.all(24),
@@ -179,7 +172,12 @@ class _DashboardWidgetState extends State<DashboardWidget>
       icon: Icons.account_balance_outlined,
       title: 'Datos de Empresa',
     ),
-    SidebarItem(icon: Icons.receipt, title: 'Facturación'),
+    SidebarItem(
+      icon: Icons.receipt, 
+      title: 'Facturación',
+      subItems: [
+        SidebarSubItem(icon: Icons.home, title: 'Conceptos'),
+      ]),
     SidebarItem(icon: Icons.trending_up, title: 'Contabilidad'),
     SidebarItem(icon: Icons.settings, title: 'Opciones'),
   ];
