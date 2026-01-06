@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
+import 'package:myapp/vista/facturacionvista/ciclo_page.dart';
 import 'package:myapp/vista/facturacionvista/concepto_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
 import 'package:myapp/vista/medidor_page.dart';
@@ -87,6 +88,14 @@ class _DashboardWidgetState extends State<DashboardWidget>
       case 3:
       //return const NuevaFacturaPage();
       case 4: //Facturacion
+        if (selectedSubIndex != null) {
+          switch (selectedSubIndex) {
+            case 0:
+              return const ConceptosPage();
+            case 1:
+              return const CiclosPage();
+          }
+        }
         return const ConceptosPage();
       case 5:
         return Container(
@@ -173,11 +182,13 @@ class _DashboardWidgetState extends State<DashboardWidget>
       title: 'Datos de Empresa',
     ),
     SidebarItem(
-      icon: Icons.receipt, 
+      icon: Icons.receipt,
       title: 'Facturación',
       subItems: [
         SidebarSubItem(icon: Icons.home, title: 'Conceptos'),
-      ]),
+        SidebarSubItem(icon: Icons.calendar_month, title: 'Ciclos'),
+      ],
+    ),
     SidebarItem(icon: Icons.trending_up, title: 'Contabilidad'),
     SidebarItem(icon: Icons.settings, title: 'Opciones'),
   ];
