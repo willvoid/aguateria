@@ -5,6 +5,7 @@ import 'package:myapp/dao/inmueblescrudimpl.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
+import 'package:myapp/vista/deuda_page.dart';
 
 class InmueblesPage extends StatefulWidget {
   const InmueblesPage({Key? key}) : super(key: key);
@@ -334,54 +335,66 @@ class _InmueblesPageState extends State<InmueblesPage> {
                                 DataColumn(label: Text('Acciones')),
                               ],
                               rows: inmueblesFiltrados.map((inmueble) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${inmueble.id}')),
-                                    DataCell(Text(inmueble.cod_inmueble)),
-                                    DataCell(Text(inmueble.direccion)),
-                                    DataCell(Text(inmueble.cliente.razonSocial)),
-                                    DataCell(Text(inmueble.categoriaServicio.descripcion)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: inmueble.estado == 'CONECTADO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          inmueble.estado,
-                                          style: TextStyle(
-                                            color: inmueble.estado == 'CONECTADO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(inmueble),
-                                            tooltip: 'Editar',
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                            onPressed: () => _eliminarInmueble(inmueble),
-                                            tooltip: 'Eliminar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
+    return DataRow(
+      cells: [
+        DataCell(Text('${inmueble.id}')),
+        DataCell(Text(inmueble.cod_inmueble)),
+        DataCell(Text(inmueble.direccion)),
+        DataCell(Text(inmueble.cliente.razonSocial)),
+        DataCell(Text(inmueble.categoriaServicio.descripcion)),
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: inmueble.estado == 'CONECTADO'
+                  ? Colors.green.shade50
+                  : Colors.red.shade50,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              inmueble.estado,
+              style: TextStyle(
+                color: inmueble.estado == 'CONECTADO'
+                    ? Colors.green.shade700
+                    : Colors.red.shade700,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.receipt_long, size: 18, color: Colors.purple),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DeudasPage(inmueble: inmueble),
+                    ),
+                  );
+                },
+                tooltip: 'Ver Deudas',
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
+                onPressed: () => _mostrarDialogoEdicion(inmueble),
+                tooltip: 'Editar',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                onPressed: () => _eliminarInmueble(inmueble),
+                tooltip: 'Eliminar',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }).toList(),
                             ),
                           ),
                         ),
