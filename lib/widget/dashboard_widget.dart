@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
+import 'package:myapp/vista/empresavista/dato_empresapage.dart';
 import 'package:myapp/vista/facturacionvista/ciclo_page.dart';
 import 'package:myapp/vista/facturacionvista/concepto_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
@@ -85,8 +86,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
             ),
           ),
         );
-      case 3:
-      //return const NuevaFacturaPage();
+      case 3: //Datos Empresa
+        return const DatoEmpresaPage();
       case 4: //Facturacion
         if (selectedSubIndex != null) {
           switch (selectedSubIndex) {
