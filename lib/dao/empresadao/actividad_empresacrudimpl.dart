@@ -28,26 +28,30 @@ class ActividadEmpresaCrudImpl {
   }
 
   // ==================== LEER ACTIVIDADES POR EMPRESA (ESENCIAL) ====================
-  Future<List<ActividadEmpresa>> leerActividadesPorEmpresa(int idEmpresa) async {
-    try {
-      final data = await supabase
-          .from('actividad_empresa')
-          .select('*, fk_empresa:datos_empresa(*), fk_actividad:actividad_economica(*)')
-          .eq('fk_empresa', idEmpresa);
+  Future<List<int>> leerIdsActividadesPorEmpresa(int idEmpresa) async {
+  try {
+    final data = await supabase
+        .from('actividad_empresa')
+        .select('fk_actividad')
+        .eq('fk_empresa', idEmpresa);
 
-      if (data == null || data.isEmpty) {
-        return [];
-      }
+    print('IDs recibidos: $data');
 
-      final List<Map<String, dynamic>> registros = 
-          List<Map<String, dynamic>>.from(data);
-
-      return registros.map((mapa) => ActividadEmpresa.fromMap(mapa)).toList();
-    } catch (e) {
-      print('Error al leer actividades por empresa: $e');
+    if (data == null || data.isEmpty) {
+      print('No hay actividades para la empresa $idEmpresa');
       return [];
     }
+
+    final List<int> ids = data.map((row) => row['fk_actividad'] as int).toList();
+    print('IDs de actividades: $ids');
+    
+    return ids;
+  } catch (e) {
+    print('Error al leer IDs de actividades: $e');
+    return [];
   }
+}
+
 
   // ==================== LEER TODAS ====================
   Future<List<ActividadEmpresa>> leerActividadesEmpresa() async {
@@ -67,20 +71,20 @@ class ActividadEmpresaCrudImpl {
   }
 
   // ==================== ELIMINAR RELACIÓN (DESVINCULAR) ====================
-  Future<bool> eliminarActividadEmpresa(int id) async {
-    try {
-      await supabase
-          .from('actividad_empresa')
-          .delete()
-          .eq('id', id);
+  Future<bool> eliminarActividadEmpresa(int idEmpresa) async {
+  try {
+    await supabase
+        .from('actividad_empresa')
+        .delete()
+        .eq('fk_empresa', idEmpresa);
 
-      print('Relación eliminada exitosamente');
-      return true;
-    } catch (e) {
-      print('Error al eliminar relación: $e');
-      return false;
-    }
+    print('Relaciones eliminadas exitosamente para empresa $idEmpresa');
+    return true;
+  } catch (e) {
+    print('Error al eliminar relaciones: $e');
+    return false;
   }
+}
 
   // ==================== LIMPIAR ACTIVIDADES DE UNA EMPRESA ====================
   // Útil para cuando editas una empresa: primero borras las viejas, luego insertas las nuevas

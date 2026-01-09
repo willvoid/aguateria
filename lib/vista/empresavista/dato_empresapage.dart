@@ -81,36 +81,48 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
   }
 
   Future<void> _mostrarDialogoEdicion(DatoEmpresa? empresa) async {
-    if (tiposContribuyente.isEmpty || tiposRegimen.isEmpty || actividadesEconomicas.isEmpty) {
-      _mostrarError('Cargando datos necesarios, por favor espere...');
-      return;
-    }
-
-    // Cargar actividades existentes si es edición
-    List<ActividadEconomica> actividadesSeleccionadas = [];
-    if (empresa != null) {
-      final actividadesEmpresa = await _actividadEmpresaCrud.leerActividadesPorEmpresa(empresa.id_empresa!);
-      actividadesSeleccionadas = actividadesEmpresa.map((ae) => ae.fk_actividad).toList();
-    }
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) => _DialogoEditarEmpresa(
-        empresa: empresa,
-        tiposContribuyente: tiposContribuyente,
-        tiposRegimen: tiposRegimen,
-        actividadesEconomicas: actividadesEconomicas,
-        actividadesSeleccionadas: actividadesSeleccionadas,
-        onGuardar: (empresaEditada, actividadesSeleccionadas) async {
-          Navigator.of(dialogContext).pop();
-          await _guardarEmpresa(empresaEditada, actividadesSeleccionadas);
-        },
-      ),
-    );
+  if (tiposContribuyente.isEmpty || tiposRegimen.isEmpty || actividadesEconomicas.isEmpty) {
+    _mostrarError('Cargando datos necesarios, por favor espere...');
+    return;
   }
+
+  // Cargar actividades existentes si es edición
+  List<ActividadEconomica> actividadesSeleccionadas = [];
+  if (empresa != null) {
+    // Obtener solo los IDs
+    final idsActividades = await _actividadEmpresaCrud.leerIdsActividadesPorEmpresa(empresa.id_empresa!);
+    
+    print('IDs obtenidos: $idsActividades');
+    
+    // Buscar las actividades completas en la lista que ya tenemos
+    actividadesSeleccionadas = actividadesEconomicas.where((actividad) {
+      return idsActividades.contains(actividad.id_actividad_economica);
+    }).toList();
+    
+    print('Actividades encontradas: ${actividadesSeleccionadas.length}');
+    for (var act in actividadesSeleccionadas) {
+      print('  - ${act.codigo_actividad}: ${act.descripcion_actividad}');
+    }
+  }
+
+  if (!mounted) return;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext dialogContext) => _DialogoEditarEmpresa(
+      empresa: empresa,
+      tiposContribuyente: tiposContribuyente,
+      tiposRegimen: tiposRegimen,
+      actividadesEconomicas: actividadesEconomicas,
+      actividadesSeleccionadas: actividadesSeleccionadas,
+      onGuardar: (empresaEditada, actividadesSeleccionadas) async {
+        Navigator.of(dialogContext).pop();
+        await _guardarEmpresa(empresaEditada, actividadesSeleccionadas);
+      },
+    ),
+  );
+}
 
   Future<void> _guardarEmpresa(DatoEmpresa empresa, List<ActividadEconomica> actividadesSeleccionadas) async {
     try {
@@ -461,34 +473,43 @@ class _DialogoEditarEmpresaState extends State<_DialogoEditarEmpresa> {
   final List<String> _estados = ['ACTIVO', 'INACTIVO'];
 
   @override
-  void initState() {
-    super.initState();
-    
-    _rucController = TextEditingController(text: widget.empresa?.ruc ?? '');
-    _razonSocialController = TextEditingController(text: widget.empresa?.razon_social ?? '');
-    _nombreFantasiaController = TextEditingController(text: widget.empresa?.nombre_fantasia ?? '');
-    _searchActividadController = TextEditingController();
-    _searchActividadController.addListener(_filtrarActividades);
+@override
+void initState() {
+  super.initState();
+  
+  _rucController = TextEditingController(text: widget.empresa?.ruc ?? '');
+  _razonSocialController = TextEditingController(text: widget.empresa?.razon_social ?? '');
+  _nombreFantasiaController = TextEditingController(text: widget.empresa?.nombre_fantasia ?? '');
+  _searchActividadController = TextEditingController();
+  _searchActividadController.addListener(_filtrarActividades);
 
-    _estadoSeleccionado = widget.empresa?.estado ?? 'ACTIVO';
-    
-    _tipoContribuyenteSeleccionado = widget.empresa != null
-        ? widget.tiposContribuyente.firstWhere(
-            (t) => t.id_tipo_contribuyente == widget.empresa!.fk_contribuyente.id_tipo_contribuyente,
-            orElse: () => widget.tiposContribuyente.first,
-          )
-        : widget.tiposContribuyente.first;
-    
-    _tipoRegimenSeleccionado = widget.empresa != null
-        ? widget.tiposRegimen.firstWhere(
-            (t) => t.id_regimen == widget.empresa!.fk_regimen.id_regimen,
-            orElse: () => widget.tiposRegimen.first,
-          )
-        : widget.tiposRegimen.first;
-    
-    _actividadesSeleccionadas = List.from(widget.actividadesSeleccionadas);
-    _actividadesFiltradas = widget.actividadesEconomicas;
+  _estadoSeleccionado = widget.empresa?.estado ?? 'ACTIVO';
+  
+  _tipoContribuyenteSeleccionado = widget.empresa != null
+      ? widget.tiposContribuyente.firstWhere(
+          (t) => t.id_tipo_contribuyente == widget.empresa!.fk_contribuyente.id_tipo_contribuyente,
+          orElse: () => widget.tiposContribuyente.first,
+        )
+      : widget.tiposContribuyente.first;
+  
+  _tipoRegimenSeleccionado = widget.empresa != null
+      ? widget.tiposRegimen.firstWhere(
+          (t) => t.id_regimen == widget.empresa!.fk_regimen.id_regimen,
+          orElse: () => widget.tiposRegimen.first,
+        )
+      : widget.tiposRegimen.first;
+  
+  // ← CORRECCIÓN AQUÍ: Inicializar correctamente la lista
+  _actividadesSeleccionadas = List.from(widget.actividadesSeleccionadas);
+  _actividadesFiltradas = widget.actividadesEconomicas;
+  
+  // Debug: Imprimir para verificar
+  print('Actividades seleccionadas inicialmente: ${_actividadesSeleccionadas.length}');
+  for (var act in _actividadesSeleccionadas) {
+    print('  - ID: ${act.id_actividad_economica}, Código: ${act.codigo_actividad}');
   }
+}
+
 
   void _filtrarActividades() {
     final query = _searchActividadController.text.toLowerCase();
@@ -504,25 +525,30 @@ class _DialogoEditarEmpresaState extends State<_DialogoEditarEmpresa> {
     });
   }
 
-  void _toggleActividad(ActividadEconomica actividad) {
-    setState(() {
-      final index = _actividadesSeleccionadas.indexWhere(
-        (a) => a.id_actividad_economica == actividad.id_actividad_economica
-      );
-      
-      if (index >= 0) {
-        _actividadesSeleccionadas.removeAt(index);
-      } else {
-        _actividadesSeleccionadas.add(actividad);
-      }
-    });
-  }
-
-  bool _isActividadSeleccionada(ActividadEconomica actividad) {
-    return _actividadesSeleccionadas.any(
+  // Seleccionar actividad y mantener selecionado si se desea editar
+void _toggleActividad(ActividadEconomica actividad) {
+  setState(() {
+    final index = _actividadesSeleccionadas.indexWhere(
       (a) => a.id_actividad_economica == actividad.id_actividad_economica
     );
-  }
+    
+    if (index != -1) {
+      _actividadesSeleccionadas.removeAt(index);
+      print('Actividad ${actividad.codigo_actividad} desmarcada');
+    } else {
+      _actividadesSeleccionadas.add(actividad);
+      print('Actividad ${actividad.codigo_actividad} marcada');
+    }
+    print('Total seleccionadas: ${_actividadesSeleccionadas.length}');
+  });
+}
+
+bool _isActividadSeleccionada(ActividadEconomica actividad) {
+  final seleccionada = _actividadesSeleccionadas.any(
+    (a) => a.id_actividad_economica == actividad.id_actividad_economica
+  );
+  return seleccionada;
+}
 
   @override
   Widget build(BuildContext context) {

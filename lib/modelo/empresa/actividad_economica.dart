@@ -29,4 +29,15 @@ class ActividadEconomica {
     };
   }
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+  
+    return other is ActividadEconomica &&
+      other.id_actividad_economica == id_actividad_economica;
+  }
+
+  @override
+  int get hashCode => id_actividad_economica.hashCode;
+
 }

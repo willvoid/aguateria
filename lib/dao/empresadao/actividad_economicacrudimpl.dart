@@ -139,20 +139,28 @@ class ActividadEconomicaCrudImpl {
   }
 
   // ==================== ELIMINAR ACTIVIDAD ====================
-  Future<bool> eliminarActividadEconomica(int id) async {
-    try {
-      await supabase
-          .from('actividad_economica')
-          .delete()
-          .eq('id_actividad_economica', id);
+ Future<bool> eliminarActividadEmpresa(int idEmpresa) async {
+  try {
+    // Primero verificar cuántas hay
+    final existing = await supabase
+        .from('actividad_empresa')
+        .select('id')
+        .eq('fk_empresa', idEmpresa);
+    
+    print('Eliminando ${existing.length} actividades de empresa $idEmpresa');
+    
+    await supabase
+        .from('actividad_empresa')
+        .delete()
+        .eq('fk_empresa', idEmpresa);
 
-      print('Actividad económica eliminada exitosamente');
-      return true;
-    } catch (e) {
-      print('Error al eliminar actividad económica: $e');
-      return false;
-    }
+    print('Relaciones eliminadas exitosamente');
+    return true;
+  } catch (e) {
+    print('Error al eliminar relaciones: $e');
+    return false;
   }
+}
 
   // ==================== VERIFICAR CÓDIGO EXISTENTE ====================
   Future<bool> verificarCodigoExistente(int codigo, {int? idActividadExcluir}) async {
