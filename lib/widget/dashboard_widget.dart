@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
 import 'package:myapp/vista/empresavista/dato_empresapage.dart';
+import 'package:myapp/vista/empresavista/establecimientopage.dart';
 import 'package:myapp/vista/facturacionvista/ciclo_page.dart';
 import 'package:myapp/vista/facturacionvista/concepto_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
@@ -87,6 +88,14 @@ class _DashboardWidgetState extends State<DashboardWidget>
           ),
         );
       case 3: //Datos Empresa
+        if (selectedSubIndex != null) {
+          switch (selectedSubIndex) {
+            case 0:
+              return const EstablecimientosPage();
+            //case 1:
+            //  return const CajasPage();
+          }
+        }
         return const DatoEmpresaPage();
       case 4: //Facturacion
         if (selectedSubIndex != null) {
@@ -181,6 +190,10 @@ class _DashboardWidgetState extends State<DashboardWidget>
     SidebarItem(
       icon: Icons.account_balance_outlined,
       title: 'Datos de Empresa',
+      subItems: [
+        SidebarSubItem(icon: Icons.home, title: 'Establecimientos'),
+        SidebarSubItem(icon: Icons.water_drop, title: 'Cajas'),
+      ],
     ),
     SidebarItem(
       icon: Icons.receipt,
