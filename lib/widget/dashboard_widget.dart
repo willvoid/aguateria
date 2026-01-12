@@ -3,6 +3,7 @@ import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
 import 'package:myapp/vista/empresavista/dato_empresapage.dart';
 import 'package:myapp/vista/empresavista/establecimientopage.dart';
+import 'package:myapp/vista/empresavista/timbradopage.dart';
 import 'package:myapp/vista/facturacionvista/ciclo_page.dart';
 import 'package:myapp/vista/facturacionvista/concepto_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
@@ -92,8 +93,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
           switch (selectedSubIndex) {
             case 0:
               return const EstablecimientosPage();
-            //case 1:
-            //  return const CajasPage();
+            case 2:
+              return const TimbradoPage();
           }
         }
         return const DatoEmpresaPage();
@@ -193,6 +194,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
       subItems: [
         SidebarSubItem(icon: Icons.home, title: 'Establecimientos'),
         SidebarSubItem(icon: Icons.water_drop, title: 'Cajas'),
+        SidebarSubItem(icon: Icons.electrical_services, title: 'Timbrados'),
       ],
     ),
     SidebarItem(
