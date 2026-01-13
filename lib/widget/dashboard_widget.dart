@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
+import 'package:myapp/vista/empresavista/cajapage.dart';
 import 'package:myapp/vista/empresavista/dato_empresapage.dart';
 import 'package:myapp/vista/empresavista/establecimientopage.dart';
 import 'package:myapp/vista/empresavista/timbradopage.dart';
@@ -93,6 +94,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
           switch (selectedSubIndex) {
             case 0:
               return const EstablecimientosPage();
+            case 1:
+              return const CajaPage();
             case 2:
               return const TimbradoPage();
           }
@@ -192,8 +195,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
       icon: Icons.account_balance_outlined,
       title: 'Datos de Empresa',
       subItems: [
-        SidebarSubItem(icon: Icons.home, title: 'Establecimientos'),
-        SidebarSubItem(icon: Icons.water_drop, title: 'Cajas'),
+        SidebarSubItem(icon: Icons.place, title: 'Establecimientos'),
+        SidebarSubItem(icon: Icons.point_of_sale_outlined, title: 'Cajas'),
         SidebarSubItem(icon: Icons.electrical_services, title: 'Timbrados'),
       ],
     ),
