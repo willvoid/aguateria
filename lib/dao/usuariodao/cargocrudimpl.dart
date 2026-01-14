@@ -19,9 +19,9 @@ class CargoCrudImpl {
   Future<Cargo?> crearCargo(Cargo cargo) async {
     try {
       final Map<String, dynamic> data = await supabase
-          .from('cargos')
+          .from('cargo')
           .insert({
-            'nombre': cargo.nombre,
+            'cargo': cargo.nombre,
             'descripcion_cargo': cargo.descripcion_cargo,
           })
           .select()
@@ -40,7 +40,7 @@ class CargoCrudImpl {
   Future<List<Cargo>> leerCargos() async {
     try {
       final data = await supabase
-          .from('cargos')
+          .from('cargo')
           .select();
 
       if (data == null) {
@@ -59,7 +59,7 @@ class CargoCrudImpl {
       final List<Cargo> cargos = registros.map((mapa) {
         return Cargo(
           id_cargo: _toInt(mapa['id_cargo']),
-          nombre: mapa['nombre'] ?? '',
+          nombre: mapa['cargo'] ?? '',
           descripcion_cargo: mapa['descripcion_cargo'] ?? '',
         );
       }).toList();
@@ -77,7 +77,7 @@ class CargoCrudImpl {
   Future<Cargo?> leerCargoPorId(int id) async {
     try {
       final Map<String, dynamic> data = await supabase
-          .from('cargos')
+          .from('cargo')
           .select()
           .eq('id_cargo', id)
           .single();
@@ -94,9 +94,9 @@ class CargoCrudImpl {
   Future<Cargo?> leerCargoPorNombre(String nombre) async {
     try {
       final Map<String, dynamic> data = await supabase
-          .from('cargos')
+          .from('cargo')
           .select()
-          .eq('nombre', nombre)
+          .eq('cargo', nombre)
           .single();
 
       return Cargo.fromMap(data);
@@ -111,7 +111,7 @@ class CargoCrudImpl {
   Future<List<Cargo>> buscarCargos(String busqueda) async {
     try {
       final data = await supabase
-          .from('cargos')
+          .from('cargo')
           .select()
           .or('nombre.ilike.%$busqueda%,descripcion_cargo.ilike.%$busqueda%');
 
@@ -138,9 +138,9 @@ class CargoCrudImpl {
   Future<bool> actualizarCargo(Cargo cargo) async {
     try {
       await supabase
-          .from('cargos')
+          .from('cargo')
           .update({
-            'nombre': cargo.nombre,
+            'cargo': cargo.nombre,
             'descripcion_cargo': cargo.descripcion_cargo,
           })
           .eq('id_cargo', cargo.id_cargo!);
@@ -158,7 +158,7 @@ class CargoCrudImpl {
   Future<bool> eliminarCargo(int id) async {
     try {
       await supabase
-          .from('cargos')
+          .from('cargo')
           .delete()
           .eq('id_cargo', id);
 
@@ -175,9 +175,9 @@ class CargoCrudImpl {
   Future<bool> verificarNombreExistente(String nombre, {int? idCargoExcluir}) async {
     try {
       var query = supabase
-          .from('cargos')
+          .from('cargo')
           .select('id_cargo')
-          .eq('nombre', nombre);
+          .eq('cargo', nombre);
 
       if (idCargoExcluir != null) {
         query = query.neq('id_cargo', idCargoExcluir);
@@ -215,7 +215,7 @@ class CargoCrudImpl {
   Future<int> contarCargos() async {
     try {
       final data = await supabase
-          .from('cargos')
+          .from('cargo')
           .select('id_cargo')
           .count();
 
@@ -248,9 +248,9 @@ class CargoCrudImpl {
   Future<List<Cargo>> leerCargosOrdenados({bool ascendente = true}) async {
     try {
       final data = await supabase
-          .from('cargos')
+          .from('cargo')
           .select()
-          .order('nombre', ascending: ascendente);
+          .order('cargo', ascending: ascendente);
 
       if (data == null || data.isEmpty) {
         return [];

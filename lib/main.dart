@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/configurations.dart';
+import 'package:myapp/vista/loginpage.dart';
 import 'package:myapp/widget/dashboard_widget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -30,7 +31,7 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const DashboardWidget(),
+      home: const LoginPage(),
     );
   }
 }

@@ -13,7 +13,7 @@ class Cargo {
   factory Cargo.fromMap(Map<String, dynamic> map) {
     return Cargo(
       id_cargo: map['id_cargo'],
-      nombre: map['nombre'],
+      nombre: map['cargo'],
       descripcion_cargo: map['descripcion_cargo'],
     );
   }
@@ -21,7 +21,7 @@ class Cargo {
   Map<String, dynamic> toMap() {
     return {
       'id_cargo': id_cargo,
-      'nombre': nombre,
+      'cargo': nombre,
       'descripcion_cargo': descripcion_cargo,
     };
   }
