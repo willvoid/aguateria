@@ -6,6 +6,7 @@ import 'package:myapp/vista/empresavista/cajapage.dart';
 import 'package:myapp/vista/empresavista/dato_empresapage.dart';
 import 'package:myapp/vista/empresavista/establecimientopage.dart';
 import 'package:myapp/vista/empresavista/timbradopage.dart';
+import 'package:myapp/vista/facturacionvista/apertura_cierre_cajapage.dart';
 import 'package:myapp/vista/facturacionvista/ciclo_page.dart';
 import 'package:myapp/vista/facturacionvista/concepto_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
@@ -101,6 +102,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
               return const CajaPage();
             case 2:
               return const TimbradoPage();
+            case 3:
+              return const AperturaCierreCajaPage();
           }
         }
         return const DatoEmpresaPage();
@@ -201,6 +204,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
         SidebarSubItem(icon: Icons.place, title: 'Establecimientos'),
         SidebarSubItem(icon: Icons.point_of_sale_outlined, title: 'Cajas'),
         SidebarSubItem(icon: Icons.electrical_services, title: 'Timbrados'),
+        SidebarSubItem(icon: Icons.watch_later_outlined, title: 'Apertura y Cierre de Caja')
       ],
     ),
     SidebarItem(

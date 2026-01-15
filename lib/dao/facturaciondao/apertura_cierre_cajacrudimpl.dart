@@ -1,12 +1,40 @@
+import 'package:myapp/dao/empresadao/cajacrudimpl.dart';
 import 'package:myapp/modelo/empresa/caja.dart';
 import 'package:myapp/modelo/facturacionmodelo/apertura_cierre_caja.dart';
 import 'package:myapp/modelo/usuario/usuario.dart';
+import 'package:myapp/dao/usuariodao/usuariocrudimpl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
 
 class AperturaCierreCajaCrudImpl {
+  final CajaCrudImpl _cajaCrud = CajaCrudImpl();
+  final UsuarioCrudImpl _usuarioCrud = UsuarioCrudImpl();
   
+  // ==================== HELPERS ====================
+  
+  int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  DateTime _toDate(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+    return DateTime.now();
+  }
+
   // ==================== CREAR APERTURA CAJA ====================
   Future<AperturaCierreCaja?> crearAperturaCaja(AperturaCierreCaja apertura) async {
     try {
@@ -20,15 +48,11 @@ class AperturaCierreCajaCrudImpl {
             'fk_usuario': apertura.fk_usuario.id_usuario,
             'fk_caja': apertura.fk_caja.id_caja,
           })
-          .select('''
-            *,
-            fk_usuario(*),
-            fk_caja(*)
-          ''')
+          .select()
           .single();
 
       print('Apertura de caja creada exitosamente');
-      return AperturaCierreCaja.fromMap(data);
+      return await _convertirApertura(data);
     } catch (e) {
       print('Error al crear apertura de caja: $e');
       return null;
@@ -40,11 +64,8 @@ class AperturaCierreCajaCrudImpl {
     try {
       final data = await supabase
           .from('apertura_cierre_caja')
-          .select('''
-            *,
-            fk_usuario(*),
-            fk_caja(*)
-          ''');
+          .select()
+          .order('apertura', ascending: false);
 
       if (data == null) {
         print('⚠️ La consulta devolvió null');
@@ -59,9 +80,17 @@ class AperturaCierreCajaCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<AperturaCierreCaja> aperturas = registros.map((mapa) {
-        return AperturaCierreCaja.fromMap(mapa);
-      }).toList();
+      final List<AperturaCierreCaja> aperturas = [];
+      
+      for (var mapa in registros) {
+        try {
+          final apertura = await _convertirApertura(mapa);
+          aperturas.add(apertura);
+        } catch (e) {
+          print('Error al convertir apertura: $e');
+          continue;
+        }
+      }
 
       print('✓ Se cargaron ${aperturas.length} aperturas de caja');
       return aperturas;
@@ -76,15 +105,11 @@ class AperturaCierreCajaCrudImpl {
     try {
       final Map<String, dynamic> data = await supabase
           .from('apertura_cierre_caja')
-          .select('''
-            *,
-            fk_usuario(*),
-            fk_caja(*)
-          ''')
+          .select()
           .eq('id_turno', idTurno)
           .single();
 
-      return AperturaCierreCaja.fromMap(data);
+      return await _convertirApertura(data);
     } catch (e) {
       print('Error al leer apertura por ID: $e');
       return null;
@@ -96,11 +121,7 @@ class AperturaCierreCajaCrudImpl {
     try {
       final data = await supabase
           .from('apertura_cierre_caja')
-          .select('''
-            *,
-            fk_usuario(*),
-            fk_caja(*)
-          ''')
+          .select()
           .eq('fk_caja', idCaja)
           .order('apertura', ascending: false);
 
@@ -111,9 +132,17 @@ class AperturaCierreCajaCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<AperturaCierreCaja> aperturas = registros.map((mapa) {
-        return AperturaCierreCaja.fromMap(mapa);
-      }).toList();
+      final List<AperturaCierreCaja> aperturas = [];
+      
+      for (var mapa in registros) {
+        try {
+          final apertura = await _convertirApertura(mapa);
+          aperturas.add(apertura);
+        } catch (e) {
+          print('Error al convertir apertura: $e');
+          continue;
+        }
+      }
 
       return aperturas;
     } catch (e) {
@@ -127,11 +156,7 @@ class AperturaCierreCajaCrudImpl {
     try {
       final data = await supabase
           .from('apertura_cierre_caja')
-          .select('''
-            *,
-            fk_usuario(*),
-            fk_caja(*)
-          ''')
+          .select()
           .eq('fk_usuario', idUsuario)
           .order('apertura', ascending: false);
 
@@ -142,9 +167,17 @@ class AperturaCierreCajaCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<AperturaCierreCaja> aperturas = registros.map((mapa) {
-        return AperturaCierreCaja.fromMap(mapa);
-      }).toList();
+      final List<AperturaCierreCaja> aperturas = [];
+      
+      for (var mapa in registros) {
+        try {
+          final apertura = await _convertirApertura(mapa);
+          aperturas.add(apertura);
+        } catch (e) {
+          print('Error al convertir apertura: $e');
+          continue;
+        }
+      }
 
       return aperturas;
     } catch (e) {
@@ -158,11 +191,7 @@ class AperturaCierreCajaCrudImpl {
     try {
       final data = await supabase
           .from('apertura_cierre_caja')
-          .select('''
-            *,
-            fk_usuario(*),
-            fk_caja(*)
-          ''')
+          .select()
           .eq('fk_caja', idCaja)
           .isFilter('cierre', null)
           .order('apertura', ascending: false)
@@ -172,7 +201,7 @@ class AperturaCierreCajaCrudImpl {
         return null;
       }
 
-      return AperturaCierreCaja.fromMap(data.first);
+      return await _convertirApertura(data.first);
     } catch (e) {
       print('Error al obtener caja abierta: $e');
       return null;
@@ -245,11 +274,7 @@ class AperturaCierreCajaCrudImpl {
     try {
       final data = await supabase
           .from('apertura_cierre_caja')
-          .select('''
-            *,
-            fk_usuario(*),
-            fk_caja(*)
-          ''')
+          .select()
           .gte('apertura', fechaInicio.toIso8601String())
           .lte('apertura', fechaFin.toIso8601String())
           .order('apertura', ascending: false);
@@ -261,9 +286,17 @@ class AperturaCierreCajaCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<AperturaCierreCaja> aperturas = registros.map((mapa) {
-        return AperturaCierreCaja.fromMap(mapa);
-      }).toList();
+      final List<AperturaCierreCaja> aperturas = [];
+      
+      for (var mapa in registros) {
+        try {
+          final apertura = await _convertirApertura(mapa);
+          aperturas.add(apertura);
+        } catch (e) {
+          print('Error al convertir apertura: $e');
+          continue;
+        }
+      }
 
       return aperturas;
     } catch (e) {
@@ -275,7 +308,7 @@ class AperturaCierreCajaCrudImpl {
   // ==================== VERIFICAR SI HAY CAJA ABIERTA PARA USUARIO ====================
   Future<bool> verificarCajaAbiertaUsuario(int idUsuario) async {
     try {
-      final data = await supabase
+      final List<dynamic> data = await supabase
           .from('apertura_cierre_caja')
           .select('id_turno')
           .eq('fk_usuario', idUsuario)
@@ -293,11 +326,7 @@ class AperturaCierreCajaCrudImpl {
     try {
       final data = await supabase
           .from('apertura_cierre_caja')
-          .select('''
-            *,
-            fk_usuario(*),
-            fk_caja(*)
-          ''')
+          .select()
           .eq('fk_caja', idCaja)
           .order('apertura', ascending: false)
           .limit(1);
@@ -306,10 +335,39 @@ class AperturaCierreCajaCrudImpl {
         return null;
       }
 
-      return AperturaCierreCaja.fromMap(data.first);
+      return await _convertirApertura(data.first);
     } catch (e) {
       print('Error al obtener último turno de caja: $e');
       return null;
     }
+  }
+
+  // ==================== MÉTODO AUXILIAR PARA CONVERTIR ====================
+  Future<AperturaCierreCaja> _convertirApertura(Map<String, dynamic> mapa) async {
+    // Extraer IDs
+    final idUsuario = _toInt(mapa['fk_usuario']);
+    final idCaja = _toInt(mapa['fk_caja']);
+
+    // Cargar usuario y caja por separado
+    final usuario = await _usuarioCrud.leerUsuarioPorId(idUsuario);
+    final caja = await _cajaCrud.leerCajaPorId(idCaja);
+
+    if (usuario == null) {
+      throw Exception('Usuario con ID $idUsuario no encontrado');
+    }
+
+    if (caja == null) {
+      throw Exception('Caja con ID $idCaja no encontrada');
+    }
+
+    return AperturaCierreCaja(
+      id_turno: _toInt(mapa['id_turno']),
+      apertura: _toDate(mapa['apertura']),
+      cierre: mapa['cierre'] != null ? _toDate(mapa['cierre']) : null,
+      monto_inicial: _toDouble(mapa['monto_inicial']),
+      monto_final: mapa['monto_final'] != null ? _toDouble(mapa['monto_final']) : 0,
+      fk_usuario: usuario,
+      fk_caja: caja,
+    );
   }
 }

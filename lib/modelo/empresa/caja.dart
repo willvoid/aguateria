@@ -22,7 +22,7 @@ class Caja {
       );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id_caja': id_caja,
       'nro_caja': nro_caja,

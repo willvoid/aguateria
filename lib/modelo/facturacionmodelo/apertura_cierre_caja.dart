@@ -32,4 +32,15 @@ class AperturaCierreCaja {
     );
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id_turno': id_turno,
+      'apertura': apertura.toIso8601String(),
+      'cierre': cierre?.toIso8601String(),
+      'monto_inicial': monto_inicial,
+      'monto_final': monto_final,
+      'fk_usuario': fk_usuario.toMap(),
+      'fk_caja': fk_caja.toMap(),
+    };
+  }
 }

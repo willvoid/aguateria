@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 final supabase = Supabase.instance.client;
 
 class CajaCrudImpl {
-
   // ==================== HELPERS ====================
 
   int _toInt(dynamic value) {
@@ -26,7 +25,9 @@ class CajaCrudImpl {
             'descripcion_caja': caja.descripcion_caja,
             'fk_establecimientos': caja.fk_establecimiento.id_establecimiento,
           })
-          .select('*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))')
+          .select(
+            '*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))',
+          )
           .single();
 
       print('Caja creada exitosamente');
@@ -43,7 +44,9 @@ class CajaCrudImpl {
     try {
       final data = await supabase
           .from('caja')
-          .select('*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))');
+          .select(
+            '*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))',
+          );
 
       if (data == null) {
         print('La consulta devolvió null');
@@ -55,7 +58,7 @@ class CajaCrudImpl {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<Caja> cajas = registros.map((mapa) {
@@ -87,7 +90,9 @@ class CajaCrudImpl {
     try {
       final Map<String, dynamic> data = await supabase
           .from('caja')
-          .select('*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))')
+          .select(
+            '*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))',
+          )
           .eq('id_caja', id)
           .single();
 
@@ -104,7 +109,9 @@ class CajaCrudImpl {
     try {
       final Map<String, dynamic> data = await supabase
           .from('caja')
-          .select('*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))')
+          .select(
+            '*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))',
+          )
           .eq('nro_caja', numeroCaja)
           .eq('fk_establecimientos', idEstablecimiento)
           .single();
@@ -122,14 +129,18 @@ class CajaCrudImpl {
     try {
       final data = await supabase
           .from('caja')
-          .select('*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))')
-          .or('nro_caja.eq.${int.tryParse(busqueda) ?? -1},descripcion_caja.ilike.%$busqueda%');
+          .select(
+            '*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))',
+          )
+          .or(
+            'nro_caja.eq.${int.tryParse(busqueda) ?? -1},descripcion_caja.ilike.%$busqueda%',
+          );
 
       if (data == null || data.isEmpty) {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<Caja> cajas = registros.map((mapa) {
@@ -149,14 +160,16 @@ class CajaCrudImpl {
     try {
       final data = await supabase
           .from('caja')
-          .select('*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))')
+          .select(
+            '*, fk_establecimientos(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))',
+          )
           .eq('fk_establecimientos', idEstablecimiento);
 
       if (data == null || data.isEmpty) {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<Caja> cajas = registros.map((mapa) {
@@ -176,14 +189,16 @@ class CajaCrudImpl {
     try {
       final data = await supabase
           .from('caja')
-          .select('*, fk_establecimientos!inner(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))')
+          .select(
+            '*, fk_establecimientos!inner(*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*)))',
+          )
           .eq('fk_establecimiento.fk_empresa', idEmpresa);
 
       if (data == null || data.isEmpty) {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<Caja> cajas = registros.map((mapa) {
@@ -222,10 +237,7 @@ class CajaCrudImpl {
 
   Future<bool> eliminarCaja(int id) async {
     try {
-      await supabase
-          .from('caja')
-          .delete()
-          .eq('id_caja', id);
+      await supabase.from('caja').delete().eq('id_caja', id);
 
       print('Caja eliminada exitosamente');
       return true;
@@ -239,9 +251,9 @@ class CajaCrudImpl {
 
   Future<bool> verificarNumeroCajaExistente(
     int numeroCaja,
-    int idEstablecimiento,
-    {int? idCajaExcluir}
-  ) async {
+    int idEstablecimiento, {
+    int? idCajaExcluir,
+  }) async {
     try {
       var query = supabase
           .from('caja')
@@ -266,10 +278,7 @@ class CajaCrudImpl {
 
   Future<int> contarCajas() async {
     try {
-      final data = await supabase
-          .from('caja')
-          .select('id_caja')
-          .count();
+      final data = await supabase.from('caja').select('id_caja').count();
 
       return data.count;
     } catch (e) {
