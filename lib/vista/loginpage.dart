@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/usuariodao/usuariocrudimpl.dart';
+import 'package:myapp/modelo/usuario/authprovider.dart';
 import 'package:myapp/vista/registro_usuariopage.dart';
 import 'package:myapp/widget/dashboard_widget.dart';
+import 'package:provider/provider.dart' show Provider;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -20,48 +22,48 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  Future<void> _iniciarSesion() async {
-    if (!_formKey.currentState!.validate()) return;
+  // En login_page.dart
+Future<void> _iniciarSesion() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      final usuario = await _usuarioCrud.autenticarUsuario(
-        _usuarioController.text.trim(),
-        _claveController.text,
-      );
+  try {
+    final usuario = await _usuarioCrud.autenticarUsuario(
+      _usuarioController.text.trim(),
+      _claveController.text,
+    );
 
-      setState(() => _isLoading = false);
+    setState(() => _isLoading = false);
 
-      if (usuario != null) {
-        // Autenticación exitosa
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('¡Bienvenido, ${usuario.nombre}!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          
-          // Navegar al Dashboard y remover todas las rutas anteriores
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DashboardWidget(),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          _mostrarError('Usuario o contraseña incorrectos');
-        }
+    if (usuario != null) {
+      // Guardar sesión con Provider
+      if (mounted) {
+        await Provider.of<AuthProvider>(context, listen: false).login(usuario);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('¡Bienvenido, ${usuario.nombre}!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardWidget()),
+        );
       }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _mostrarError('Error al iniciar sesión: $e');
+    } else {
+      if (mounted) {
+        _mostrarError('Usuario o contraseña incorrectos');
+      }
     }
+  } catch (e) {
+    setState(() => _isLoading = false);
+    _mostrarError('Error al iniciar sesión: $e');
   }
+}
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(

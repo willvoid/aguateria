@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/modelo/usuario/authprovider.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
 import 'package:myapp/vista/empresavista/cajapage.dart';
@@ -8,8 +9,10 @@ import 'package:myapp/vista/empresavista/timbradopage.dart';
 import 'package:myapp/vista/facturacionvista/ciclo_page.dart';
 import 'package:myapp/vista/facturacionvista/concepto_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
+import 'package:myapp/vista/loginpage.dart';
 import 'package:myapp/vista/medidor_page.dart';
 import 'package:myapp/vista/tarifa_page.dart';
+import 'package:provider/provider.dart';
 
 class DashboardWidget extends StatefulWidget {
   const DashboardWidget({Key? key}) : super(key: key);
@@ -347,6 +350,111 @@ class _DashboardWidgetState extends State<DashboardWidget>
                         ),
                       ),
                       const Spacer(),
+                      // En dashboard_widget.dart - Agregar en el TopBar después del Spacer()
+
+Consumer<AuthProvider>(
+  builder: (context, authProvider, _) {
+    return Row(
+      children: [
+        // Información del usuario
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              authProvider.usuarioNombre,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF111827),
+              ),
+            ),
+            Text(
+              authProvider.cargoNombre,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        
+        // Avatar
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0085FF),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              authProvider.usuarioNombre.isNotEmpty 
+                  ? authProvider.usuarioNombre[0].toUpperCase()
+                  : 'U',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        
+        // Botón de cerrar sesión
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, size: 20, color: Color(0xFF6B7280)),
+          onSelected: (value) async {
+            if (value == 'logout') {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Cerrar Sesión'),
+                  content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                      child: const Text('Cerrar Sesión'),
+                    ),
+                  ],
+                ),
+              );
+              
+              if (confirm == true && context.mounted) {
+                await authProvider.logout();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              }
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout, size: 18, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Cerrar Sesión'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  },
+),
                     ],
                   ),
                 ),
@@ -582,6 +690,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
     );
   }
 }
+
+
 
 class SidebarItem {
   final IconData icon;
