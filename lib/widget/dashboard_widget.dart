@@ -5,6 +5,7 @@ import 'package:myapp/vista/cliente_page.dart';
 import 'package:myapp/vista/empresavista/cajapage.dart';
 import 'package:myapp/vista/empresavista/dato_empresapage.dart';
 import 'package:myapp/vista/empresavista/establecimientopage.dart';
+import 'package:myapp/vista/facturacionvista/facturapage.dart';
 import 'package:myapp/vista/empresavista/timbradopage.dart';
 import 'package:myapp/vista/facturacionvista/apertura_cierre_cajapage.dart';
 import 'package:myapp/vista/facturacionvista/ciclo_page.dart';
@@ -116,7 +117,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
               return const CiclosPage();
           }
         }
-        return const ConceptosPage();
+        return const CrearFacturaPage();
       case 5:
         return Container(
           padding: const EdgeInsets.all(24),

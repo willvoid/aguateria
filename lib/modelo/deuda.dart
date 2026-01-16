@@ -29,7 +29,7 @@ class Deuda {
     this.id_deuda,
   });
 
-  factory Deuda.fromJson(Map<String, dynamic> map) {
+  factory Deuda.fromMap(Map<String, dynamic> map) {
     return Deuda(
       fk_concepto: Concepto.fromMap(map['fk_concepto']),
       descripcion: map['descripcion'],
