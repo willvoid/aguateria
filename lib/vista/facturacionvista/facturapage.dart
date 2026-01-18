@@ -236,95 +236,287 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     });
   }
 
-  Future<void> _guardarFactura() async {
-    if (!_formKey.currentState!.validate()) return;
-    
-    if (_clienteSeleccionado == null) {
-      _mostrarError('Debe seleccionar un cliente');
-      return;
-    }
+ Future<void> _guardarFactura() async {
+  if (!_formKey.currentState!.validate()) return;
+  
+  if (_clienteSeleccionado == null) {
+    _mostrarError('Debe seleccionar un cliente');
+    return;
+  }
 
-    if (_inmuebleSeleccionado == null) {
-      _mostrarError('Debe seleccionar un inmueble');
-      return;
-    }
+  if (_inmuebleSeleccionado == null) {
+    _mostrarError('Debe seleccionar un inmueble');
+    return;
+  }
 
-    if (_detalles.isEmpty) {
-      _mostrarError('Debe agregar al menos un item');
-      return;
-    }
+  if (_detalles.isEmpty) {
+    _mostrarError('Debe agregar al menos un item');
+    return;
+  }
 
-    if (_establecimientoSeleccionado == null) {
-      _mostrarError('Debe seleccionar un establecimiento');
-      return;
-    }
+  if (_establecimientoSeleccionado == null) {
+    _mostrarError('Debe seleccionar un establecimiento');
+    return;
+  }
 
-    final efectivo = double.tryParse(_efectivoController.text) ?? 0;
-    if (efectivo < _totalGeneral) {
-      _mostrarError('El efectivo debe ser mayor o igual al total');
-      return;
-    }
+  final efectivo = double.tryParse(_efectivoController.text) ?? 0;
+  if (efectivo < _totalGeneral) {
+    _mostrarError('El efectivo debe ser mayor o igual al total');
+    return;
+  }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+  // Mostrar diálogo de carga
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Guardando factura...'),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  try {
+    final nroSecuencial = await _facturaCrud.obtenerProximoSecuencial(
+      _establecimientoSeleccionado!.id_establecimiento!,
+      _tipoFacturaSeleccionado!.id_tipo_factura!,
     );
 
-    try {
-      final nroSecuencial = await _facturaCrud.obtenerProximoSecuencial(
-        _establecimientoSeleccionado!.id_establecimiento!,
-        _tipoFacturaSeleccionado!.id_tipo_factura!,
-      );
+    final factura = Factura(
+      fecha_emision: DateTime.now(),
+      fk_cliente: _clienteSeleccionado!,
+      fk_inmueble: _inmuebleSeleccionado!,
+      codicion_venta: _condicionVenta,
+      total_gravado_10: _totalGravado10,
+      total_gravado_5: _totalGravado5,
+      total_exenta: _totalExenta,
+      total_iva: _totalIVA,
+      total_general: _totalGeneral,
+      observacion: _observacionController.text,
+      fk_monedas: _monedaSeleccionada!,
+      fk_establecimientos: _establecimientoSeleccionado!,
+      fk_modo_pago: _modoPagoSeleccionado!,
+      fk_tipo_factura: _tipoFacturaSeleccionado!,
+      nro_secuencial: nroSecuencial,
+      fk_turno: _cajaAbierta!,
+      tipo_emision: 1,
+      efectivo: efectivo,
+      vuelto: _vuelto,
+      descuento_global: 0,
+    );
 
-      final factura = Factura(
-        fecha_emision: DateTime.now(),
-        fk_cliente: _clienteSeleccionado!,
-        fk_inmueble: _inmuebleSeleccionado!,
-        codicion_venta: _condicionVenta,
-        total_gravado_10: _totalGravado10,
-        total_gravado_5: _totalGravado5,
-        total_exenta: _totalExenta,
-        total_iva: _totalIVA,
-        total_general: _totalGeneral,
-        observacion: _observacionController.text,
-        fk_monedas: _monedaSeleccionada!,
-        fk_establecimientos: _establecimientoSeleccionado!,
-        fk_modo_pago: _modoPagoSeleccionado!,
-        fk_tipo_factura: _tipoFacturaSeleccionado!,
-        nro_secuencial: nroSecuencial,
-        fk_turno: _cajaAbierta!,
-        tipo_emision: 1,
-        efectivo: efectivo,
-        vuelto: _vuelto,
-        descuento_global: 0,
-      );
+    final facturaCreada = await _facturaCrud.crearFactura(factura);
 
-      final facturaCreada = await _facturaCrud.crearFactura(factura);
-
-      if (facturaCreada == null) {
-        throw Exception('Error al crear la factura');
-      }
-
-      for (var detalle in _detalles) {
-        detalle.fk_factura = facturaCreada;
-      }
-
-      final detallesGuardados = await _detalleCrud.crearDetallesFactura(_detalles);
-
-      Navigator.pop(context);
-
-      if (detallesGuardados) {
-        _mostrarExito('Factura creada exitosamente');
-        Navigator.pop(context, facturaCreada);
-      } else {
-        _mostrarError('Error al guardar detalles de la factura');
-      }
-    } catch (e) {
-      Navigator.pop(context);
-      _mostrarError('Error al guardar factura: $e');
+    if (facturaCreada == null) {
+      throw Exception('Error al crear la factura');
     }
+
+    // Asignar factura a los detalles
+    for (var detalle in _detalles) {
+      detalle.fk_factura = facturaCreada;
+    }
+
+    final detallesGuardados = await _detalleCrud.crearDetallesFactura(_detalles);
+
+    // Cerrar diálogo de carga
+    Navigator.pop(context);
+
+    if (detallesGuardados) {
+      // Mostrar diálogo de éxito
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  color: Colors.green.shade600,
+                  size: 64,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '¡Factura Creada!',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'La factura ha sido guardada exitosamente',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'N° Factura:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Cliente:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Expanded(
+                          child: Text(
+                            _clienteSeleccionado!.razonSocial,
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: 14),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${_totalGeneral.toStringAsFixed(0)} Gs.',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0085FF),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Cerrar diálogo
+                Navigator.pop(context, facturaCreada); // Volver a la pantalla anterior
+              },
+              child: const Text('Cerrar'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context); // Cerrar diálogo
+                Navigator.pop(context, facturaCreada); // Volver a la pantalla anterior
+                // Aquí podrías agregar lógica para imprimir la factura
+              },
+              icon: const Icon(Icons.print),
+              label: const Text('Imprimir'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _mostrarError('Error al guardar detalles de la factura');
+    }
+  } catch (e) {
+    // Cerrar diálogo de carga
+    Navigator.pop(context);
+    
+    // Mostrar diálogo de error
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                color: Colors.red.shade600,
+                size: 64,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Error',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Error al guardar factura: $e',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
   }
+}
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
