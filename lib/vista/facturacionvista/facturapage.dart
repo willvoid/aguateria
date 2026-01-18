@@ -7,16 +7,17 @@ import 'package:myapp/dao/facturaciondao/facturacrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/modo_pagocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/monedascrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/tipo_facturacrudimpl.dart';
+import 'package:myapp/dao/inmueblescrudimpl.dart';
 import 'package:myapp/modelo/facturacionmodelo/factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/detalle_factura.dart';
 import 'package:myapp/modelo/cliente.dart';
+import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
 import 'package:myapp/modelo/facturacionmodelo/apertura_cierre_caja.dart';
 import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:myapp/modelo/facturacionmodelo/moneda.dart';
 import 'package:myapp/modelo/facturacionmodelo/tipo_factura.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
-import 'package:myapp/vista/facturacionvista/apertura_cierre_cajapage.dart';
 import 'package:myapp/vista/facturacionvista/detallefacturawidget.dart';
 import 'package:provider/provider.dart';
 
@@ -31,6 +32,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   final FacturaCrudImpl _facturaCrud = FacturaCrudImpl();
   final DetalleFacturaCrudImpl _detalleCrud = DetalleFacturaCrudImpl();
   final ClienteCrudImpl _clienteCrud = ClienteCrudImpl();
+  final InmuebleCrudImpl _inmuebleCrud = InmuebleCrudImpl();
   final EstablecimientoCrudImpl _establecimientoCrud = EstablecimientoCrudImpl();
   final AperturaCierreCajaCrudImpl _aperturaCrud = AperturaCierreCajaCrudImpl();
   final ModoPagoCrudImpl _modoPagoCrud = ModoPagoCrudImpl();
@@ -41,6 +43,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
   // Datos de catálogos
   List<Cliente> _clientes = [];
+  List<Inmuebles> _inmuebles = [];
   List<Establecimiento> _establecimientos = [];
   List<ModoPago> _modosPago = [];
   List<Moneda> _monedas = [];
@@ -49,11 +52,12 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
   // Selecciones
   Cliente? _clienteSeleccionado;
+  Inmuebles? _inmuebleSeleccionado;
   Establecimiento? _establecimientoSeleccionado;
   ModoPago? _modoPagoSeleccionado;
   Moneda? _monedaSeleccionada;
   TipoFactura? _tipoFacturaSeleccionado;
-  int _condicionVenta = 1; // 1 = Contado, 2 = Crédito
+  int _condicionVenta = 1;
 
   // Detalles de la factura
   List<DetalleFactura> _detalles = [];
@@ -99,7 +103,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         return;
       }
 
-      // Verificar caja abierta
       final cajaAbierta = await _aperturaCrud.verificarCajaAbiertaUsuario(usuario.id_usuario!);
       
       if (!cajaAbierta) {
@@ -111,9 +114,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         return;
       }
 
-      // Cargar catálogos en paralelo
       final resultados = await Future.wait([
         _clienteCrud.leerClientes(),
+        _inmuebleCrud.leerInmuebles(),
         _establecimientoCrud.leerEstablecimientos(),
         _modoPagoCrud.leerModosPago(),
         _monedaCrud.leerMonedas(),
@@ -122,13 +125,13 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       ]);
 
       final clientes = resultados[0] as List<Cliente>;
-      final establecimientos = resultados[1] as List<Establecimiento>;
-      final modosPago = resultados[2] as List<ModoPago>;
-      final monedas = resultados[3] as List<Moneda>;
-      final tiposFactura = resultados[4] as List<TipoFactura>;
-      final aperturas = resultados[5] as List<AperturaCierreCaja>;
+      final inmuebles = resultados[1] as List<Inmuebles>;
+      final establecimientos = resultados[2] as List<Establecimiento>;
+      final modosPago = resultados[3] as List<ModoPago>;
+      final monedas = resultados[4] as List<Moneda>;
+      final tiposFactura = resultados[5] as List<TipoFactura>;
+      final aperturas = resultados[6] as List<AperturaCierreCaja>;
 
-      // Obtener caja abierta del usuario
       final cajaActiva = aperturas.firstWhere(
         (a) => a.cierre == null,
         orElse: () => throw Exception('No hay caja abierta'),
@@ -136,6 +139,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
       setState(() {
         _clientes = clientes;
+        _inmuebles = inmuebles;
         _establecimientos = establecimientos;
         _modosPago = modosPago;
         _monedas = monedas;
@@ -143,7 +147,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         _cajaAbierta = cajaActiva;
         _isLoading = false;
 
-        // Seleccionar valores por defecto
         if (_monedas.isNotEmpty) {
           _monedaSeleccionada = _monedas.first;
         }
@@ -163,6 +166,21 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     }
   }
 
+  void _cargarInmueblesPorCliente(Cliente cliente) async {
+    try {
+      final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(cliente.idCliente!);
+      setState(() {
+        _inmuebles = inmuebles;
+        _inmuebleSeleccionado = null;
+        if (_inmuebles.isNotEmpty) {
+          _inmuebleSeleccionado = _inmuebles.first;
+        }
+      });
+    } catch (e) {
+      _mostrarError('Error al cargar inmuebles: $e');
+    }
+  }
+
   void _agregarDetalle(DetalleFactura detalle) {
     setState(() {
       _detalles.add(detalle);
@@ -170,34 +188,46 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     });
   }
 
-  void _calcularTotales() {
-    double totalGravado10 = 0;
-    double totalGravado5 = 0;
-    double totalExenta = 0;
-    double totalIVA = 0;
+ void _calcularTotales() {
+  double totalGravado10 = 0;
+  double totalGravado5 = 0;
+  double totalExenta = 0;
+  double totalIVA = 0;
 
-    for (var detalle in _detalles) {
-      final montoBase = detalle.monto * detalle.cantidad;
+  for (var detalle in _detalles) {
+    // detalle.monto es el precio unitario CON IVA incluido
+    // detalle.subtotal es el total con IVA incluido (monto × cantidad)
+    final montoTotalConIva = detalle.monto * detalle.cantidad;
+    final tasaIva = detalle.iva_aplicado;
+    
+    if (tasaIva == 10) {
+      // Fórmula Paraguay: IVA = montoTotal × (tasa/100) / (1 + tasa/100)
+      final iva = montoTotalConIva * (tasaIva / 100) / (1 + tasaIva / 100);
+      final montoBase = montoTotalConIva - iva;
       
-      if (detalle.iva_aplicado == 10) {
-        totalGravado10 += montoBase;
-        totalIVA += montoBase * 0.1;
-      } else if (detalle.iva_aplicado == 5) {
-        totalGravado5 += montoBase;
-        totalIVA += montoBase * 0.05;
-      } else {
-        totalExenta += montoBase;
-      }
+      totalGravado10 += montoBase;
+      totalIVA += iva;
+    } else if (tasaIva == 5) {
+      // Fórmula Paraguay: IVA = montoTotal × (tasa/100) / (1 + tasa/100)
+      final iva = montoTotalConIva * (tasaIva / 100) / (1 + tasaIva / 100);
+      final montoBase = montoTotalConIva - iva;
+      
+      totalGravado5 += montoBase;
+      totalIVA += iva;
+    } else {
+      // Exenta (0% IVA)
+      totalExenta += montoTotalConIva;
     }
-
-    setState(() {
-      _totalGravado10 = totalGravado10;
-      _totalGravado5 = totalGravado5;
-      _totalExenta = totalExenta;
-      _totalIVA = totalIVA;
-      _totalGeneral = totalGravado10 + totalGravado5 + totalExenta + totalIVA;
-    });
   }
+
+  setState(() {
+    _totalGravado10 = totalGravado10;
+    _totalGravado5 = totalGravado5;
+    _totalExenta = totalExenta;
+    _totalIVA = totalIVA;
+    _totalGeneral = totalGravado10 + totalGravado5 + totalExenta + totalIVA;
+  });
+}
 
   void _calcularVuelto() {
     final efectivo = double.tryParse(_efectivoController.text) ?? 0;
@@ -211,6 +241,11 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     
     if (_clienteSeleccionado == null) {
       _mostrarError('Debe seleccionar un cliente');
+      return;
+    }
+
+    if (_inmuebleSeleccionado == null) {
+      _mostrarError('Debe seleccionar un inmueble');
       return;
     }
 
@@ -230,7 +265,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       return;
     }
 
-    // Mostrar diálogo de carga
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -238,16 +272,15 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     );
 
     try {
-      // Obtener próximo número secuencial
       final nroSecuencial = await _facturaCrud.obtenerProximoSecuencial(
         _establecimientoSeleccionado!.id_establecimiento!,
         _tipoFacturaSeleccionado!.id_tipo_factura!,
       );
 
-      // Crear factura
       final factura = Factura(
         fecha_emision: DateTime.now(),
         fk_cliente: _clienteSeleccionado!,
+        fk_inmueble: _inmuebleSeleccionado!,
         codicion_venta: _condicionVenta,
         total_gravado_10: _totalGravado10,
         total_gravado_5: _totalGravado5,
@@ -267,21 +300,18 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         descuento_global: 0,
       );
 
-      // Guardar factura
       final facturaCreada = await _facturaCrud.crearFactura(factura);
 
       if (facturaCreada == null) {
         throw Exception('Error al crear la factura');
       }
 
-      // Asignar factura a los detalles y guardarlos
       for (var detalle in _detalles) {
         detalle.fk_factura = facturaCreada;
       }
 
       final detallesGuardados = await _detalleCrud.crearDetallesFactura(_detalles);
 
-      // Cerrar diálogo de carga
       Navigator.pop(context);
 
       if (detallesGuardados) {
@@ -291,7 +321,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         _mostrarError('Error al guardar detalles de la factura');
       }
     } catch (e) {
-      // Cerrar diálogo de carga
       Navigator.pop(context);
       _mostrarError('Error al guardar factura: $e');
     }
@@ -348,9 +377,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
-                        onPressed: () => AperturaCierreCajaPage(),
+                        onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.arrow_back),
-                        label: const Text('Abri Caja'),
+                        label: const Text('Volver'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0085FF),
                           foregroundColor: Colors.white,
@@ -371,7 +400,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Datos principales
                           Card(
                             child: Padding(
                               padding: const EdgeInsets.all(16),
@@ -403,9 +431,36 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                     }).toList(),
                                     onChanged: (value) {
                                       setState(() => _clienteSeleccionado = value);
+                                      if (value != null) {
+                                        _cargarInmueblesPorCliente(value);
+                                      }
                                     },
                                     validator: (value) =>
                                         value == null ? 'Seleccione un cliente' : null,
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Inmueble
+                                  DropdownButtonFormField<Inmuebles>(
+                                    value: _inmuebleSeleccionado,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Inmueble *',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.home),
+                                    ),
+                                    items: _inmuebles.map((inmueble) {
+                                      return DropdownMenuItem(
+                                        value: inmueble,
+                                        child: Text(
+                                          '${inmueble.cod_inmueble} - ${inmueble.direccion ?? "Sin dirección"}',
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(() => _inmuebleSeleccionado = value);
+                                    },
+                                    validator: (value) =>
+                                        value == null ? 'Seleccione un inmueble' : null,
                                   ),
                                   const SizedBox(height: 12),
 
@@ -433,7 +488,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
                                   Row(
                                     children: [
-                                      // Tipo Factura
                                       Expanded(
                                         child: DropdownButtonFormField<TipoFactura>(
                                           value: _tipoFacturaSeleccionado,
@@ -453,7 +507,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      // Condición de venta
                                       Expanded(
                                         child: DropdownButtonFormField<int>(
                                           value: _condicionVenta,
@@ -476,7 +529,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
                                   Row(
                                     children: [
-                                      // Modo Pago
                                       Expanded(
                                         child: DropdownButtonFormField<ModoPago>(
                                           value: _modoPagoSeleccionado,
@@ -496,7 +548,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      // Moneda
                                       Expanded(
                                         child: DropdownButtonFormField<Moneda>(
                                           value: _monedaSeleccionada,
@@ -519,7 +570,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                   ),
                                   const SizedBox(height: 12),
 
-                                  // Observación
                                   TextFormField(
                                     controller: _observacionController,
                                     maxLines: 2,
@@ -535,14 +585,12 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Widget de detalles
                           DetalleFacturaWidget(
                             onDetalleAgregado: _agregarDetalle,
                             detallesActuales: _detalles,
                           ),
                           const SizedBox(height: 24),
 
-                          // Resumen y pago
                           Card(
                             child: Padding(
                               padding: const EdgeInsets.all(16),
@@ -594,7 +642,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Botón guardar
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(

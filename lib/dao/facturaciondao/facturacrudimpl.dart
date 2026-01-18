@@ -1,3 +1,4 @@
+
 import 'package:myapp/dao/clientecrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/apertura_cierre_cajacrudimpl.dart';
@@ -5,6 +6,7 @@ import 'package:myapp/dao/facturaciondao/modo_pagocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/monedascrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/motivo_emisioncrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/tipo_facturacrudimpl.dart';
+import 'package:myapp/dao/inmueblescrudimpl.dart';
 import 'package:myapp/modelo/facturacionmodelo/factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/motivo_emision.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,6 +21,7 @@ class FacturaCrudImpl {
   final MonedaCrudImpl _monedaCrud = MonedaCrudImpl();
   final MotivoEmisionCrudImpl _motivoCrud = MotivoEmisionCrudImpl();
   final TipoFacturaCrudImpl _tipoFacturaCrud = TipoFacturaCrudImpl();
+  final InmuebleCrudImpl _inmuebleCrud = InmuebleCrudImpl();
 
   // ==================== HELPERS ====================
 
@@ -53,7 +56,8 @@ class FacturaCrudImpl {
           .insert({
             'fecha_emision': factura.fecha_emision.toIso8601String(),
             'fk_cliente': factura.fk_cliente.idCliente,
-            'codicion_venta': factura.codicion_venta,
+            'fk_inmueble': factura.fk_inmueble.id,
+            'condicion_venta': factura.codicion_venta,
             'total_gravado_10': factura.total_gravado_10,
             'total_gravado_5': factura.total_gravado_5,
             'total_exenta': factura.total_exenta,
@@ -179,6 +183,42 @@ class FacturaCrudImpl {
     }
   }
 
+  // ==================== LEER FACTURAS POR INMUEBLE ====================
+
+  Future<List<Factura>> leerFacturasPorInmueble(int idInmueble) async {
+    try {
+      final data = await supabase
+          .from('facturas')
+          .select()
+          .eq('fk_inmueble', idInmueble)
+          .order('fecha_emision', ascending: false);
+
+      if (data == null || data.isEmpty) {
+        return [];
+      }
+
+      final List<Map<String, dynamic>> registros = 
+          List<Map<String, dynamic>>.from(data);
+
+      final List<Factura> facturas = [];
+      
+      for (var mapa in registros) {
+        try {
+          final factura = await _convertirFactura(mapa);
+          facturas.add(factura);
+        } catch (e) {
+          print('Error al convertir factura: $e');
+          continue;
+        }
+      }
+
+      return facturas;
+    } catch (e) {
+      print('Error al leer facturas por inmueble: $e');
+      return [];
+    }
+  }
+
   // ==================== LEER FACTURAS POR ESTABLECIMIENTO ====================
 
   Future<List<Factura>> leerFacturasPorEstablecimiento(int idEstablecimiento) async {
@@ -291,42 +331,6 @@ class FacturaCrudImpl {
     }
   }
 
-  // ==================== LEER FACTURAS POR TIPO ====================
-
-  Future<List<Factura>> leerFacturasPorTipo(int idTipoFactura) async {
-    try {
-      final data = await supabase
-          .from('facturas')
-          .select()
-          .eq('fk_tipo_factura', idTipoFactura)
-          .order('fecha_emision', ascending: false);
-
-      if (data == null || data.isEmpty) {
-        return [];
-      }
-
-      final List<Map<String, dynamic>> registros = 
-          List<Map<String, dynamic>>.from(data);
-
-      final List<Factura> facturas = [];
-      
-      for (var mapa in registros) {
-        try {
-          final factura = await _convertirFactura(mapa);
-          facturas.add(factura);
-        } catch (e) {
-          print('Error al convertir factura: $e');
-          continue;
-        }
-      }
-
-      return facturas;
-    } catch (e) {
-      print('Error al leer facturas por tipo: $e');
-      return [];
-    }
-  }
-
   // ==================== BUSCAR FACTURAS ====================
 
   Future<List<Factura>> buscarFacturas(String busqueda) async {
@@ -372,7 +376,8 @@ class FacturaCrudImpl {
           .update({
             'fecha_emision': factura.fecha_emision.toIso8601String(),
             'fk_cliente': factura.fk_cliente.idCliente,
-            'codicion_venta': factura.codicion_venta,
+            'fk_inmueble': factura.fk_inmueble.id,
+            'condicion_venta': factura.codicion_venta,
             'total_gravado_10': factura.total_gravado_10,
             'total_gravado_5': factura.total_gravado_5,
             'total_exenta': factura.total_exenta,
@@ -406,10 +411,6 @@ class FacturaCrudImpl {
 
   Future<bool> anularFactura(int idFactura) async {
     try {
-      // Aquí podrías implementar lógica adicional como:
-      // - Crear una nota de crédito automáticamente
-      // - Cambiar un estado de la factura a "ANULADA"
-      // Por ahora, simplemente eliminamos el registro
       await supabase
           .from('facturas')
           .delete()
@@ -436,7 +437,7 @@ class FacturaCrudImpl {
           .limit(1);
 
       if (data.isEmpty) {
-        return 1; // Primera factura
+        return 1;
       }
 
       final ultimoNumero = _toInt(data.first['nro_secuencial']);
@@ -500,8 +501,8 @@ class FacturaCrudImpl {
   // ==================== MÉTODO AUXILIAR PARA CONVERTIR ====================
 
   Future<Factura> _convertirFactura(Map<String, dynamic> mapa) async {
-    // Extraer IDs
     final idCliente = _toInt(mapa['fk_cliente']);
+    final idInmueble = _toInt(mapa['fk_inmueble']);
     final idEstablecimiento = _toInt(mapa['fk_establecimientos']);
     final idTurno = _toInt(mapa['fk_turno']);
     final idModoPago = _toInt(mapa['fk_modo_pago']);
@@ -512,8 +513,8 @@ class FacturaCrudImpl {
         ? _toInt(mapa['fk_factura_asociada']) 
         : null;
 
-    // Cargar entidades relacionadas
     final cliente = await _clienteCrud.leerClientePorId(idCliente);
+    final inmueble = await _inmuebleCrud.leerInmueblePorId(idInmueble);
     final establecimiento = await _establecimientoCrud.leerEstablecimientoPorId(idEstablecimiento);
     final turno = await _aperturaCrud.leerAperturaPorId(idTurno);
     final modoPago = await _modoPagoCrud.leerModoPagoPorId(idModoPago);
@@ -530,8 +531,8 @@ class FacturaCrudImpl {
       facturaAsociada = await leerFacturaPorId(idFacturaAsociada);
     }
 
-    // Validaciones
     if (cliente == null) throw Exception('Cliente con ID $idCliente no encontrado');
+    if (inmueble == null) throw Exception('Inmueble con ID $idInmueble no encontrado');
     if (establecimiento == null) throw Exception('Establecimiento con ID $idEstablecimiento no encontrado');
     if (turno == null) throw Exception('Turno con ID $idTurno no encontrado');
     if (modoPago == null) throw Exception('Modo de pago con ID $idModoPago no encontrado');
@@ -542,7 +543,8 @@ class FacturaCrudImpl {
       id_factura: _toInt(mapa['id_factura']),
       fecha_emision: _toDate(mapa['fecha_emision']),
       fk_cliente: cliente,
-      codicion_venta: _toInt(mapa['codicion_venta']),
+      fk_inmueble: inmueble,
+      codicion_venta: _toInt(mapa['condicion_venta']),
       total_gravado_10: _toDouble(mapa['total_gravado_10']),
       total_gravado_5: _toDouble(mapa['total_gravado_5']),
       total_exenta: _toDouble(mapa['total_exenta']),

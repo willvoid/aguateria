@@ -5,11 +5,13 @@ import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:myapp/modelo/facturacionmodelo/moneda.dart';
 import 'package:myapp/modelo/facturacionmodelo/motivo_emision.dart';
 import 'package:myapp/modelo/facturacionmodelo/tipo_factura.dart';
+import 'package:myapp/modelo/inmuebles.dart';
 
 class Factura {
   int? id_factura;
   DateTime fecha_emision; //En la BD se guarda automaticamente al crearse
   Cliente fk_cliente;
+  Inmuebles fk_inmueble;
   int codicion_venta; //Contado, credito
   double total_gravado_10;
   double total_gravado_5; //Estos campos deben ser calculados en el backend
@@ -34,6 +36,7 @@ class Factura {
 
   Factura({
     this.id_factura,
+    required this.fk_inmueble,
     required this.fecha_emision,
     required this.fk_cliente,
     required this.codicion_venta,
@@ -62,6 +65,7 @@ class Factura {
       id_factura: map['id_factura'],
       fecha_emision: DateTime.parse(map['fecha_emision']),
       fk_cliente: Cliente.fromMap(map['fk_cliente']),
+      fk_inmueble: Inmuebles.fromMap(map['fk_inmueble']),
       codicion_venta: map['codicion_venta'],
       total_gravado_10: map['total_gravado_10'],
       total_gravado_5: map['total_gravado_5'],
@@ -93,6 +97,7 @@ class Factura {
       'id_factura': id_factura,
       'fecha_emision': fecha_emision.toIso8601String(),
       'fk_cliente': fk_cliente.toMap(),
+      'fk_inmueble': fk_inmueble.toMap(),
       'codicion_venta': codicion_venta,
       'total_gravado_10': total_gravado_10,
       'total_gravado_5': total_gravado_5,
