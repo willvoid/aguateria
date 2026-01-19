@@ -21,8 +21,11 @@ class Moneda {
       cod_moneda: map['cod_moneda'],
       num: map['num'],
       dec: map['dec'],
-      divisa: map['divisa'],
-      cotizacion_gs: map['cotizacion_gs'],
+      // Protección contra nulos para String
+      divisa: map['divisa'] ?? '', 
+      
+      //convierte a double obligatoriamente. Soluciona bug en android
+      cotizacion_gs: (map['cotizacion_gs'] as dynamic)?.toDouble() ?? 0.0, 
     );
   }
 
