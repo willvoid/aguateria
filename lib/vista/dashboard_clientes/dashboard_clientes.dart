@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
+import 'package:myapp/vista/dashboard_clientes/deudaspage.dart';
 
 class ClienteDashboardPage extends StatelessWidget {
   final Cliente cliente;
@@ -141,7 +142,15 @@ class ClienteDashboardPage extends StatelessWidget {
                     Icons.receipt_long,
                     Colors.orange,
                     () {
-                      _showComingSoon(context, 'Ver Deudas');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DeudasClientesPage(
+                            cliente: cliente,
+                            inmueble: inmueble,
+                          ),
+                        ),
+                      );
                     },
                   ),
                   const SizedBox(height: 12),
