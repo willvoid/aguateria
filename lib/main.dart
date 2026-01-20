@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
+import 'package:myapp/vista/dashboard_clientes/consulta_clientes.dart';
 import 'package:provider/provider.dart';
 import 'package:myapp/dao/configurations.dart';
 import 'package:myapp/vista/loginpage.dart';
@@ -60,21 +61,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkSession() async {
-    // Obtener el AuthProvider
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    // Verificar si hay una sesión guardada
-    final hasSesion = await authProvider.cargarSesion();
-    
-    // Pequeño delay para mostrar el splash (opcional)
+    // Pequeño delay para mostrar el splash
     await Future.delayed(const Duration(milliseconds: 1500));
     
-    // Navegar a la pantalla correspondiente
+    // Navegar directamente a la pantalla de consulta de clientes
     if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => hasSesion ? const DashboardWidget() : const LoginPage(),
+          builder: (_) => const ClienteConsultaPage(),
         ),
       );
     }
