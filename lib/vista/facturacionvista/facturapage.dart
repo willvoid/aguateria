@@ -18,7 +18,9 @@ import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:myapp/modelo/facturacionmodelo/moneda.dart';
 import 'package:myapp/modelo/facturacionmodelo/tipo_factura.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
+import 'package:myapp/service/factura_rpc_service.dart';
 import 'package:myapp/vista/facturacionvista/detallefacturawidget.dart';
+import 'package:myapp/widget/dialogo_exito_factura.dart';
 import 'package:provider/provider.dart';
 
 class CrearFacturaPage extends StatefulWidget {
@@ -29,6 +31,7 @@ class CrearFacturaPage extends StatefulWidget {
 }
 
 class _CrearFacturaPageState extends State<CrearFacturaPage> {
+  final FacturaRpcService _facturaRpcService = FacturaRpcService();
   final FacturaCrudImpl _facturaCrud = FacturaCrudImpl();
   final DetalleFacturaCrudImpl _detalleCrud = DetalleFacturaCrudImpl();
   final ClienteCrudImpl _clienteCrud = ClienteCrudImpl();
@@ -287,55 +290,83 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   );
 
   try {
+    // 1. Obtener el número secuencial
     final nroSecuencial = await _facturaCrud.obtenerProximoSecuencial(
       _establecimientoSeleccionado!.id_establecimiento!,
       _tipoFacturaSeleccionado!.id_tipo_factura!,
     );
 
-    final factura = Factura(
-      fecha_emision: DateTime.now(),
-      fk_cliente: _clienteSeleccionado!,
-      fk_inmueble: _inmuebleSeleccionado!,
-      codicion_venta: _condicionVenta,
-      total_gravado_10: _totalGravado10,
-      total_gravado_5: _totalGravado5,
-      total_exenta: _totalExenta,
-      total_iva: _totalIVA,
-      total_general: _totalGeneral,
+    // 2. Construir el payload
+    final payload = _facturaRpcService.construirPayload(
+      cliente: _clienteSeleccionado!,
+      inmueble: _inmuebleSeleccionado!,
+      establecimiento: _establecimientoSeleccionado!,
+      modoPago: _modoPagoSeleccionado!,
+      moneda: _monedaSeleccionada!,
+      tipoFactura: _tipoFacturaSeleccionado!,
+      cajaAbierta: _cajaAbierta!,
+      condicionVenta: _condicionVenta,
+      totalGravado10: _totalGravado10,
+      totalGravado5: _totalGravado5,
+      totalExenta: _totalExenta,
+      totalIva: _totalIVA,
+      totalGeneral: _totalGeneral,
       observacion: _observacionController.text,
-      fk_monedas: _monedaSeleccionada!,
-      fk_establecimientos: _establecimientoSeleccionado!,
-      fk_modo_pago: _modoPagoSeleccionado!,
-      fk_tipo_factura: _tipoFacturaSeleccionado!,
-      nro_secuencial: nroSecuencial,
-      fk_turno: _cajaAbierta!,
-      tipo_emision: 1,
+      nroSecuencial: nroSecuencial,
       efectivo: efectivo,
       vuelto: _vuelto,
-      descuento_global: 0,
+      descuentoGlobal: 0,
+      detalles: _detalles,
     );
 
-    final facturaCreada = await _facturaCrud.crearFactura(factura);
+    // 3. Log del payload (opcional, para debugging)
+    print('📦 Payload JSON a enviar:');
+    print(payload.toJson());
 
-    if (facturaCreada == null) {
-      throw Exception('Error al crear la factura');
-    }
+    // 4. Llamar a la función RPC
+    final facturaCreada = await _facturaRpcService.guardarFacturaRpc(payload);
 
-    // Asignar factura a los detalles
-    for (var detalle in _detalles) {
-      detalle.fk_factura = facturaCreada;
-    }
-
-    final detallesGuardados = await _detalleCrud.crearDetallesFactura(_detalles);
+    // 5. Extraer datos de la respuesta
+    final idFactura = _facturaRpcService.extraerIdFactura(facturaCreada);
+    final numeroFactura = _facturaRpcService.formatearNumeroFactura(facturaCreada);
 
     // Cerrar diálogo de carga
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
 
-    if (detallesGuardados) {
-      // Mostrar diálogo de éxito
-      await showDialog(
+    if (idFactura != null) {
+      // Éxito: mostrar diálogo de confirmación
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => FacturaSuccessDialog(
+            facturaCreada: facturaCreada,
+            clienteNombre: _clienteSeleccionado!.razonSocial,
+            onImprimir: () {
+              // TODO: Implementar lógica de impresión
+              print('📄 Imprimir factura #$idFactura');
+              // Aquí puedes navegar a una pantalla de impresión
+              // o generar un PDF con los datos de facturaCreada
+            },
+          ),
+        );
+        
+        // Volver a la pantalla anterior con los datos de la factura
+        Navigator.pop(context, facturaCreada);
+      }
+    } else {
+      throw Exception('No se pudo extraer el ID de la factura');
+    }
+  } catch (e) {
+    // Cerrar diálogo de carga si está abierto
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+    
+    // Mostrar diálogo de error
+    if (mounted) {
+      showDialog(
         context: context,
-        barrierDismissible: false,
         builder: (context) => AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -345,179 +376,62 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: Colors.red.shade50,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.check_circle,
-                  color: Colors.green.shade600,
+                  Icons.error_outline,
+                  color: Colors.red.shade600,
                   size: 64,
                 ),
               ),
               const SizedBox(height: 16),
               const Text(
-                '¡Factura Creada!',
+                'Error al Guardar',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green,
+                  color: Colors.red,
                 ),
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'La factura ha sido guardada exitosamente',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade700,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  e.toString().replaceAll('Exception: ', ''),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 16),
+                const Text(
+                  'Por favor, verifique los datos e intente nuevamente.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'N° Factura:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Cliente:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Expanded(
-                          child: Text(
-                            _clienteSeleccionado!.razonSocial,
-                            textAlign: TextAlign.right,
-                            style: const TextStyle(fontSize: 14),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          '${_totalGeneral.toStringAsFixed(0)} Gs.',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0085FF),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Cerrar diálogo
-                Navigator.pop(context, facturaCreada); // Volver a la pantalla anterior
-              },
-              child: const Text('Cerrar'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context); // Cerrar diálogo
-                Navigator.pop(context, facturaCreada); // Volver a la pantalla anterior
-                // Aquí podrías agregar lógica para imprimir la factura
-              },
-              icon: const Icon(Icons.print),
-              label: const Text('Imprimir'),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0085FF),
+                backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
+              child: const Text('Cerrar'),
             ),
           ],
         ),
       );
-    } else {
-      _mostrarError('Error al guardar detalles de la factura');
     }
-  } catch (e) {
-    // Cerrar diálogo de carga
-    Navigator.pop(context);
-    
-    // Mostrar diálogo de error
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.error_outline,
-                color: Colors.red.shade600,
-                size: 64,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Error',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Error al guardar factura: $e',
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
   }
 }
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
