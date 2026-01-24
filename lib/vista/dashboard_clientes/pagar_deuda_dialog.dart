@@ -5,6 +5,7 @@ import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/service/pago_deuda_service.dart';
 import 'package:myapp/widget/dialogo_exito_factura.dart';
+import 'package:myapp/widget/selector_ciclos_widget.dart';
 
 
 class PagarDeudaDialog extends StatefulWidget {
@@ -230,7 +231,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
                           // Selector de ciclos o monto fijo
                           if (esConsumo) ...[
-                            _buildSelectorCiclos(),
+                            _buildResumenCiclosSeleccionados(),
                           ] else ...[
                             _buildMontoFijo(),
                           ],
@@ -362,7 +363,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     );
   }
 
-  Widget _buildSelectorCiclos() {
+  Widget _buildResumenCiclosSeleccionados() {
     final montoPorCiclo = widget.deuda.fk_concepto.arancel;
     
     return Column(
@@ -372,89 +373,129 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           children: [
             const Icon(Icons.calendar_today, size: 20),
             const SizedBox(width: 8),
-            const Text(
-              'Seleccione los ciclos a pagar',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            const Expanded(
+              child: Text(
+                'Ciclos a Pagar',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: _abrirSelectorCiclos,
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text('Agregar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue.shade200),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Precio por ciclo: ${montoPorCiclo.toStringAsFixed(0)} Gs.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue.shade900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
         const SizedBox(height: 12),
         
-        if (_ciclosDisponibles.isEmpty)
+        if (_ciclosSeleccionados.isEmpty)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.shade200),
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
             ),
-            child: Row(
+            child: Column(
               children: [
-                Icon(Icons.check_circle, color: Colors.green.shade700),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text('No hay ciclos pendientes de pago'),
+                Icon(Icons.touch_app, color: Colors.blue.shade300, size: 48),
+                const SizedBox(height: 12),
+                Text(
+                  'No hay ciclos seleccionados',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Toca el botón "Agregar" para seleccionar ciclos',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
           )
         else
-          ..._ciclosDisponibles.map((ciclo) {
-            final isSelected = _ciclosSeleccionados.contains(ciclo);
-            
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: Material(
-                color: isSelected ? Colors.blue.shade50 : Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                child: InkWell(
-                  onTap: () => _toggleCiclo(ciclo),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: isSelected ? Colors.blue : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      child: Icon(
+                        Icons.check_circle,
+                        color: Colors.green.shade600,
+                        size: 20,
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_ciclosSeleccionados.length} ciclo(s) seleccionado(s)',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Precio por ciclo: ${montoPorCiclo.toStringAsFixed(0)} Gs.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _abrirSelectorCiclos,
+                      icon: const Icon(Icons.edit, size: 16),
+                      label: const Text('Editar'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF0085FF),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                ..._ciclosSeleccionados.map((ciclo) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
-                        Checkbox(
-                          value: isSelected,
-                          onChanged: (_) => _toggleCiclo(ciclo),
-                          activeColor: Colors.blue,
+                        Icon(
+                          Icons.water_drop,
+                          size: 16,
+                          color: Colors.blue.shade400,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,52 +503,53 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                               Text(
                                 ciclo.descripcion,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(height: 4),
                               Text(
-                                'Ciclo: ${ciclo.ciclo}',
+                                'Ciclo ${ciclo.ciclo} - Año ${ciclo.anio}',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   color: Colors.grey.shade600,
                                 ),
                               ),
-                              if (ciclo.vencimiento != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Vence: ${ciclo.vencimiento.toString().split(' ')[0]}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: ciclo.vencimiento!.isBefore(DateTime.now())
-                                        ? Colors.red.shade700
-                                        : Colors.grey.shade600,
-                                    fontWeight: ciclo.vencimiento!.isBefore(DateTime.now())
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ],
                             ],
                           ),
                         ),
                         Text(
                           '${montoPorCiclo.toStringAsFixed(0)} Gs.',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.blue : Colors.grey.shade800,
+                            color: Colors.grey.shade800,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
       ],
+    );
+  }
+
+  Future<void> _abrirSelectorCiclos() async {
+    await showDialog(
+      context: context,
+      builder: (context) => SelectorCiclosDialog(
+        ciclosDisponibles: _ciclosDisponibles,
+        ciclosSeleccionados: _ciclosSeleccionados,
+        montoPorCiclo: widget.deuda.fk_concepto.arancel,
+        onCiclosSeleccionados: (ciclosSeleccionados) {
+          setState(() {
+            _ciclosSeleccionados = ciclosSeleccionados;
+            _calcularTotales();
+          });
+        },
+      ),
     );
   }
 
