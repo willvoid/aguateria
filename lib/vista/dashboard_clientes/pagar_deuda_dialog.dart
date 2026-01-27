@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/modelo/cuenta_consumo.dart';
+import 'package:myapp/modelo/cuenta_cobrar.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/inmuebles.dart';
@@ -8,7 +8,7 @@ import 'package:myapp/widget/dialogo_exito_factura.dart';
 import 'package:myapp/widget/selector_ciclos_widget.dart';
 
 class PagarDeudaDialog extends StatefulWidget {
-  final CuentaConsumo deuda;
+  final CuentaCobrar deuda;
   final Cliente cliente;
   final Inmuebles inmueble;
   final int idUsuario;

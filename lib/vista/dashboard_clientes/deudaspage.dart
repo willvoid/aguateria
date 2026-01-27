@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
-import 'package:myapp/modelo/cuenta_consumo.dart';
-import 'package:myapp/dao/cuenta_consumocrudimpl.dart';
+import 'package:myapp/modelo/cuenta_cobrar.dart';
+import 'package:myapp/dao/cuenta_cobrarcrudimpl.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/vista/dashboard_clientes/pagar_deuda_dialog.dart';
 
@@ -23,7 +23,7 @@ class DeudasClientesPage extends StatefulWidget {
 class _DeudasClientesPageState extends State<DeudasClientesPage> {
   final DeudaCrudImpl _deudaCrud = DeudaCrudImpl();
   bool _isLoading = true;
-  List<CuentaConsumo> _deudas = [];
+  List<CuentaCobrar> _deudas = [];
   String _filtroEstado = 'TODAS';
   final NumberFormat _formatoMoneda = NumberFormat.currency(
     symbol: 'Gs. ',
@@ -58,7 +58,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     }
   }
 
-  List<CuentaConsumo> get _deudasFiltradas {
+  List<CuentaCobrar> get _deudasFiltradas {
     if (_filtroEstado == 'TODAS') return _deudas;
     if (_filtroEstado == 'PENDIENTES') {
       return _deudas.where((d) => d.estado == 'PENDIENTE').toList();
@@ -83,13 +83,13 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     return _deudas.where((d) => d.estado == 'PAGADO').length;
   }
 
-  bool _estaVencida(CuentaConsumo deuda) {
+  bool _estaVencida(CuentaCobrar deuda) {
     if (deuda.fk_ciclos == null) return false;
     return deuda.estado == 'PENDIENTE' &&
         deuda.fk_ciclos!.vencimiento.isBefore(DateTime.now());
   }
 
-  int _diasVencidos(CuentaConsumo deuda) {
+  int _diasVencidos(CuentaCobrar deuda) {
     if (!_estaVencida(deuda)) return 0;
     return DateTime.now().difference(deuda.fk_ciclos!.vencimiento).inDays;
   }
@@ -345,7 +345,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
   }
 
   Widget _buildDeudaCard(
-    CuentaConsumo deuda,
+    CuentaCobrar deuda,
     Cliente cliente,
     Inmuebles inmueble,
     int idUsuario,
@@ -615,7 +615,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
   }
 
   void _mostrarDetalleDeuda(
-    CuentaConsumo deuda,
+    CuentaCobrar deuda,
     Cliente cliente,
     Inmuebles inmueble,
     int idUsuario,
@@ -789,7 +789,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     );
   }
 
-  void _mostrarOpcionesPago(CuentaConsumo deuda) {
+  void _mostrarOpcionesPago(CuentaCobrar deuda) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

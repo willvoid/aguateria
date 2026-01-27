@@ -3,7 +3,7 @@ import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/consumo.dart';
-import 'package:myapp/modelo/cuenta_consumo.dart';
+import 'package:myapp/modelo/cuenta_cobrar.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/facturacionmodelo/iva.dart';
@@ -42,9 +42,9 @@ class DeudaCrudImpl {
 
   // ==================== CREAR DEUDA ====================
 
-  Future<bool> crearDeuda(CuentaConsumo deuda) async {
+  Future<bool> crearDeuda(CuentaCobrar deuda) async {
     try {
-      await supabase.from('cuentas_consumo').insert({
+      await supabase.from('cuentas_cobrar').insert({
         'fk_concepto': deuda.fk_concepto.id,
         'descripcion': deuda.descripcion,
         'monto': deuda.monto,
@@ -65,10 +65,10 @@ class DeudaCrudImpl {
 
   // ==================== LEER TODAS LAS DEUDAS ====================
 
-  Future<List<CuentaConsumo>> leerDeudas() async {
+  Future<List<CuentaCobrar>> leerDeudas() async {
     try {
       final data = await supabase
-          .from('cuentas_consumo')
+          .from('cuentas_cobrar')
           .select('''
         *,
         fk_concepto (
@@ -121,10 +121,10 @@ class DeudaCrudImpl {
 
   // ==================== LEER DEUDA POR ID ====================
 
-  Future<CuentaConsumo?> leerDeudaPorId(int idDeuda) async {
+  Future<CuentaCobrar?> leerDeudaPorId(int idDeuda) async {
     try {
       final data = await supabase
-          .from('cuentas_consumo')
+          .from('cuentas_cobrar')
           .select('''
             *,
             fk_concepto (
@@ -174,10 +174,10 @@ class DeudaCrudImpl {
 
   // ==================== ACTUALIZAR DEUDA ====================
 
-  Future<bool> actualizarDeuda(CuentaConsumo deuda) async {
+  Future<bool> actualizarDeuda(CuentaCobrar deuda) async {
     try {
       await supabase
-          .from('cuentas_consumo')
+          .from('cuentas_cobrar')
           .update({
             'fk_concepto': deuda.fk_concepto.id,
             'descripcion': deuda.descripcion,
@@ -202,7 +202,7 @@ class DeudaCrudImpl {
 
   Future<bool> eliminarDeuda(int idDeuda) async {
     try {
-      await supabase.from('cuentas_consumo').delete().eq('id_deuda', idDeuda);
+      await supabase.from('cuentas_cobrar').delete().eq('id_deuda', idDeuda);
       return true;
     } catch (e) {
       print('Error al eliminar deuda: $e');
@@ -212,10 +212,10 @@ class DeudaCrudImpl {
 
   // ==================== LEER DEUDAS POR INMUEBLE ====================
 
-  Future<List<CuentaConsumo>> leerDeudasPorInmueble(int idInmueble) async {
+  Future<List<CuentaCobrar>> leerDeudasPorInmueble(int idInmueble) async {
     try {
       final data = await supabase
-          .from('cuentas_consumo')
+          .from('cuentas_cobrar')
           .select('''
             *,
             fk_concepto (
@@ -269,12 +269,12 @@ class DeudaCrudImpl {
 
   // ==================== LEER DEUDAS PENDIENTES POR INMUEBLE ====================
 
-  Future<List<CuentaConsumo>> leerDeudasPendientesPorInmueble(
+  Future<List<CuentaCobrar>> leerDeudasPendientesPorInmueble(
     int idInmueble,
   ) async {
     try {
       final data = await supabase
-          .from('cuentas_consumo')
+          .from('cuentas_cobrar')
           .select('''
             *,
             fk_concepto (
@@ -329,10 +329,10 @@ class DeudaCrudImpl {
 
   // ==================== LEER DEUDAS POR CICLO ====================
 
-  Future<List<CuentaConsumo>> leerDeudasPorCiclo(int idCiclo) async {
+  Future<List<CuentaCobrar>> leerDeudasPorCiclo(int idCiclo) async {
     try {
       final data = await supabase
-          .from('cuentas_consumo')
+          .from('cuentas_cobrar')
           .select('''
             *,
             fk_concepto (
@@ -408,7 +408,7 @@ class DeudaCrudImpl {
       final nuevoEstado = nuevoSaldo <= 0 ? 'PAGADO' : 'PENDIENTE';
 
       await supabase
-          .from('cuentas_consumo')
+          .from('cuentas_cobrar')
           .update({
             'pagado': nuevoPagado,
             'saldo': nuevoSaldo,
@@ -425,7 +425,7 @@ class DeudaCrudImpl {
 
   // ==================== HELPER PARA CONSTRUIR DEUDA ====================
 
-  CuentaConsumo _construirDeuda(Map<String, dynamic> mapa) {
+  CuentaCobrar _construirDeuda(Map<String, dynamic> mapa) {
     // Construir Concepto
     final datosConcepto = mapa['fk_concepto'];
     final concepto = Concepto(
@@ -547,7 +547,7 @@ class DeudaCrudImpl {
       );
     }
 
-    return CuentaConsumo(
+    return CuentaCobrar(
       id_deuda: _toInt(mapa['id_deuda']),
       fk_concepto: concepto,
       descripcion: mapa['descripcion'] ?? '',

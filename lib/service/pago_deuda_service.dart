@@ -1,5 +1,5 @@
 import 'package:myapp/dao/configuracion_sistema_crudimpl.dart';
-import 'package:myapp/modelo/cuenta_consumo.dart';
+import 'package:myapp/modelo/cuenta_cobrar.dart';
 import 'package:myapp/modelo/facturacionmodelo/facturacion_payload.dart';
 import 'package:myapp/service/factura_rpc_service.dart';
 import 'package:myapp/dao/facturaciondao/apertura_cierre_cajacrudimpl.dart';
@@ -94,7 +94,7 @@ class PagoDeudaService {
 
   /// Procesa el pago de una deuda
   Future<Map<String, dynamic>> procesarPagoDeuda({
-    required CuentaConsumo deuda,
+    required CuentaCobrar deuda,
     required Cliente cliente,
     required Inmuebles inmueble,
     required List<Ciclo> ciclosSeleccionados, // Para consumo: ciclos a pagar
@@ -226,7 +226,7 @@ class PagoDeudaService {
 
   /// Valida que se pueda procesar el pago
   String? validarPago({
-    required CuentaConsumo deuda,
+    required CuentaCobrar deuda,
     required List<Ciclo> ciclosSeleccionados,
     required double efectivo,
   }) {

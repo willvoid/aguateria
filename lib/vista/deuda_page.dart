@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/consumocrudimpl.dart';
-import 'package:myapp/dao/cuenta_consumocrudimpl.dart';
+import 'package:myapp/dao/cuenta_cobrarcrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/ciclocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/conceptocrudimpl.dart';
 import 'package:myapp/modelo/consumo.dart';
-import 'package:myapp/modelo/cuenta_consumo.dart';
+import 'package:myapp/modelo/cuenta_cobrar.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/inmuebles.dart';
@@ -24,8 +24,8 @@ class _DeudasPageState extends State<DeudasPage> {
   final CicloCrudImpl _cicloCrud = CicloCrudImpl();
   final ConsumoCrudImpl _consumoCrud = ConsumoCrudImpl();
 
-  List<CuentaConsumo> deudas = [];
-  List<CuentaConsumo> deudasFiltradas = [];
+  List<CuentaCobrar> deudas = [];
+  List<CuentaCobrar> deudasFiltradas = [];
   List<Concepto> conceptos = [];
   List<Ciclo> ciclos = [];
   List<Consumo> consumos = [];
@@ -64,7 +64,7 @@ class _DeudasPageState extends State<DeudasPage> {
       ]);
 
       setState(() {
-        deudas = resultados[0] as List<CuentaConsumo>;
+        deudas = resultados[0] as List<CuentaCobrar>;
         conceptos = resultados[1] as List<Concepto>;
         ciclos = resultados[2] as List<Ciclo>;
         consumos = resultados[3] as List<Consumo>;
@@ -93,7 +93,7 @@ class _DeudasPageState extends State<DeudasPage> {
     });
   }
 
-  void _mostrarDialogoEdicion(CuentaConsumo? deuda) {
+  void _mostrarDialogoEdicion(CuentaCobrar? deuda) {
     if (conceptos.isEmpty) {
       _mostrarError('Cargando datos necesarios, por favor espere...');
       return;
@@ -116,7 +116,7 @@ class _DeudasPageState extends State<DeudasPage> {
     );
   }
 
-  Future<void> _guardarDeuda(CuentaConsumo deuda) async {
+  Future<void> _guardarDeuda(CuentaCobrar deuda) async {
     try {
       showDialog(
         context: context,
@@ -154,7 +154,7 @@ class _DeudasPageState extends State<DeudasPage> {
     }
   }
 
-  void _eliminarDeuda(CuentaConsumo deuda) {
+  void _eliminarDeuda(CuentaCobrar deuda) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -204,7 +204,7 @@ class _DeudasPageState extends State<DeudasPage> {
     );
   }
 
-  void _registrarPago(CuentaConsumo deuda) {
+  void _registrarPago(CuentaCobrar deuda) {
     final montoController = TextEditingController();
 
     showDialog(
@@ -583,12 +583,12 @@ class _DeudasPageState extends State<DeudasPage> {
 }
 
 class _DialogoEditarDeuda extends StatefulWidget {
-  final CuentaConsumo? deuda;
+  final CuentaCobrar? deuda;
   final Inmuebles inmueble;
   final List<Concepto> conceptos;
   final List<Ciclo> ciclos;
   final List<Consumo> consumos;
-  final Function(CuentaConsumo) onGuardar;
+  final Function(CuentaCobrar) onGuardar;
 
   const _DialogoEditarDeuda({
     this.deuda,
@@ -949,7 +949,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
       final saldo = widget.deuda?.saldo ?? monto;
       final pagado = widget.deuda?.pagado ?? 0.0;
 
-      final deuda = CuentaConsumo(
+      final deuda = CuentaCobrar(
         id_deuda: widget.deuda?.id_deuda,
         fk_concepto: _conceptoSeleccionado,
         descripcion: _descripcionController.text,

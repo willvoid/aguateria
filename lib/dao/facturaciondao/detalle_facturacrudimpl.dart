@@ -1,12 +1,12 @@
 import 'package:myapp/dao/consumocrudimpl.dart';
-import 'package:myapp/dao/cuenta_consumocrudimpl.dart';
+import 'package:myapp/dao/cuenta_cobrarcrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/ciclocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/conceptocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/facturacrudimpl.dart';
 import 'package:myapp/modelo/facturacionmodelo/detalle_factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/consumo.dart';
-import 'package:myapp/modelo/cuenta_consumo.dart';
+import 'package:myapp/modelo/cuenta_cobrar.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -579,7 +579,7 @@ class DetalleFacturaCrudImpl {
       consumo = await _consumoCrud.leerConsumoPorId(idConsumo);
     }
 
-    CuentaConsumo? deuda;
+    CuentaCobrar? deuda;
     if (idDeuda != null) {
       deuda = await _deudaCrud.leerDeudaPorId(idDeuda);
     }
