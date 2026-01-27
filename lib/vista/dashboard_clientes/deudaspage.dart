@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
-import 'package:myapp/modelo/deuda.dart';
-import 'package:myapp/dao/deudacrudimpl.dart';
+import 'package:myapp/modelo/cuenta_consumo.dart';
+import 'package:myapp/dao/cuenta_consumocrudimpl.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/vista/dashboard_clientes/pagar_deuda_dialog.dart';
 
@@ -23,7 +23,7 @@ class DeudasClientesPage extends StatefulWidget {
 class _DeudasClientesPageState extends State<DeudasClientesPage> {
   final DeudaCrudImpl _deudaCrud = DeudaCrudImpl();
   bool _isLoading = true;
-  List<Deuda> _deudas = [];
+  List<CuentaConsumo> _deudas = [];
   String _filtroEstado = 'TODAS';
   final NumberFormat _formatoMoneda = NumberFormat.currency(
     symbol: 'Gs. ',
@@ -40,8 +40,10 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     setState(() => _isLoading = true);
 
     try {
-      final deudas = await _deudaCrud.leerDeudasPorInmueble(widget.inmueble.id!);
-      
+      final deudas = await _deudaCrud.leerDeudasPorInmueble(
+        widget.inmueble.id!,
+      );
+
       setState(() {
         _deudas = deudas;
         _isLoading = false;
@@ -49,14 +51,14 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar deudas: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al cargar deudas: $e')));
       }
     }
   }
 
-  List<Deuda> get _deudasFiltradas {
+  List<CuentaConsumo> get _deudasFiltradas {
     if (_filtroEstado == 'TODAS') return _deudas;
     if (_filtroEstado == 'PENDIENTES') {
       return _deudas.where((d) => d.estado == 'PENDIENTE').toList();
@@ -81,13 +83,13 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     return _deudas.where((d) => d.estado == 'PAGADO').length;
   }
 
-  bool _estaVencida(Deuda deuda) {
+  bool _estaVencida(CuentaConsumo deuda) {
     if (deuda.fk_ciclos == null) return false;
-    return deuda.estado == 'PENDIENTE' && 
-           deuda.fk_ciclos!.vencimiento.isBefore(DateTime.now());
+    return deuda.estado == 'PENDIENTE' &&
+        deuda.fk_ciclos!.vencimiento.isBefore(DateTime.now());
   }
 
-  int _diasVencidos(Deuda deuda) {
+  int _diasVencidos(CuentaConsumo deuda) {
     if (!_estaVencida(deuda)) return 0;
     return DateTime.now().difference(deuda.fk_ciclos!.vencimiento).inDays;
   }
@@ -157,10 +159,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                       // Total adeudado
                       const Text(
                         'Total Adeudado',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -283,7 +282,12 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                               final cliente = widget.cliente;
                               final inmueble = widget.inmueble;
 
-                              return _buildDeudaCard(deuda, cliente, inmueble, 1);
+                              return _buildDeudaCard(
+                                deuda,
+                                cliente,
+                                inmueble,
+                                1,
+                              );
                             },
                           ),
                         ),
@@ -308,10 +312,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
         ),
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ],
     );
@@ -321,9 +322,11 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     final isSelected = _filtroEstado == filtro;
     return FilterChip(
       label: Text(
-        filtro == 'TODAS' ? 'Todas' :
-        filtro == 'PENDIENTES' ? 'Pendientes' :
-        'Pagadas',
+        filtro == 'TODAS'
+            ? 'Todas'
+            : filtro == 'PENDIENTES'
+            ? 'Pendientes'
+            : 'Pagadas',
       ),
       selected: isSelected,
       onSelected: (selected) {
@@ -341,274 +344,282 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     );
   }
 
-Widget _buildDeudaCard(Deuda deuda, Cliente cliente, Inmuebles inmueble, int idUsuario) {
-  Color estadoColor;
-  IconData estadoIcon;
-  String estadoTexto;
-  final estaVencida = _estaVencida(deuda);
+  Widget _buildDeudaCard(
+    CuentaConsumo deuda,
+    Cliente cliente,
+    Inmuebles inmueble,
+    int idUsuario,
+  ) {
+    Color estadoColor;
+    IconData estadoIcon;
+    String estadoTexto;
+    final estaVencida = _estaVencida(deuda);
 
-  if (deuda.estado == 'PAGADO') {
-    estadoColor = Colors.green;
-    estadoIcon = Icons.check_circle;
-    estadoTexto = 'PAGADA';
-  } else if (estaVencida) {
-    estadoColor = Colors.red;
-    estadoIcon = Icons.warning;
-    estadoTexto = 'VENCIDA';
-  } else {
-    estadoColor = Colors.orange;
-    estadoIcon = Icons.pending;
-    estadoTexto = 'PENDIENTE';
-  }
+    if (deuda.estado == 'PAGADO') {
+      estadoColor = Colors.green;
+      estadoIcon = Icons.check_circle;
+      estadoTexto = 'PAGADA';
+    } else if (estaVencida) {
+      estadoColor = Colors.red;
+      estadoIcon = Icons.warning;
+      estadoTexto = 'VENCIDA';
+    } else {
+      estadoColor = Colors.orange;
+      estadoIcon = Icons.pending;
+      estadoTexto = 'PENDIENTE';
+    }
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: estaVencida
-            ? Colors.red.withOpacity(0.3)
-            : Colors.grey[200]!,
-        width: estaVencida ? 2 : 1,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _mostrarDetalleDeuda(deuda, cliente, inmueble, idUsuario),
-        onLongPress: () => _mostrarOpcionesPago(deuda),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: estadoColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: estaVencida ? Colors.red.withOpacity(0.3) : Colors.grey[200]!,
+          width: estaVencida ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () =>
+              _mostrarDetalleDeuda(deuda, cliente, inmueble, idUsuario),
+          onLongPress: () => _mostrarOpcionesPago(deuda),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: estadoColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(estadoIcon, color: estadoColor, size: 20),
                     ),
-                    child: Icon(
-                      estadoIcon,
-                      color: estadoColor,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          deuda.fk_concepto.nombre,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                        if (deuda.descripcion.isNotEmpty) ...[
-                          const SizedBox(height: 4),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            deuda.descripcion,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
+                            deuda.fk_concepto.nombre,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF111827),
                             ),
                           ),
-                        ],
-                        if (deuda.fk_ciclos != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            'Ciclo: ${deuda.fk_ciclos!.descripcion}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        deuda.estado == 'PAGADO' ? 'Pagado' : 'Saldo',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatoMoneda.format(
-                          deuda.estado == 'PAGADO' ? deuda.monto : deuda.saldo
-                        ),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-                      if (deuda.estado == 'PENDIENTE' && deuda.pagado > 0) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Pagado: ${_formatoMoneda.format(deuda.pagado)}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.green[600],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: estadoColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          estadoTexto,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: estadoColor,
-                          ),
-                        ),
-                      ),
-                      if (deuda.fk_ciclos != null) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 12,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
+                          if (deuda.descripcion.isNotEmpty) ...[
+                            const SizedBox(height: 4),
                             Text(
-                              'Vence: ${DateFormat('dd/MM/yyyy').format(deuda.fk_ciclos!.vencimiento)}',
+                              deuda.descripcion,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
                               ),
                             ),
                           ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-              // BOTÓN DE PAGO RÁPIDO - NUEVO
-              if (deuda.estado == 'PENDIENTE') ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final resultado = await showDialog<bool>(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => PagarDeudaDialog(
-                          deuda: deuda,
-                          cliente: cliente,
-                          inmueble: inmueble,
-                          idUsuario: idUsuario,
-                        ),
-                      );
-                      
-                      if (resultado == true) {
-                        await _cargarDeudas();
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('✓ Pago procesado exitosamente'),
-                              backgroundColor: Colors.green,
-                              duration: Duration(seconds: 2),
+                          if (deuda.fk_ciclos != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ciclo: ${deuda.fk_ciclos!.descripcion}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          );
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          deuda.estado == 'PAGADO' ? 'Pagado' : 'Saldo',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatoMoneda.format(
+                            deuda.estado == 'PAGADO'
+                                ? deuda.monto
+                                : deuda.saldo,
+                          ),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        if (deuda.estado == 'PENDIENTE' &&
+                            deuda.pagado > 0) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Pagado: ${_formatoMoneda.format(deuda.pagado)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green[600],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: estadoColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            estadoTexto,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: estadoColor,
+                            ),
+                          ),
+                        ),
+                        if (deuda.fk_ciclos != null) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Vence: ${DateFormat('dd/MM/yyyy').format(deuda.fk_ciclos!.vencimiento)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                // BOTÓN DE PAGO RÁPIDO - NUEVO
+                if (deuda.estado == 'PENDIENTE') ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final resultado = await showDialog<bool>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => PagarDeudaDialog(
+                            deuda: deuda,
+                            cliente: cliente,
+                            inmueble: inmueble,
+                            idUsuario: idUsuario,
+                          ),
+                        );
+
+                        if (resultado == true) {
+                          await _cargarDeudas();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('✓ Pago procesado exitosamente'),
+                                backgroundColor: Colors.green,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
                         }
-                      }
-                    },
-                    icon: const Icon(Icons.payment, size: 18),
-                    label: const Text('Pagar Ahora'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                      },
+                      icon: const Icon(Icons.payment, size: 18),
+                      label: const Text('Pagar Ahora'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0085FF),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-              // ALERTA DE VENCIMIENTO
-              if (estaVencida) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 16,
-                        color: Colors.red[700],
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Vencida hace ${_diasVencidos(deuda)} días',
-                        style: TextStyle(
-                          fontSize: 12,
+                ],
+                // ALERTA DE VENCIMIENTO
+                if (estaVencida) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 16,
                           color: Colors.red[700],
-                          fontWeight: FontWeight.w500,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          'Vencida hace ${_diasVencidos(deuda)} días',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  void _mostrarDetalleDeuda(Deuda deuda, Cliente cliente, Inmuebles inmueble, int idUsuario) {
+  void _mostrarDetalleDeuda(
+    CuentaConsumo deuda,
+    Cliente cliente,
+    Inmuebles inmueble,
+    int idUsuario,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -647,7 +658,10 @@ Widget _buildDeudaCard(Deuda deuda, Cliente cliente, Inmuebles inmueble, int idU
               ),
               const SizedBox(height: 24),
               _buildDetalleRow('Concepto', deuda.fk_concepto.nombre),
-              _buildDetalleRow('Monto Total', _formatoMoneda.format(deuda.monto)),
+              _buildDetalleRow(
+                'Monto Total',
+                _formatoMoneda.format(deuda.monto),
+              ),
               _buildDetalleRow('Pagado', _formatoMoneda.format(deuda.pagado)),
               _buildDetalleRow('Saldo', _formatoMoneda.format(deuda.saldo)),
               if (deuda.fk_ciclos != null) ...[
@@ -669,10 +683,7 @@ Widget _buildDeudaCard(Deuda deuda, Cliente cliente, Inmuebles inmueble, int idU
                 const SizedBox(height: 16),
                 const Text(
                   'Información de Consumo',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 _buildDetalleRow(
@@ -690,53 +701,50 @@ Widget _buildDeudaCard(Deuda deuda, Cliente cliente, Inmuebles inmueble, int idU
               ],
               const SizedBox(height: 24),
               if (deuda.estado != 'PAGADO') ...[
-  ElevatedButton(
-    onPressed: () async {
-      Navigator.pop(context); // Cierra el modal de detalle
-      
-      // Muestra el dialog de pago
-      final resultado = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => PagarDeudaDialog(
-          deuda: deuda,
-          cliente: cliente,
-          inmueble: inmueble,
-          idUsuario: idUsuario,
-        ),
-      );
-      
-      // Si el pago fue exitoso, recarga las deudas
-      if (resultado == true) {
-        await _cargarDeudas();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ Pago procesado exitosamente'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    },
-    style: ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFF0085FF),
-      foregroundColor: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-    ),
-    child: const Text(
-      'Pagar Deuda',
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-  ),
-],
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context); // Cierra el modal de detalle
+
+                    // Muestra el dialog de pago
+                    final resultado = await showDialog<bool>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => PagarDeudaDialog(
+                        deuda: deuda,
+                        cliente: cliente,
+                        inmueble: inmueble,
+                        idUsuario: idUsuario,
+                      ),
+                    );
+
+                    // Si el pago fue exitoso, recarga las deudas
+                    if (resultado == true) {
+                      await _cargarDeudas();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✓ Pago procesado exitosamente'),
+                            backgroundColor: Colors.green,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0085FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Pagar Deuda',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -781,7 +789,7 @@ Widget _buildDeudaCard(Deuda deuda, Cliente cliente, Inmuebles inmueble, int idU
     );
   }
 
-  void _mostrarOpcionesPago(Deuda deuda) {
+  void _mostrarOpcionesPago(CuentaConsumo deuda) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

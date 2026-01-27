@@ -3,7 +3,7 @@ import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/consumo.dart';
-import 'package:myapp/modelo/deuda.dart';
+import 'package:myapp/modelo/cuenta_consumo.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/facturacionmodelo/iva.dart';
@@ -16,7 +16,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 final supabase = Supabase.instance.client;
 
 class DeudaCrudImpl {
-
   // ==================== HELPERS ====================
 
   int _toInt(dynamic value) {
@@ -43,9 +42,9 @@ class DeudaCrudImpl {
 
   // ==================== CREAR DEUDA ====================
 
-  Future<bool> crearDeuda(Deuda deuda) async {
+  Future<bool> crearDeuda(CuentaConsumo deuda) async {
     try {
-      await supabase.from('deudas').insert({
+      await supabase.from('cuentas_consumo').insert({
         'fk_concepto': deuda.fk_concepto.id,
         'descripcion': deuda.descripcion,
         'monto': deuda.monto,
@@ -66,9 +65,11 @@ class DeudaCrudImpl {
 
   // ==================== LEER TODAS LAS DEUDAS ====================
 
-  Future<List<Deuda>> leerDeudas() async {
+  Future<List<CuentaConsumo>> leerDeudas() async {
     try {
-      final data = await supabase.from('deudas').select('''
+      final data = await supabase
+          .from('cuentas_consumo')
+          .select('''
         *,
         fk_concepto (
           *,
@@ -104,14 +105,14 @@ class DeudaCrudImpl {
           ),
           fk_ciclo(*)
         )
-      ''').order('id_deuda', ascending: false);
+      ''')
+          .order('id_deuda', ascending: false);
 
       if (data == null || data.isEmpty) return [];
 
       return List<Map<String, dynamic>>.from(data).map((mapa) {
         return _construirDeuda(mapa);
       }).toList();
-
     } catch (e) {
       print('Error al leer deudas: $e');
       return [];
@@ -120,10 +121,10 @@ class DeudaCrudImpl {
 
   // ==================== LEER DEUDA POR ID ====================
 
-  Future<Deuda?> leerDeudaPorId(int idDeuda) async {
+  Future<CuentaConsumo?> leerDeudaPorId(int idDeuda) async {
     try {
       final data = await supabase
-          .from('deudas')
+          .from('cuentas_consumo')
           .select('''
             *,
             fk_concepto (
@@ -173,19 +174,22 @@ class DeudaCrudImpl {
 
   // ==================== ACTUALIZAR DEUDA ====================
 
-  Future<bool> actualizarDeuda(Deuda deuda) async {
+  Future<bool> actualizarDeuda(CuentaConsumo deuda) async {
     try {
-      await supabase.from('deudas').update({
-        'fk_concepto': deuda.fk_concepto.id,
-        'descripcion': deuda.descripcion,
-        'monto': deuda.monto,
-        'estado': deuda.estado,
-        'fk_ciclos': deuda.fk_ciclos?.id,
-        'fk_inmueble': deuda.fk_inmueble.id,
-        'saldo': deuda.saldo,
-        'pagado': deuda.pagado,
-        'fk_consumos': deuda.fk_consumos?.id_consumos,
-      }).eq('id_deuda', deuda.id_deuda!);
+      await supabase
+          .from('cuentas_consumo')
+          .update({
+            'fk_concepto': deuda.fk_concepto.id,
+            'descripcion': deuda.descripcion,
+            'monto': deuda.monto,
+            'estado': deuda.estado,
+            'fk_ciclos': deuda.fk_ciclos?.id,
+            'fk_inmueble': deuda.fk_inmueble.id,
+            'saldo': deuda.saldo,
+            'pagado': deuda.pagado,
+            'fk_consumos': deuda.fk_consumos?.id_consumos,
+          })
+          .eq('id_deuda', deuda.id_deuda!);
 
       return true;
     } catch (e) {
@@ -198,7 +202,7 @@ class DeudaCrudImpl {
 
   Future<bool> eliminarDeuda(int idDeuda) async {
     try {
-      await supabase.from('deudas').delete().eq('id_deuda', idDeuda);
+      await supabase.from('cuentas_consumo').delete().eq('id_deuda', idDeuda);
       return true;
     } catch (e) {
       print('Error al eliminar deuda: $e');
@@ -208,10 +212,10 @@ class DeudaCrudImpl {
 
   // ==================== LEER DEUDAS POR INMUEBLE ====================
 
-  Future<List<Deuda>> leerDeudasPorInmueble(int idInmueble) async {
+  Future<List<CuentaConsumo>> leerDeudasPorInmueble(int idInmueble) async {
     try {
       final data = await supabase
-          .from('deudas')
+          .from('cuentas_consumo')
           .select('''
             *,
             fk_concepto (
@@ -257,7 +261,6 @@ class DeudaCrudImpl {
       return List<Map<String, dynamic>>.from(data).map((mapa) {
         return _construirDeuda(mapa);
       }).toList();
-
     } catch (e) {
       print('Error al leer deudas por inmueble: $e');
       return [];
@@ -266,10 +269,12 @@ class DeudaCrudImpl {
 
   // ==================== LEER DEUDAS PENDIENTES POR INMUEBLE ====================
 
-  Future<List<Deuda>> leerDeudasPendientesPorInmueble(int idInmueble) async {
+  Future<List<CuentaConsumo>> leerDeudasPendientesPorInmueble(
+    int idInmueble,
+  ) async {
     try {
       final data = await supabase
-          .from('deudas')
+          .from('cuentas_consumo')
           .select('''
             *,
             fk_concepto (
@@ -316,7 +321,6 @@ class DeudaCrudImpl {
       return List<Map<String, dynamic>>.from(data).map((mapa) {
         return _construirDeuda(mapa);
       }).toList();
-
     } catch (e) {
       print('Error al leer deudas pendientes por inmueble: $e');
       return [];
@@ -325,10 +329,10 @@ class DeudaCrudImpl {
 
   // ==================== LEER DEUDAS POR CICLO ====================
 
-  Future<List<Deuda>> leerDeudasPorCiclo(int idCiclo) async {
+  Future<List<CuentaConsumo>> leerDeudasPorCiclo(int idCiclo) async {
     try {
       final data = await supabase
-          .from('deudas')
+          .from('cuentas_consumo')
           .select('''
             *,
             fk_concepto (
@@ -374,7 +378,6 @@ class DeudaCrudImpl {
       return List<Map<String, dynamic>>.from(data).map((mapa) {
         return _construirDeuda(mapa);
       }).toList();
-
     } catch (e) {
       print('Error al leer deudas por ciclo: $e');
       return [];
@@ -404,11 +407,14 @@ class DeudaCrudImpl {
       final nuevoSaldo = deuda.monto - nuevoPagado;
       final nuevoEstado = nuevoSaldo <= 0 ? 'PAGADO' : 'PENDIENTE';
 
-      await supabase.from('deudas').update({
-        'pagado': nuevoPagado,
-        'saldo': nuevoSaldo,
-        'estado': nuevoEstado,
-      }).eq('id_deuda', idDeuda);
+      await supabase
+          .from('cuentas_consumo')
+          .update({
+            'pagado': nuevoPagado,
+            'saldo': nuevoSaldo,
+            'estado': nuevoEstado,
+          })
+          .eq('id_deuda', idDeuda);
 
       return true;
     } catch (e) {
@@ -419,7 +425,7 @@ class DeudaCrudImpl {
 
   // ==================== HELPER PARA CONSTRUIR DEUDA ====================
 
-  Deuda _construirDeuda(Map<String, dynamic> mapa) {
+  CuentaConsumo _construirDeuda(Map<String, dynamic> mapa) {
     // Construir Concepto
     final datosConcepto = mapa['fk_concepto'];
     final concepto = Concepto(
@@ -476,7 +482,9 @@ class DeudaCrudImpl {
       estado: datosInmueble['estado'] ?? '',
       direccion: datosInmueble['direccion'] ?? '',
       cliente: cliente,
-      categoriaServicio: CategoriaServicio.fromMap(datosInmueble['fk_categoria_servicio']),
+      categoriaServicio: CategoriaServicio.fromMap(
+        datosInmueble['fk_categoria_servicio'],
+      ),
     );
 
     // Construir Consumo (opcional)
@@ -496,11 +504,16 @@ class DeudaCrudImpl {
         celular: datosClienteMedidor['celular'] ?? '',
         direccion: datosClienteMedidor['direccion'] ?? '',
         email: datosClienteMedidor['email'] ?? '',
-        es_proveedor_del_estado: datosClienteMedidor['es_proveedor_del_estado'] ?? false,
+        es_proveedor_del_estado:
+            datosClienteMedidor['es_proveedor_del_estado'] ?? false,
         nroCasa: datosClienteMedidor['nro_casa'] ?? '',
         estado: datosClienteMedidor['estado_cliente'] ?? 'ACTIVO',
-        tipoOperacion: TipoOperacion.fromMap(datosClienteMedidor['tipo_operacion']),
-        tipoDocumento: TipoDocumento.fromMap(datosClienteMedidor['tipo_documento']),
+        tipoOperacion: TipoOperacion.fromMap(
+          datosClienteMedidor['tipo_operacion'],
+        ),
+        tipoDocumento: TipoDocumento.fromMap(
+          datosClienteMedidor['tipo_documento'],
+        ),
         barrio: Barrio.fromMap(datosClienteMedidor['barrios']),
       );
 
@@ -510,7 +523,9 @@ class DeudaCrudImpl {
         estado: datosInmuebleMedidor['estado'] ?? '',
         direccion: datosInmuebleMedidor['direccion'] ?? '',
         cliente: clienteMedidor,
-        categoriaServicio: CategoriaServicio.fromMap(datosInmuebleMedidor['fk_categoria_servicio']),
+        categoriaServicio: CategoriaServicio.fromMap(
+          datosInmuebleMedidor['fk_categoria_servicio'],
+        ),
       );
 
       final medidor = Medidor(
@@ -532,7 +547,7 @@ class DeudaCrudImpl {
       );
     }
 
-    return Deuda(
+    return CuentaConsumo(
       id_deuda: _toInt(mapa['id_deuda']),
       fk_concepto: concepto,
       descripcion: mapa['descripcion'] ?? '',

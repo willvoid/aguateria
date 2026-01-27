@@ -1,5 +1,5 @@
 import 'package:myapp/dao/configuracion_sistema_crudimpl.dart';
-import 'package:myapp/modelo/deuda.dart';
+import 'package:myapp/modelo/cuenta_consumo.dart';
 import 'package:myapp/modelo/facturacionmodelo/facturacion_payload.dart';
 import 'package:myapp/service/factura_rpc_service.dart';
 import 'package:myapp/dao/facturaciondao/apertura_cierre_cajacrudimpl.dart';
@@ -13,7 +13,8 @@ final supabase = Supabase.instance.client;
 
 class PagoDeudaService {
   final FacturaRpcService _facturaRpcService = FacturaRpcService();
-  final ConfiguracionSistemaCrudImpl _configCrud = ConfiguracionSistemaCrudImpl();
+  final ConfiguracionSistemaCrudImpl _configCrud =
+      ConfiguracionSistemaCrudImpl();
   final AperturaCierreCajaCrudImpl _aperturaCrud = AperturaCierreCajaCrudImpl();
   final FacturaCrudImpl _facturaCrud = FacturaCrudImpl();
 
@@ -68,13 +69,13 @@ class PagoDeudaService {
       // Fórmula Paraguay: IVA = montoTotal × (tasa/100) / (1 + tasa/100)
       final iva = montoTotal * (10 / 100) / (1 + 10 / 100);
       final base = montoTotal - iva;
-      
+
       totalGravado10 = base;
       totalIva = iva;
     } else if (tasaIva == 5) {
       final iva = montoTotal * (5 / 100) / (1 + 5 / 100);
       final base = montoTotal - iva;
-      
+
       totalGravado5 = base;
       totalIva = iva;
     } else {
@@ -93,7 +94,7 @@ class PagoDeudaService {
 
   /// Procesa el pago de una deuda
   Future<Map<String, dynamic>> procesarPagoDeuda({
-    required Deuda deuda,
+    required CuentaConsumo deuda,
     required Cliente cliente,
     required Inmuebles inmueble,
     required List<Ciclo> ciclosSeleccionados, // Para consumo: ciclos a pagar
@@ -103,14 +104,16 @@ class PagoDeudaService {
     try {
       // 1. Cargar configuración del sistema
       final config = await _configCrud.leerConfiguracionActual();
-      
+
       if (config == null) {
         throw Exception('No se encontró configuración del sistema');
       }
 
       // 2. Verificar caja abierta
-      final cajaAbierta = await _aperturaCrud.verificarCajaAbiertaUsuario(idUsuario);
-      
+      final cajaAbierta = await _aperturaCrud.verificarCajaAbiertaUsuario(
+        idUsuario,
+      );
+
       if (!cajaAbierta) {
         throw Exception('Debe abrir una caja antes de procesar pagos');
       }
@@ -131,7 +134,7 @@ class PagoDeudaService {
         // CONSUMO: Un detalle por cada ciclo seleccionado
         // El monto viene del CONCEPTO (arancel), no del ciclo
         final montoPorCiclo = deuda.fk_concepto.arancel;
-        
+
         detalles = ciclosSeleccionados.map((ciclo) {
           montoTotal += montoPorCiclo;
           return DetallePayload(
@@ -144,7 +147,8 @@ class PagoDeudaService {
             cantidad: 1.0,
             fkCiclo: ciclo.id,
             fkDeudas: deuda.id_deuda,
-            fkConsumos: null, // Ajustar según tu lógica si tienes consumo asociado
+            fkConsumos:
+                null, // Ajustar según tu lógica si tienes consumo asociado
           );
         }).toList();
       } else {
@@ -192,7 +196,7 @@ class PagoDeudaService {
         totalExenta: totales['totalExenta']!,
         totalIva: totales['totalIva']!,
         totalGeneral: totales['totalGeneral']!,
-        observacion: esConsumo 
+        observacion: esConsumo
             ? 'Pago de consumo - ${ciclosSeleccionados.length} ciclo(s)'
             : 'Pago de ${deuda.fk_concepto.nombre}',
         fkMonedas: config.moneda_default.id_monedas!,
@@ -222,7 +226,7 @@ class PagoDeudaService {
 
   /// Valida que se pueda procesar el pago
   String? validarPago({
-    required Deuda deuda,
+    required CuentaConsumo deuda,
     required List<Ciclo> ciclosSeleccionados,
     required double efectivo,
   }) {
@@ -233,7 +237,7 @@ class PagoDeudaService {
     }
 
     double montoTotal = 0.0;
-    
+
     if (esConsumo) {
       // El monto viene del arancel del concepto, multiplicado por cantidad de ciclos
       final montoPorCiclo = deuda.fk_concepto.arancel;

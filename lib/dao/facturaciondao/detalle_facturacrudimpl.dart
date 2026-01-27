@@ -1,12 +1,12 @@
 import 'package:myapp/dao/consumocrudimpl.dart';
-import 'package:myapp/dao/deudacrudimpl.dart';
+import 'package:myapp/dao/cuenta_consumocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/ciclocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/conceptocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/facturacrudimpl.dart';
 import 'package:myapp/modelo/facturacionmodelo/detalle_factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/consumo.dart';
-import 'package:myapp/modelo/deuda.dart';
+import 'package:myapp/modelo/cuenta_consumo.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -72,26 +72,77 @@ class DetalleFacturaCrudImpl {
   // ==================== CREAR DETALLE FACTURA ====================
 
   Future<DetalleFactura?> crearDetalleFactura(DetalleFactura detalle) async {
-  try {
-    // Validar que tenga factura asignada
-    if (detalle.fk_factura == null || detalle.fk_factura!.id_factura == null) {
-      print('Error: El detalle debe tener una factura asignada antes de guardar');
+    try {
+      // Validar que tenga factura asignada
+      if (detalle.fk_factura == null ||
+          detalle.fk_factura!.id_factura == null) {
+        print(
+          'Error: El detalle debe tener una factura asignada antes de guardar',
+        );
+        return null;
+      }
+
+      // Buscar deuda coincidente si aplica
+      int? idDeuda;
+      if (detalle.fk_factura!.fk_inmueble.id != null) {
+        idDeuda = await _buscarDeudaCoincidente(
+          idInmueble: detalle.fk_factura!.fk_inmueble.id!,
+          idConcepto: detalle.fk_concepto.id!,
+          idCiclo: detalle.fk_ciclo?.id,
+        );
+      }
+
+      final Map<String, dynamic> data = await supabase
+          .from('detalle_factura')
+          .insert({
+            'fk_factura': detalle.fk_factura!.id_factura,
+            'fk_concepto': detalle.fk_concepto.id,
+            'monto': detalle.monto,
+            'descripcion': detalle.descripcion,
+            'iva_aplicado': detalle.iva_aplicado,
+            'subtotal': detalle.subtotal,
+            'estado': detalle.estado,
+            'cantidad': detalle.cantidad,
+            'fk_consumos': detalle.fk_consumos?.id_consumos,
+            'fk_deudas': idDeuda ?? detalle.fk_deudas?.id_deuda,
+            'fk_ciclo': detalle.fk_ciclo?.id,
+          })
+          .select()
+          .single();
+
+      print('Detalle de factura creado exitosamente');
+      return await _convertirDetalle(data);
+    } catch (e) {
+      print('Error al crear detalle de factura: $e');
       return null;
     }
+  }
 
-    // Buscar deuda coincidente si aplica
-    int? idDeuda;
-    if (detalle.fk_factura!.fk_inmueble.id != null) {
-      idDeuda = await _buscarDeudaCoincidente(
-        idInmueble: detalle.fk_factura!.fk_inmueble.id!,
-        idConcepto: detalle.fk_concepto.id!,
-        idCiclo: detalle.fk_ciclo?.id,
-      );
-    }
+  // ==================== CREAR MÚLTIPLES DETALLES ====================
 
-    final Map<String, dynamic> data = await supabase
-        .from('detalle_factura')
-        .insert({
+  Future<bool> crearDetallesFactura(List<DetalleFactura> detalles) async {
+    try {
+      final List<Map<String, dynamic>> datosDetalles = [];
+
+      for (var detalle in detalles) {
+        // Validar que tenga factura asignada
+        if (detalle.fk_factura == null ||
+            detalle.fk_factura!.id_factura == null) {
+          print('Error: Todos los detalles deben tener una factura asignada');
+          return false;
+        }
+
+        // Buscar deuda coincidente para cada detalle
+        int? idDeuda;
+        if (detalle.fk_factura!.fk_inmueble.id != null) {
+          idDeuda = await _buscarDeudaCoincidente(
+            idInmueble: detalle.fk_factura!.fk_inmueble.id!,
+            idConcepto: detalle.fk_concepto.id!,
+            idCiclo: detalle.fk_ciclo?.id,
+          );
+        }
+
+        datosDetalles.add({
           'fk_factura': detalle.fk_factura!.id_factura,
           'fk_concepto': detalle.fk_concepto.id,
           'monto': detalle.monto,
@@ -103,65 +154,18 @@ class DetalleFacturaCrudImpl {
           'fk_consumos': detalle.fk_consumos?.id_consumos,
           'fk_deudas': idDeuda ?? detalle.fk_deudas?.id_deuda,
           'fk_ciclo': detalle.fk_ciclo?.id,
-        })
-        .select()
-        .single();
-
-    print('Detalle de factura creado exitosamente');
-    return await _convertirDetalle(data);
-  } catch (e) {
-    print('Error al crear detalle de factura: $e');
-    return null;
-  }
-}
-
-  // ==================== CREAR MÚLTIPLES DETALLES ====================
-
-  Future<bool> crearDetallesFactura(List<DetalleFactura> detalles) async {
-  try {
-    final List<Map<String, dynamic>> datosDetalles = [];
-
-    for (var detalle in detalles) {
-      // Validar que tenga factura asignada
-      if (detalle.fk_factura == null || detalle.fk_factura!.id_factura == null) {
-        print('Error: Todos los detalles deben tener una factura asignada');
-        return false;
+        });
       }
 
-      // Buscar deuda coincidente para cada detalle
-      int? idDeuda;
-      if (detalle.fk_factura!.fk_inmueble.id != null) {
-        idDeuda = await _buscarDeudaCoincidente(
-          idInmueble: detalle.fk_factura!.fk_inmueble.id!,
-          idConcepto: detalle.fk_concepto.id!,
-          idCiclo: detalle.fk_ciclo?.id,
-        );
-      }
+      await supabase.from('detalle_factura').insert(datosDetalles);
 
-      datosDetalles.add({
-        'fk_factura': detalle.fk_factura!.id_factura,
-        'fk_concepto': detalle.fk_concepto.id,
-        'monto': detalle.monto,
-        'descripcion': detalle.descripcion,
-        'iva_aplicado': detalle.iva_aplicado,
-        'subtotal': detalle.subtotal,
-        'estado': detalle.estado,
-        'cantidad': detalle.cantidad,
-        'fk_consumos': detalle.fk_consumos?.id_consumos,
-        'fk_deudas': idDeuda ?? detalle.fk_deudas?.id_deuda,
-        'fk_ciclo': detalle.fk_ciclo?.id,
-      });
+      print('${detalles.length} detalles de factura creados exitosamente');
+      return true;
+    } catch (e) {
+      print('Error al crear detalles de factura: $e');
+      return false;
     }
-
-    await supabase.from('detalle_factura').insert(datosDetalles);
-
-    print('${detalles.length} detalles de factura creados exitosamente');
-    return true;
-  } catch (e) {
-    print('Error al crear detalles de factura: $e');
-    return false;
   }
-}
   // ==================== LEER TODOS LOS DETALLES ====================
 
   Future<List<DetalleFactura>> leerDetallesFactura() async {
@@ -181,11 +185,11 @@ class DetalleFacturaCrudImpl {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<DetalleFactura> detalles = [];
-      
+
       for (var mapa in registros) {
         try {
           final detalle = await _convertirDetalle(mapa);
@@ -235,11 +239,11 @@ class DetalleFacturaCrudImpl {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<DetalleFactura> detalles = [];
-      
+
       for (var mapa in registros) {
         try {
           final detalle = await _convertirDetalle(mapa);
@@ -271,11 +275,11 @@ class DetalleFacturaCrudImpl {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<DetalleFactura> detalles = [];
-      
+
       for (var mapa in registros) {
         try {
           final detalle = await _convertirDetalle(mapa);
@@ -306,11 +310,11 @@ class DetalleFacturaCrudImpl {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<DetalleFactura> detalles = [];
-      
+
       for (var mapa in registros) {
         try {
           final detalle = await _convertirDetalle(mapa);
@@ -341,11 +345,11 @@ class DetalleFacturaCrudImpl {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<DetalleFactura> detalles = [];
-      
+
       for (var mapa in registros) {
         try {
           final detalle = await _convertirDetalle(mapa);
@@ -376,11 +380,11 @@ class DetalleFacturaCrudImpl {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<DetalleFactura> detalles = [];
-      
+
       for (var mapa in registros) {
         try {
           final detalle = await _convertirDetalle(mapa);
@@ -401,37 +405,38 @@ class DetalleFacturaCrudImpl {
   // ==================== ACTUALIZAR DETALLE ====================
 
   Future<bool> actualizarDetalleFactura(DetalleFactura detalle) async {
-  try {
-    // Validar que tenga factura asignada
-    if (detalle.fk_factura == null || detalle.fk_factura!.id_factura == null) {
-      print('Error: El detalle debe tener una factura asignada');
+    try {
+      // Validar que tenga factura asignada
+      if (detalle.fk_factura == null ||
+          detalle.fk_factura!.id_factura == null) {
+        print('Error: El detalle debe tener una factura asignada');
+        return false;
+      }
+
+      await supabase
+          .from('detalle_factura')
+          .update({
+            'fk_factura': detalle.fk_factura!.id_factura,
+            'fk_concepto': detalle.fk_concepto.id,
+            'monto': detalle.monto,
+            'descripcion': detalle.descripcion,
+            'iva_aplicado': detalle.iva_aplicado,
+            'subtotal': detalle.subtotal,
+            'estado': detalle.estado,
+            'cantidad': detalle.cantidad,
+            'fk_consumos': detalle.fk_consumos?.id_consumos,
+            'fk_deudas': detalle.fk_deudas?.id_deuda,
+            'fk_ciclo': detalle.fk_ciclo?.id,
+          })
+          .eq('id_detalle', detalle.id_detalle!);
+
+      print('Detalle de factura actualizado exitosamente');
+      return true;
+    } catch (e) {
+      print('Error al actualizar detalle de factura: $e');
       return false;
     }
-
-    await supabase
-        .from('detalle_factura')
-        .update({
-          'fk_factura': detalle.fk_factura!.id_factura,
-          'fk_concepto': detalle.fk_concepto.id,
-          'monto': detalle.monto,
-          'descripcion': detalle.descripcion,
-          'iva_aplicado': detalle.iva_aplicado,
-          'subtotal': detalle.subtotal,
-          'estado': detalle.estado,
-          'cantidad': detalle.cantidad,
-          'fk_consumos': detalle.fk_consumos?.id_consumos,
-          'fk_deudas': detalle.fk_deudas?.id_deuda,
-          'fk_ciclo': detalle.fk_ciclo?.id,
-        })
-        .eq('id_detalle', detalle.id_detalle!);
-
-    print('Detalle de factura actualizado exitosamente');
-    return true;
-  } catch (e) {
-    print('Error al actualizar detalle de factura: $e');
-    return false;
   }
-}
 
   // ==================== CAMBIAR ESTADO DETALLE ====================
 
@@ -489,7 +494,7 @@ class DetalleFacturaCrudImpl {
   Future<double> calcularTotalPorFactura(int idFactura) async {
     try {
       final detalles = await leerDetallesPorFactura(idFactura);
-      
+
       double total = 0;
       for (var detalle in detalles) {
         total += detalle.subtotal;
@@ -558,8 +563,12 @@ class DetalleFacturaCrudImpl {
   Future<DetalleFactura> _convertirDetalle(Map<String, dynamic> mapa) async {
     final idFactura = _toInt(mapa['fk_factura']);
     final idConcepto = _toInt(mapa['fk_concepto']);
-    final idConsumo = mapa['fk_consumos'] != null ? _toInt(mapa['fk_consumos']) : null;
-    final idDeuda = mapa['fk_deudas'] != null ? _toInt(mapa['fk_deudas']) : null;
+    final idConsumo = mapa['fk_consumos'] != null
+        ? _toInt(mapa['fk_consumos'])
+        : null;
+    final idDeuda = mapa['fk_deudas'] != null
+        ? _toInt(mapa['fk_deudas'])
+        : null;
     final idCiclo = mapa['fk_ciclo'] != null ? _toInt(mapa['fk_ciclo']) : null;
 
     final factura = await _facturaCrud.leerFacturaPorId(idFactura);
@@ -570,7 +579,7 @@ class DetalleFacturaCrudImpl {
       consumo = await _consumoCrud.leerConsumoPorId(idConsumo);
     }
 
-    Deuda? deuda;
+    CuentaConsumo? deuda;
     if (idDeuda != null) {
       deuda = await _deudaCrud.leerDeudaPorId(idDeuda);
     }

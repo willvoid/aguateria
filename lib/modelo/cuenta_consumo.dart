@@ -4,7 +4,7 @@ import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 
-class Deuda {
+class CuentaConsumo {
   int? id_deuda;
   Concepto fk_concepto;
   String descripcion;
@@ -16,7 +16,7 @@ class Deuda {
   double pagado;
   Consumo? fk_consumos;
 
-  Deuda({
+  CuentaConsumo({
     required this.fk_concepto,
     required this.descripcion,
     required this.monto,
@@ -29,8 +29,8 @@ class Deuda {
     this.id_deuda,
   });
 
-  factory Deuda.fromMap(Map<String, dynamic> map) {
-    return Deuda(
+  factory CuentaConsumo.fromMap(Map<String, dynamic> map) {
+    return CuentaConsumo(
       fk_concepto: Concepto.fromMap(map['fk_concepto']),
       descripcion: map['descripcion'],
       monto: map['monto'],

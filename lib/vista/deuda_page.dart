@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/consumocrudimpl.dart';
-import 'package:myapp/dao/deudacrudimpl.dart';
+import 'package:myapp/dao/cuenta_consumocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/ciclocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/conceptocrudimpl.dart';
 import 'package:myapp/modelo/consumo.dart';
-import 'package:myapp/modelo/deuda.dart';
+import 'package:myapp/modelo/cuenta_consumo.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/inmuebles.dart';
@@ -24,8 +24,8 @@ class _DeudasPageState extends State<DeudasPage> {
   final CicloCrudImpl _cicloCrud = CicloCrudImpl();
   final ConsumoCrudImpl _consumoCrud = ConsumoCrudImpl();
 
-  List<Deuda> deudas = [];
-  List<Deuda> deudasFiltradas = [];
+  List<CuentaConsumo> deudas = [];
+  List<CuentaConsumo> deudasFiltradas = [];
   List<Concepto> conceptos = [];
   List<Ciclo> ciclos = [];
   List<Consumo> consumos = [];
@@ -64,7 +64,7 @@ class _DeudasPageState extends State<DeudasPage> {
       ]);
 
       setState(() {
-        deudas = resultados[0] as List<Deuda>;
+        deudas = resultados[0] as List<CuentaConsumo>;
         conceptos = resultados[1] as List<Concepto>;
         ciclos = resultados[2] as List<Ciclo>;
         consumos = resultados[3] as List<Consumo>;
@@ -93,7 +93,7 @@ class _DeudasPageState extends State<DeudasPage> {
     });
   }
 
-  void _mostrarDialogoEdicion(Deuda? deuda) {
+  void _mostrarDialogoEdicion(CuentaConsumo? deuda) {
     if (conceptos.isEmpty) {
       _mostrarError('Cargando datos necesarios, por favor espere...');
       return;
@@ -116,7 +116,7 @@ class _DeudasPageState extends State<DeudasPage> {
     );
   }
 
-  Future<void> _guardarDeuda(Deuda deuda) async {
+  Future<void> _guardarDeuda(CuentaConsumo deuda) async {
     try {
       showDialog(
         context: context,
@@ -154,7 +154,7 @@ class _DeudasPageState extends State<DeudasPage> {
     }
   }
 
-  void _eliminarDeuda(Deuda deuda) {
+  void _eliminarDeuda(CuentaConsumo deuda) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -204,7 +204,7 @@ class _DeudasPageState extends State<DeudasPage> {
     );
   }
 
-  void _registrarPago(Deuda deuda) {
+  void _registrarPago(CuentaConsumo deuda) {
     final montoController = TextEditingController();
 
     showDialog(
@@ -583,12 +583,12 @@ class _DeudasPageState extends State<DeudasPage> {
 }
 
 class _DialogoEditarDeuda extends StatefulWidget {
-  final Deuda? deuda;
+  final CuentaConsumo? deuda;
   final Inmuebles inmueble;
   final List<Concepto> conceptos;
   final List<Ciclo> ciclos;
   final List<Consumo> consumos;
-  final Function(Deuda) onGuardar;
+  final Function(CuentaConsumo) onGuardar;
 
   const _DialogoEditarDeuda({
     this.deuda,
@@ -892,56 +892,56 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
   }
 
   Widget _buildDropdownNullable<T>({
-  required String label,
-  required T? value,
-  required List<T> items,
-  required Function(T?) onChanged,
-  required String Function(T) itemLabel,
-}) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF374151),
+    required String label,
+    required T? value,
+    required List<T> items,
+    required Function(T?) onChanged,
+    required String Function(T) itemLabel,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF374151),
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      DropdownButtonFormField<T>(
-        value: value,
-        items: [
-          DropdownMenuItem<T>(value: null, child: const Text('Ninguno')),
-          ...items.map(
-            (item) => DropdownMenuItem<T>(
-              value: item,
-              child: Text(itemLabel(item)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<T>(
+          value: value,
+          items: [
+            DropdownMenuItem<T>(value: null, child: const Text('Ninguno')),
+            ...items.map(
+              (item) => DropdownMenuItem<T>(
+                value: item,
+                child: Text(itemLabel(item)),
+              ),
+            ),
+          ],
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
             ),
           ),
-        ],
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
   void _guardarDeuda() {
     if (_formKey.currentState!.validate()) {
@@ -949,7 +949,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
       final saldo = widget.deuda?.saldo ?? monto;
       final pagado = widget.deuda?.pagado ?? 0.0;
 
-      final deuda = Deuda(
+      final deuda = CuentaConsumo(
         id_deuda: widget.deuda?.id_deuda,
         fk_concepto: _conceptoSeleccionado,
         descripcion: _descripcionController.text,

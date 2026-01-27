@@ -1,5 +1,5 @@
 import 'package:myapp/modelo/consumo.dart';
-import 'package:myapp/modelo/deuda.dart';
+import 'package:myapp/modelo/cuenta_consumo.dart';
 import 'package:myapp/modelo/facturacionmodelo/factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
@@ -15,7 +15,7 @@ class DetalleFactura {
   String estado;
   double cantidad;
   Consumo? fk_consumos;
-  Deuda? fk_deudas; 
+  CuentaConsumo? fk_deudas;
   Ciclo? fk_ciclo; // Solo para consumos
 
   DetalleFactura({
@@ -50,7 +50,7 @@ class DetalleFactura {
           ? Consumo.fromMap(map['fk_consumos'])
           : null,
       fk_deudas: map['fk_deudas'] != null
-          ? Deuda.fromMap(map['fk_deudas'])
+          ? CuentaConsumo.fromMap(map['fk_deudas'])
           : null,
       fk_ciclo: map['fk_ciclo'] != null ? Ciclo.fromMap(map['fk_ciclo']) : null,
     );
@@ -85,7 +85,7 @@ class DetalleFactura {
     String? estado,
     double? cantidad,
     Consumo? fk_consumos,
-    Deuda? fk_deudas,
+    CuentaConsumo? fk_deudas,
     Ciclo? fk_ciclo,
   }) {
     return DetalleFactura(

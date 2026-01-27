@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/modelo/deuda.dart';
+import 'package:myapp/modelo/cuenta_consumo.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/inmuebles.dart';
@@ -7,9 +7,8 @@ import 'package:myapp/service/pago_deuda_service.dart';
 import 'package:myapp/widget/dialogo_exito_factura.dart';
 import 'package:myapp/widget/selector_ciclos_widget.dart';
 
-
 class PagarDeudaDialog extends StatefulWidget {
-  final Deuda deuda;
+  final CuentaConsumo deuda;
   final Cliente cliente;
   final Inmuebles inmueble;
   final int idUsuario;
@@ -33,7 +32,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   // Para deudas de consumo: lista de ciclos disponibles
   List<Ciclo> _ciclosDisponibles = [];
   List<Ciclo> _ciclosSeleccionados = [];
-  
+
   bool _isLoading = true;
   double _totalAPagar = 0.0;
   double _vuelto = 0.0;
@@ -49,16 +48,16 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   Future<void> _cargarDatos() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final esConsumo = widget.deuda.fk_concepto.id == 1;
-      
+
       if (esConsumo) {
         // Cargar ciclos disponibles para consumo
         final ciclos = await _pagoService.cargarCiclosDisponiblesConsumo(
           widget.inmueble.id!,
         );
-        
+
         setState(() {
           _ciclosDisponibles = ciclos;
           _isLoading = false;
@@ -90,7 +89,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   void _calcularTotales() {
     final esConsumo = widget.deuda.fk_concepto.id == 1;
-    
+
     if (esConsumo) {
       // El monto viene del arancel del concepto, multiplicado por cantidad de ciclos
       final montoPorCiclo = widget.deuda.fk_concepto.arancel;
@@ -106,7 +105,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     );
 
     setState(() {
-      _totalGravado = totales['totalGravado10']! + totales['totalGravado5']! + totales['totalExenta']!;
+      _totalGravado =
+          totales['totalGravado10']! +
+          totales['totalGravado5']! +
+          totales['totalExenta']!;
       _totalIva = totales['totalIva']!;
       _calcularVuelto();
     });
@@ -205,9 +207,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final esConsumo = widget.deuda.fk_concepto.id == 1;
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
         child: Column(
@@ -215,7 +215,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           children: [
             // Header
             _buildHeader(),
-            
+
             // Contenido scrolleable
             Expanded(
               child: _isLoading
@@ -309,10 +309,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 ),
                 Text(
                   widget.deuda.fk_concepto.nombre,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
                 ),
               ],
             ),
@@ -355,7 +352,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           const Divider(height: 16),
           _buildInfoRow('Código', widget.inmueble.cod_inmueble),
           const SizedBox(height: 8),
-          _buildInfoRow('Dirección', widget.inmueble.direccion ?? "Sin dirección"),
+          _buildInfoRow(
+            'Dirección',
+            widget.inmueble.direccion ?? "Sin dirección",
+          ),
           const SizedBox(height: 8),
           _buildInfoRow('Cliente', widget.cliente.razonSocial),
         ],
@@ -365,7 +365,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   Widget _buildResumenCiclosSeleccionados() {
     final montoPorCiclo = widget.deuda.fk_concepto.arancel;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -376,10 +376,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             const Expanded(
               child: Text(
                 'Ciclos a Pagar',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
             ElevatedButton.icon(
@@ -389,13 +386,16 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0085FF),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        
+
         if (_ciclosSeleccionados.isEmpty)
           Container(
             padding: const EdgeInsets.all(20),
@@ -419,10 +419,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 const SizedBox(height: 4),
                 Text(
                   'Toca el botón "Agregar" para seleccionar ciclos',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -571,10 +568,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
               children: [
                 const Text(
                   'Monto a Pagar',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -587,17 +581,17 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 ),
                 Text(
                   widget.deuda.descripcion,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (widget.deuda.pagado > 0) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.green.shade100,
                       borderRadius: BorderRadius.circular(4),
@@ -640,27 +634,25 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
               const SizedBox(width: 8),
               const Text(
                 'Resumen del Pago',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const Divider(height: 16),
           _buildTotalRow('Subtotal', _totalGravado),
           const SizedBox(height: 8),
-          _buildTotalRow('IVA (${widget.deuda.fk_concepto.fk_iva.valor}%)', _totalIva),
+          _buildTotalRow(
+            'IVA (${widget.deuda.fk_concepto.fk_iva.valor}%)',
+            _totalIva,
+          ),
           const Divider(height: 16),
           _buildTotalRow('TOTAL', _totalAPagar, isTotal: true),
-          if (widget.deuda.fk_concepto.id == 1 && _ciclosSeleccionados.isNotEmpty) ...[
+          if (widget.deuda.fk_concepto.id == 1 &&
+              _ciclosSeleccionados.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
               '${_ciclosSeleccionados.length} ciclo(s) seleccionado(s)',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade700,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
             ),
           ],
         ],
@@ -681,16 +673,11 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             labelText: 'Efectivo Recibido *',
             prefixIcon: const Icon(Icons.payments),
             suffixText: 'Gs.',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: Colors.white,
           ),
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         Container(
@@ -725,7 +712,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: esValido ? Colors.green.shade700 : Colors.red.shade700,
+                        color: esValido
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
                       ),
                     ),
                     if (!esValido)
@@ -784,10 +773,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
         ),
         Expanded(
           child: Text(
