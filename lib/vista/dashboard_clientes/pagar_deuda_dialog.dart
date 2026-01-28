@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/dao/facturaciondao/apertura_cierre_cajacrudimpl.dart';
 import 'package:myapp/modelo/cuenta_cobrar.dart';
 import 'package:myapp/modelo/cliente.dart';
+import 'package:myapp/modelo/facturacionmodelo/apertura_cierre_caja.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:myapp/modelo/facturacionmodelo/pago.dart';
@@ -9,6 +11,7 @@ import 'package:myapp/service/pago_deuda_service.dart';
 import 'package:myapp/widget/dialogo_exito_factura.dart';
 import 'package:myapp/widget/selector_ciclos_widget.dart';
 import 'package:myapp/widget/selector_metodo_pago.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PagarDeudaDialog extends StatefulWidget {
   final CuentaCobrar deuda;
@@ -125,329 +128,465 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Future<void> _procesarPago() async {
-  // Validar datos básicos
-  final error = _pagoService.validarPago(
-    deuda: widget.deuda,
-    ciclosSeleccionados: _ciclosSeleccionados,
-    efectivo: double.tryParse(_efectivoController.text) ?? 0,
-  );
-
-  if (error != null) {
-    _mostrarError(error);
-    return;
-  }
-
-  // ========== PASO 1: Seleccionar método de pago ==========
-  ModoPago? modoPagoSeleccionado;
-  Pago? pagoConComprobante;
-
-  await showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => SelectorMetodoPagoDialog(
-      totalAPagar: _totalAPagar,
-      idUsuario: widget.idUsuario,
-      payloadFactura: {
-        'deuda_id': widget.deuda.id_deuda,
-        'cliente_id': widget.cliente.idCliente,
-        'inmueble_id': widget.inmueble.id,
-        'concepto_id': widget.deuda.fk_concepto.id,
-        'concepto_nombre': widget.deuda.fk_concepto.nombre,
-        'ciclos_seleccionados': _ciclosSeleccionados.map((c) => {
-          'id': c.id,
-          'descripcion': c.descripcion,
-          'anio': c.anio,
-          'ciclo': c.ciclo,
-        }).toList(),
-        'monto_total': _totalAPagar,
-        'monto_gravado': _totalGravado,
-        'monto_iva': _totalIva,
-        'fecha_pago': DateTime.now().toIso8601String(),
-        'cliente_nombre': widget.cliente.razonSocial,
-        'inmueble_codigo': widget.inmueble.cod_inmueble,
-      },
-      onMetodoSeleccionado: (modoPago, pagoCreado) {
-        modoPagoSeleccionado = modoPago;
-        pagoConComprobante = pagoCreado;
-        Navigator.pop(context);
-      },
-    ),
-  );
-
-  // Si el usuario canceló la selección
-  if (modoPagoSeleccionado == null) {
-    return;
-  }
-
-  // ========== PASO 2: Procesar según el tipo de pago ==========
-  
-  // Caso A: Transferencia o Giro (con comprobante pendiente de aprobación)
-  if (pagoConComprobante != null) {
-    await _mostrarDialogoPagoPendiente(
-      modoPagoSeleccionado!,
-      pagoConComprobante!,
+    // Validar datos básicos
+    final error = _pagoService.validarPago(
+      deuda: widget.deuda,
+      ciclosSeleccionados: _ciclosSeleccionados,
+      efectivo: double.tryParse(_efectivoController.text) ?? 0,
     );
-    
-    // Cerrar el diálogo de pago de deuda
-    if (mounted) {
-      Navigator.pop(context, true); // true = pago registrado (aunque pendiente)
+
+    if (error != null) {
+      _mostrarError(error);
+      return;
     }
-    return;
+
+    // ========== PASO 0: OBTENER TURNO ACTIVO (CRÍTICO) ==========
+    print('🔍 Obteniendo turno activo para usuario ${widget.idUsuario}...');
+
+    final turnoActivo = await _obtenerTurnoActivo();
+
+    if (turnoActivo == null) {
+      _mostrarError(
+        'No hay un turno de caja activo.\n\n'
+        'Debe abrir caja antes de procesar pagos.',
+      );
+      return;
+    }
+
+    print('✅ Turno activo encontrado: ${turnoActivo.id_turno}');
+
+    // ========== PASO 1: Seleccionar método de pago ==========
+    ModoPago? modoPagoSeleccionado;
+    Pago? pagoConComprobante;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => SelectorMetodoPagoDialog(
+        totalAPagar: _totalAPagar,
+        idUsuario: widget.idUsuario,
+        payloadFactura: {}, // El payload se construirá después
+        onMetodoSeleccionado: (modoPago, pagoCreado) async {
+          modoPagoSeleccionado = modoPago;
+          pagoConComprobante = pagoCreado;
+
+          // Si es transferencia/giro, construir y actualizar el payload completo
+          if (pagoCreado != null) {
+            print(
+              '📦 Construyendo payload completo para pago #${pagoCreado.idPago}...',
+            );
+
+            final payloadCompleto = _construirPayloadCompleto(
+              turnoActivo: turnoActivo,
+              modoPago: modoPago,
+            );
+
+            // Actualizar el pago con el payload completo
+            await _actualizarPayloadPago(pagoCreado.idPago!, payloadCompleto);
+          }
+
+          Navigator.pop(context);
+        },
+      ),
+    );
+
+    // Si el usuario canceló la selección
+    if (modoPagoSeleccionado == null) {
+      return;
+    }
+
+    // ========== PASO 2: Procesar según el tipo de pago ==========
+
+    // Caso A: Transferencia o Giro (con comprobante pendiente de aprobación)
+    if (pagoConComprobante != null) {
+      await _mostrarDialogoPagoPendiente(
+        modoPagoSeleccionado!,
+        pagoConComprobante!,
+      );
+
+      // Cerrar el diálogo de pago de deuda
+      if (mounted) {
+        Navigator.pop(
+          context,
+          true,
+        ); // true = pago registrado (aunque pendiente)
+      }
+      return;
+    }
+
+    // Caso B: Otros métodos (Efectivo, Tarjeta, etc.) - Procesar factura inmediatamente
+    await _procesarFactura(modoPagoSeleccionado!);
   }
 
-  // Caso B: Otros métodos (Efectivo, Tarjeta, etc.) - Procesar factura inmediatamente
-  await _procesarFactura(modoPagoSeleccionado!);
-}
+  // ========================================
+  // MÉTODOS HELPER
+  // ========================================
 
-/// Procesa la factura para métodos de pago inmediatos (Efectivo, Tarjeta, etc.)
-Future<void> _procesarFactura(ModoPago modoPago) async {
-  // Mostrar loading
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const Center(
-      child: Card(
-        child: Padding(
-          padding: EdgeInsets.all(24),
+  /// Obtiene el turno de caja activo del usuario actual
+  /// Retorna null si no hay turno activo
+  Future<AperturaCierreCaja?> _obtenerTurnoActivo() async {
+    try {
+      // Buscar aperturas de caja del usuario que no tienen cierre (están abiertas)
+      final crudTurno = AperturaCierreCajaCrudImpl();
+      final aperturas =
+          await crudTurno.leerAperturasPorUsuario(
+            widget.idUsuario,
+          );
+
+      if (aperturas.isEmpty) {
+        print('⚠️ No hay turnos para el usuario ${widget.idUsuario}');
+        return null;
+      }
+
+      // Buscar el turno que no tiene fecha de cierre
+      final turnoAbierto = aperturas.firstWhere(
+        (apertura) => apertura.cierre == null,
+        orElse: () => throw Exception('No hay turno abierto'),
+      );
+
+      print('✅ Turno activo encontrado:');
+      print('   - ID Turno: ${turnoAbierto.id_turno}');
+      print('   - Apertura: ${turnoAbierto.apertura}');
+      print('   - Caja: ${turnoAbierto.fk_caja.descripcion_caja}');
+      print('   - Monto Inicial: ${turnoAbierto.monto_inicial}');
+
+      return turnoAbierto;
+    } catch (e) {
+      print('❌ Error al obtener turno activo: $e');
+      return null;
+    }
+  }
+
+  Map<String, dynamic> _construirPayloadCompleto({
+    required AperturaCierreCaja turnoActivo,
+    required ModoPago modoPago,
+  }) {
+    // Calcular totales según IVA
+    final ivaValor = widget.deuda.fk_concepto.fk_iva.valor;
+    double totalGravado10 = 0;
+    double totalGravado5 = 0;
+    double totalExenta = 0;
+
+    if (ivaValor == 10) {
+      // Base gravada 10% (sin IVA incluido)
+      totalGravado10 = _totalGravado;
+    } else if (ivaValor == 5) {
+      // Base gravada 5% (sin IVA incluido)
+      totalGravado5 = _totalGravado;
+    } else {
+      // Exenta de IVA
+      totalExenta = _totalAPagar;
+    }
+
+    // Construir detalles de la factura
+    final detalles = _construirDetallesFactura();
+
+    // Logging para debug
+    print('📋 Construyendo payload:');
+    print('   - Cliente: ${widget.cliente.idCliente}');
+    print('   - Inmueble: ${widget.inmueble.id}');
+    print('   - Turno: ${turnoActivo.id_turno}');
+    print('   - Modo Pago: ${modoPago.id_modo_pago} (${modoPago.descripcion})');
+    print('   - Total: $_totalAPagar Gs.');
+    print('   - Detalles: ${detalles.length}');
+
+    // ESTRUCTURA COMPLETA - Igual a FacturaPayload
+    return {
+      // ========== INFORMACIÓN BÁSICA ==========
+      'fechaEmision': DateTime.now().toUtc().toIso8601String(),
+      'fk_cliente': widget.cliente.idCliente,
+      'fk_inmueble': widget.inmueble.id,
+      'condicion_venta': 1, // 1 = Contado
+      // ========== TOTALES (redondeados a 2 decimales) ==========
+      'total_gravado_10': double.parse(totalGravado10.toStringAsFixed(2)),
+      'total_gravado_5': double.parse(totalGravado5.toStringAsFixed(2)),
+      'total_exenta': double.parse(totalExenta.toStringAsFixed(2)),
+      'total_iva': double.parse(_totalIva.toStringAsFixed(2)),
+      'total_general': double.parse(_totalAPagar.toStringAsFixed(2)),
+
+      // ========== INFORMACIÓN DE FACTURACIÓN ==========
+      'observacion': _construirObservacion(),
+      'fk_monedas': 1, // 1 = Guaraníes (ajustar si tienes múltiples monedas)
+      'fk_establecimientos':
+          1, // 1 = Establecimiento principal (ajustar según tu lógica)
+      'fk_modo_pago': modoPago.id_modo_pago,
+      'fk_tipo_factura': 1, // 1 = Factura normal (ajustar según tu lógica)
+      'nro_secuencial': 0, // Se asignará automáticamente por la función RPC
+      'fk_turno': turnoActivo.id_turno, // ⚠️ CRÍTICO
+      'tipo_emision': 1, // 1 = Normal
+      'fk_motivo': null,
+      'fk_factura_asociada': null,
+
+      // ========== MONTOS DE PAGO ==========
+      // Para transferencias, efectivo y vuelto siempre son 0
+      'efectivo': 0,
+      'vuelto': 0,
+      'descuento_global': 0,
+
+      // ========== DETALLES DE LA FACTURA ==========
+      'detalles': detalles,
+    };
+  }
+
+  /// Procesa la factura para métodos de pago inmediatos (Efectivo, Tarjeta, etc.)
+  Future<void> _procesarFactura(ModoPago modoPago) async {
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Procesando pago...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final facturaCreada = await _pagoService.procesarPagoDeuda(
+        deuda: widget.deuda,
+        cliente: widget.cliente,
+        inmueble: widget.inmueble,
+        ciclosSeleccionados: _ciclosSeleccionados,
+        efectivo: double.parse(_efectivoController.text),
+        idUsuario: widget.idUsuario,
+        idModoPago:
+            modoPago.id_modo_pago, // Pasar el ID del método seleccionado
+      );
+
+      // Cerrar loading
+      if (mounted) Navigator.pop(context);
+
+      // Mostrar éxito con la factura
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => FacturaSuccessDialog(
+            facturaCreada: facturaCreada,
+            clienteNombre: widget.cliente.razonSocial,
+            //metodosPago: modoPago.descripcion,
+            onImprimir: () {
+              print('📄 Imprimir factura de pago de deuda');
+              // Implementar lógica de impresión
+            },
+          ),
+        );
+
+        // Cerrar el diálogo de pago
+        Navigator.pop(context, true); // true = pago exitoso
+      }
+    } catch (e) {
+      // Cerrar loading
+      if (mounted) Navigator.pop(context);
+      _mostrarError('Error al procesar pago: $e');
+    }
+  }
+
+  /// Muestra diálogo informativo para pagos pendientes (Transferencia/Giro)
+  Future<void> _mostrarDialogoPagoPendiente(
+    ModoPago modoPago,
+    Pago pago,
+  ) async {
+    final color = modoPago.id_modo_pago == 5 ? Colors.teal : Colors.indigo;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.pending_actions,
+                color: Colors.orange.shade600,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Pago Pendiente de Aprobación',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Procesando pago...'),
+              Text(
+                'Su comprobante de ${modoPago.descripcion.toLowerCase()} ha sido registrado exitosamente.',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+
+              // Información del pago
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: color.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoRow(
+                      'ID de Pago',
+                      '#${pago.idPago}',
+                      Icons.tag,
+                      color,
+                    ),
+                    const Divider(height: 16),
+                    _buildInfoRow(
+                      'Método',
+                      modoPago.descripcion,
+                      Icons.payment,
+                      color,
+                    ),
+                    const Divider(height: 16),
+                    _buildInfoRow(
+                      'Monto',
+                      '${pago.monto.toStringAsFixed(0)} Gs.',
+                      Icons.attach_money,
+                      color,
+                    ),
+                    const Divider(height: 16),
+                    _buildInfoRow(
+                      'Estado',
+                      pago.estado,
+                      Icons.info_outline,
+                      Colors.orange,
+                    ),
+                    const Divider(height: 16),
+                    _buildInfoRow(
+                      'Fecha',
+                      _formatearFecha(pago.fechaPago!),
+                      Icons.calendar_today,
+                      color,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Aviso de aprobación
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.blue.shade700,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'El pago será procesado una vez que un administrador verifique y apruebe el comprobante. Recibirá una notificación cuando esto ocurra.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Información de contacto
+              Text(
+                'Para consultas, comuníquese con administración presentando el ID de pago #${pago.idPago}.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ],
           ),
         ),
-      ),
-    ),
-  );
-
-  try {
-    final facturaCreada = await _pagoService.procesarPagoDeuda(
-      deuda: widget.deuda,
-      cliente: widget.cliente,
-      inmueble: widget.inmueble,
-      ciclosSeleccionados: _ciclosSeleccionados,
-      efectivo: double.parse(_efectivoController.text),
-      idUsuario: widget.idUsuario,
-      idModoPago: modoPago.id_modo_pago, // Pasar el ID del método seleccionado
-    );
-
-    // Cerrar loading
-    if (mounted) Navigator.pop(context);
-
-    // Mostrar éxito con la factura
-    if (mounted) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => FacturaSuccessDialog(
-          facturaCreada: facturaCreada,
-          clienteNombre: widget.cliente.razonSocial,
-          //metodosPago: modoPago.descripcion,
-          onImprimir: () {
-            print('📄 Imprimir factura de pago de deuda');
-            // Implementar lógica de impresión
-          },
-        ),
-      );
-
-      // Cerrar el diálogo de pago
-      Navigator.pop(context, true); // true = pago exitoso
-    }
-  } catch (e) {
-    // Cerrar loading
-    if (mounted) Navigator.pop(context);
-    _mostrarError('Error al procesar pago: $e');
-  }
-}
-
-/// Muestra diálogo informativo para pagos pendientes (Transferencia/Giro)
-Future<void> _mostrarDialogoPagoPendiente(
-  ModoPago modoPago,
-  Pago pago,
-) async {
-  final color = modoPago.id_modo_pago == 5 ? Colors.teal : Colors.indigo;
-  
-  await showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.pending_actions,
-              color: Colors.orange.shade600,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Pago Pendiente de Aprobación',
-              style: TextStyle(fontSize: 18),
-            ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
           ),
         ],
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Su comprobante de ${modoPago.descripcion.toLowerCase()} ha sido registrado exitosamente.',
-              style: const TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            
-            // Información del pago
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: color.withOpacity(0.3)),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color.withOpacity(0.7)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildInfoRow(
-                    'ID de Pago',
-                    '#${pago.idPago}',
-                    Icons.tag,
-                    color,
-                  ),
-                  const Divider(height: 16),
-                  _buildInfoRow(
-                    'Método',
-                    modoPago.descripcion,
-                    Icons.payment,
-                    color,
-                  ),
-                  const Divider(height: 16),
-                  _buildInfoRow(
-                    'Monto',
-                    '${pago.monto.toStringAsFixed(0)} Gs.',
-                    Icons.attach_money,
-                    color,
-                  ),
-                  const Divider(height: 16),
-                  _buildInfoRow(
-                    'Estado',
-                    pago.estado,
-                    Icons.info_outline,
-                    Colors.orange,
-                  ),
-                  const Divider(height: 16),
-                  _buildInfoRow(
-                    'Fecha',
-                    _formatearFecha(pago.fechaPago!),
-                    Icons.calendar_today,
-                    color,
-                  ),
-                ],
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Aviso de aprobación
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'El pago será procesado una vez que un administrador verifique y apruebe el comprobante. Recibirá una notificación cuando esto ocurra.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            
-            // Información de contacto
-            Text(
-              'Para consultas, comuníquese con administración presentando el ID de pago #${pago.idPago}.',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Entendido'),
+            ],
+          ),
         ),
       ],
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildInfoRow(String label, String value, IconData icon, Color color) {
-  return Row(
-    children: [
-      Icon(icon, size: 16, color: color.withOpacity(0.7)),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
-}
+  String _formatearFecha(DateTime fecha) {
+    final meses = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic',
+    ];
 
-String _formatearFecha(DateTime fecha) {
-  final meses = [
-    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
-  ];
-  
-  return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year} - ${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
-}
-
-
+    return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year} - ${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
+  }
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -582,68 +721,79 @@ String _formatearFecha(DateTime fecha) {
   }
 
   Widget _buildResumenDeuda() {
-  return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade100,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.grey.shade300),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Información del Inmueble',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Información del Inmueble',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                ),
               ),
-            ),
-          ],
-        ),
-        const Divider(height: 16),
-        _buildInfoRowSimple('Código', widget.inmueble.cod_inmueble), // CAMBIADO
-        const SizedBox(height: 8),
-        _buildInfoRowSimple( // CAMBIADO
-          'Dirección',
-          widget.inmueble.direccion ?? "Sin dirección",
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRowSimple('Cliente', widget.cliente.razonSocial), // CAMBIADO
-      ],
-    ),
-  );
-}
-
-Widget _buildInfoRowSimple(String label, String value, {bool isBold = false}) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(
-        label,
-        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-      ),
-      Expanded(
-        child: Text(
-          value,
-          textAlign: TextAlign.right,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold ? Colors.black87 : Colors.grey.shade800,
+            ],
           ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+          const Divider(height: 16),
+          _buildInfoRowSimple(
+            'Código',
+            widget.inmueble.cod_inmueble,
+          ), // CAMBIADO
+          const SizedBox(height: 8),
+          _buildInfoRowSimple(
+            // CAMBIADO
+            'Dirección',
+            widget.inmueble.direccion ?? "Sin dirección",
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRowSimple(
+            'Cliente',
+            widget.cliente.razonSocial,
+          ), // CAMBIADO
+        ],
       ),
-    ],
-  );
-}
+    );
+  }
+
+  Widget _buildInfoRowSimple(
+    String label,
+    String value, {
+    bool isBold = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: isBold ? Colors.black87 : Colors.grey.shade800,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildResumenCiclosSeleccionados() {
     final montoPorCiclo = widget.deuda.fk_concepto.arancel;
@@ -1017,6 +1167,86 @@ Widget _buildInfoRowSimple(String label, String value, {bool isBold = false}) {
     );
   }
 
+  List<Map<String, dynamic>> _construirDetallesFactura() {
+    final esConsumo = widget.deuda.fk_concepto.id == 1;
+    final ivaValor = widget.deuda.fk_concepto.fk_iva.valor;
+
+    if (esConsumo && _ciclosSeleccionados.isNotEmpty) {
+      // Para consumo: un detalle por cada ciclo seleccionado
+      return _ciclosSeleccionados.map((ciclo) {
+        final montoPorCiclo = widget.deuda.fk_concepto.arancel;
+
+        return {
+          'fk_concepto': widget.deuda.fk_concepto.id,
+          'monto': double.parse(montoPorCiclo.toStringAsFixed(2)),
+          'descripcion':
+              '${widget.deuda.fk_concepto.nombre} - ${ciclo.descripcion}',
+          'iva_aplicado': ivaValor,
+          'subtotal': double.parse(montoPorCiclo.toStringAsFixed(2)),
+          'estado': 'PENDIENTE',
+          'cantidad': 1.0,
+          'fk_consumos': null,
+          'fk_deudas': widget.deuda.id_deuda,
+          'fk_ciclo': ciclo.id,
+        };
+      }).toList();
+    } else {
+      // Para otros conceptos (conexión, multas, etc.): un solo detalle
+      return [
+        {
+          'fk_concepto': widget.deuda.fk_concepto.id,
+          'monto': double.parse(_totalAPagar.toStringAsFixed(2)),
+          'descripcion':
+              widget.deuda.descripcion ?? widget.deuda.fk_concepto.nombre,
+          'iva_aplicado': ivaValor,
+          'subtotal': double.parse(_totalAPagar.toStringAsFixed(2)),
+          'estado': 'PENDIENTE',
+          'cantidad': 1.0,
+          'fk_consumos': null,
+          'fk_deudas': widget.deuda.id_deuda,
+          'fk_ciclo': null,
+        },
+      ];
+    }
+  }
+
+  String _construirObservacion() {
+    final esConsumo = widget.deuda.fk_concepto.id == 1;
+
+    if (esConsumo && _ciclosSeleccionados.isNotEmpty) {
+      // Para consumo con ciclos
+      final ciclosTexto = _ciclosSeleccionados
+          .map((c) => 'Ciclo ${c.ciclo}/${c.anio}')
+          .join(', ');
+      return 'Pago de ${widget.deuda.fk_concepto.nombre} - $ciclosTexto - Aprobación de Transferencia';
+    } else {
+      // Para otros conceptos
+      return 'Pago de ${widget.deuda.fk_concepto.nombre} - Aprobación de Transferencia';
+    }
+  }
+
+  Future<void> _actualizarPayloadPago(
+    int idPago,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      print('💾 Actualizando payload para pago #$idPago...');
+
+      final supabase = Supabase.instance.client;
+      await supabase
+          .from('pagos')
+          .update({'payload_creacion': payload})
+          .eq('id_pago', idPago);
+
+      print('✅ Payload actualizado correctamente');
+      print('   Campos incluidos: ${payload.keys.join(", ")}');
+    } catch (e) {
+      print('❌ Error al actualizar payload: $e');
+      // No lanzamos error para no interrumpir el flujo
+      // El pago ya está creado, solo falta el payload
+    }
+  }
+
   Widget _buildBotones() {
     return Row(
       children: [
@@ -1048,7 +1278,6 @@ Widget _buildInfoRowSimple(String label, String value, {bool isBold = false}) {
       ],
     );
   }
-
 
   Widget _buildTotalRow(String label, double valor, {bool isTotal = false}) {
     return Row(

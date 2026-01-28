@@ -371,6 +371,211 @@ class PagoCrudImpl {
     }
   }
 
+  // ==================== APROBAR PAGO CON FUNCIÓN RPC ====================
+  /// Aprueba un pago y genera automáticamente la factura usando la función RPC de Supabase
+  /// 
+  /// [idPago] - ID del pago a aprobar
+  /// [idUsuarioAdmin] - ID del usuario administrador que aprueba el pago
+  /// 
+  /// Retorna un Map con la respuesta de la función RPC que incluye:
+  /// - success: bool indicando si fue exitoso
+  /// - factura: objeto con los datos de la factura generada
+  /// - error: mensaje de error si falló
+  /// 
+  /// Ejemplo de uso:
+  /// ```dart
+  /// final resultado = await _pagoCrud.aprobarPagoConRPC(
+  ///   idPago: 123,
+  ///   idUsuarioAdmin: 1,
+  /// );
+  /// 
+  /// if (resultado['success'] == true) {
+  ///   final facturaId = resultado['factura']['id_factura'];
+  ///   print('Factura generada: $facturaId');
+  /// } else {
+  ///   print('Error: ${resultado['error']}');
+  /// }
+  /// ```
+  Future<Map<String, dynamic>> aprobarPagoConRPC({
+    required int idPago,
+    required int idUsuarioAdmin,
+  }) async {
+    try {
+      print('🔄 Aprobando pago #$idPago con usuario admin #$idUsuarioAdmin');
+      
+      // Primero verificar que el pago tenga un payload válido
+      final pago = await leerPagoPorId(idPago);
+      
+      if (pago == null) {
+        return {
+          'success': false,
+          'error': 'El pago no existe',
+        };
+      }
+      
+      if (pago.payloadCreacion == null) {
+        return {
+          'success': false,
+          'error': 'El pago no tiene información de facturación (payload_creacion es null)',
+        };
+      }
+      
+      // Verificar campos requeridos en el payload
+      final payload = pago.payloadCreacion!;
+      final camposRequeridos = [
+        'fk_cliente',
+        'fk_inmueble',
+        'condicion_venta',
+        'total_general',
+        'fk_monedas',
+        'fk_establecimientos',
+        'fk_modo_pago',
+        'fk_tipo_factura',
+        'fk_turno',
+        'tipo_emision',
+      ];
+      
+      final camposFaltantes = <String>[];
+      for (final campo in camposRequeridos) {
+        if (!payload.containsKey(campo) || payload[campo] == null) {
+          camposFaltantes.add(campo);
+        }
+      }
+      
+      if (camposFaltantes.isNotEmpty) {
+        return {
+          'success': false,
+          'error': 'El payload del pago está incompleto. Faltan los siguientes campos: ${camposFaltantes.join(", ")}',
+          'missing_fields': camposFaltantes,
+        };
+      }
+      
+      // Verificar que tenga detalles
+      if (!payload.containsKey('detalles') || payload['detalles'] == null) {
+        return {
+          'success': false,
+          'error': 'El pago no tiene detalles de facturación',
+        };
+      }
+      
+      print('✅ Payload validado correctamente');
+      print('📋 Payload: ${payload.toString()}');
+      
+      final response = await supabase.rpc(
+        'aprobar_pago_transferencia',
+        params: {
+          'p_id_pago': idPago,
+          'p_id_usuario_admin': idUsuarioAdmin,
+        },
+      );
+
+      print('✅ Respuesta RPC: $response');
+      
+      if (response is Map<String, dynamic>) {
+        return response;
+      } else {
+        return {
+          'success': true,
+          'data': response,
+        };
+      }
+    } catch (e) {
+      print('❌ Error al aprobar pago con RPC: $e');
+      
+      // Extraer mensaje de error más legible
+      String errorMsg = e.toString();
+      if (e.toString().contains('violates not-null constraint')) {
+        final match = RegExp(r'column "(\w+)"').firstMatch(e.toString());
+        if (match != null) {
+          final campo = match.group(1);
+          errorMsg = 'Falta el campo requerido: $campo en el payload del pago';
+        }
+      }
+      
+      return {
+        'success': false,
+        'error': errorMsg,
+      };
+    }
+  }
+  
+  // ==================== VALIDAR PAYLOAD DE PAGO ====================
+  /// Valida que un pago tenga toda la información necesaria para generar una factura
+  /// 
+  /// [idPago] - ID del pago a validar
+  /// 
+  /// Retorna un Map con:
+  /// - valid: bool indicando si el payload es válido
+  /// - missing_fields: lista de campos faltantes (si aplica)
+  /// - error: mensaje de error (si aplica)
+  Future<Map<String, dynamic>> validarPayloadPago(int idPago) async {
+    try {
+      final pago = await leerPagoPorId(idPago);
+      
+      if (pago == null) {
+        return {
+          'valid': false,
+          'error': 'El pago no existe',
+        };
+      }
+      
+      if (pago.payloadCreacion == null) {
+        return {
+          'valid': false,
+          'error': 'El pago no tiene payload_creacion',
+        };
+      }
+      
+      final payload = pago.payloadCreacion!;
+      final camposRequeridos = {
+        'fk_cliente': 'Cliente',
+        'fk_inmueble': 'Inmueble',
+        'condicion_venta': 'Condición de venta',
+        'total_general': 'Total general',
+        'fk_monedas': 'Moneda',
+        'fk_establecimientos': 'Establecimiento',
+        'fk_modo_pago': 'Modo de pago',
+        'fk_tipo_factura': 'Tipo de factura',
+        'fk_turno': 'Turno',
+        'tipo_emision': 'Tipo de emisión',
+        'detalles': 'Detalles de la factura',
+      };
+      
+      final camposFaltantes = <String, String>{};
+      for (final entry in camposRequeridos.entries) {
+        if (!payload.containsKey(entry.key) || payload[entry.key] == null) {
+          camposFaltantes[entry.key] = entry.value;
+        }
+      }
+      
+      if (camposFaltantes.isNotEmpty) {
+        return {
+          'valid': false,
+          'missing_fields': camposFaltantes,
+          'error': 'Faltan campos requeridos: ${camposFaltantes.values.join(", ")}',
+        };
+      }
+      
+      // Verificar que detalles sea un array no vacío
+      if (payload['detalles'] is! List || (payload['detalles'] as List).isEmpty) {
+        return {
+          'valid': false,
+          'error': 'El pago no tiene detalles de facturación',
+        };
+      }
+      
+      return {
+        'valid': true,
+        'payload': payload,
+      };
+    } catch (e) {
+      return {
+        'valid': false,
+        'error': 'Error al validar payload: $e',
+      };
+    }
+  }
+
   // ==================== ASOCIAR FACTURA A PAGO ====================
   Future<bool> asociarFacturaAPago(int idPago, int idFactura) async {
     try {

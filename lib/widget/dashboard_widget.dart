@@ -10,6 +10,7 @@ import 'package:myapp/vista/empresavista/timbradopage.dart';
 import 'package:myapp/vista/facturacionvista/apertura_cierre_cajapage.dart';
 import 'package:myapp/vista/facturacionvista/ciclo_page.dart';
 import 'package:myapp/vista/facturacionvista/concepto_page.dart';
+import 'package:myapp/vista/facturacionvista/pagos_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
 import 'package:myapp/vista/loginpage.dart';
 import 'package:myapp/vista/medidor_page.dart';
@@ -84,16 +85,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
         }
 
         return const InmueblesPage();
-      case 2:
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: const Center(
-            child: Text(
-              'Datos de Empresa',
-              style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-            ),
-          ),
-        );
+      case 2: return const PagosPage();
+        
       case 3: //Datos Empresa
         if (selectedSubIndex != null) {
           switch (selectedSubIndex) {
