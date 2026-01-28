@@ -100,6 +100,7 @@ class PagoDeudaService {
     required List<Ciclo> ciclosSeleccionados, // Para consumo: ciclos a pagar
     required double efectivo,
     required int idUsuario,
+    int? idModoPago, // NUEVO: ID del modo de pago seleccionado (opcional)
   }) async {
     try {
       // 1. Cargar configuración del sistema
@@ -185,7 +186,11 @@ class PagoDeudaService {
       // 7. Calcular vuelto
       final vuelto = efectivo - totales['totalGeneral']!;
 
-      // 8. Construir payload
+      // 8. NUEVO: Determinar el modo de pago a usar
+      // Si se proporcionó idModoPago, usarlo; si no, usar el default de config
+      final modoPagoAUsar = idModoPago ?? config.modo_pago_default.id_modo_pago!;
+
+      // 9. Construir payload
       final payload = FacturaPayload(
         fechaEmision: DateTime.now().toUtc().toIso8601String(),
         fkCliente: cliente.idCliente!,
@@ -201,7 +206,7 @@ class PagoDeudaService {
             : 'Pago de ${deuda.fk_concepto.nombre}',
         fkMonedas: config.moneda_default.id_monedas!,
         fkEstablecimientos: config.establecimiento_default.id_establecimiento!,
-        fkModoPago: config.modo_pago_default.id_modo_pago!,
+        fkModoPago: modoPagoAUsar, // MODIFICADO: Usar el modo de pago seleccionado
         fkTipoFactura: config.tipo_factura_default.id_tipo_factura!,
         nroSecuencial: nroSecuencial,
         fkTurno: cajaActiva.id_turno!,
@@ -214,7 +219,7 @@ class PagoDeudaService {
         detalles: detalles,
       );
 
-      // 9. Llamar a la RPC
+      // 10. Llamar a la RPC
       final facturaCreada = await _facturaRpcService.guardarFacturaRpc(payload);
 
       return facturaCreada;
