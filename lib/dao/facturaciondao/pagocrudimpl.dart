@@ -7,6 +7,70 @@ final supabase = Supabase.instance.client;
 
 class PagoCrudImpl {
   
+  // ==================== HELPER: PARSEAR PAYLOAD SEGURO ====================
+  Map<String, dynamic>? _parsearPayloadSeguro(dynamic payload, int? idPago) {
+    if (payload == null) {
+      return null;
+    }
+
+    if (payload is Map<String, dynamic>) {
+      return payload;
+    }
+
+    print('⚠️  ADVERTENCIA: Pago #$idPago tiene payload_creacion inválido');
+    print('   Tipo detectado: ${payload.runtimeType}');
+    print('   Valor: $payload');
+    print('   Este pago necesita ser corregido en la base de datos');
+    
+    return null;
+  }
+
+  // ==================== HELPER: CONSTRUIR PAGO DESDE MAPA ====================
+  Pago _construirPagoDesdeMap(Map<String, dynamic> mapa) {
+    // Parsear factura con diagnóstico mejorado
+    Factura? factura;
+    if (mapa['facturas'] != null) {
+      try {
+        factura = Factura.fromMap(mapa['facturas']);
+      } catch (e) {
+        print('🔴 ERROR al parsear FACTURA en pago #${mapa['id_pago']}');
+        print('   Error: $e');
+        print('   Datos de factura: ${mapa['facturas']}');
+        // No detener el proceso, simplemente dejar factura en null
+      }
+    }
+
+    // Parsear usuario con diagnóstico mejorado
+    Usuario? usuario;
+    if (mapa['fk_usuario'] != null) {
+      try {
+        usuario = Usuario.fromMap(mapa['fk_usuario']);
+      } catch (e) {
+        print('🔴 ERROR al parsear USUARIO en pago #${mapa['id_pago']}');
+        print('   Error: $e');
+        print('   Datos de usuario: ${mapa['fk_usuario']}');
+        // No detener el proceso, simplemente dejar usuario en null
+      }
+    }
+
+    return Pago(
+      idPago: mapa['id_pago'],
+      fechaPago: mapa['fecha_pago'] != null 
+          ? DateTime.parse(mapa['fecha_pago']) 
+          : null,
+      factura: factura,
+      comprobanteUrl: mapa['comprobante_url'],
+      monto: (mapa['monto'] as num).toDouble(),
+      estado: mapa['estado'] ?? 'PENDIENTE',
+      payloadCreacion: _parsearPayloadSeguro(
+        mapa['payload_creacion'], 
+        mapa['id_pago'],
+      ),
+      usuario: usuario,
+      motivoRechazo: mapa['motivo_rechazo'],
+    );
+  }
+  
   // ==================== CREAR PAGO ====================
   Future<Pago?> crearPago(Pago pago) async {
     try {
@@ -36,49 +100,31 @@ class PagoCrudImpl {
   // ==================== LEER TODOS LOS PAGOS ====================
   Future<List<Pago>> leerPagos() async {
     try {
-      final data = await supabase
-          .from('pagos')
-          .select('''
-            *,
-            facturas(*),
-            usuario(*)
-          ''');
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        )
+      ''');
 
-      if (data == null) {
-        print('⚠️ La consulta devolvió null');
-        return [];
-      }
-
-      if (data.isEmpty) {
-        print('ℹ️ No hay pagos en la base de datos');
-        return [];
-      }
+      if (data == null) return [];
 
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<Pago> pagos = registros.map((mapa) {
-        return Pago(
-          idPago: mapa['id_pago'],
-          fechaPago: mapa['fecha_pago'] != null 
-              ? DateTime.parse(mapa['fecha_pago']) 
-              : null,
-          factura: mapa['facturas'] != null 
-              ? Factura.fromMap(mapa['facturas']) 
-              : null,
-          comprobanteUrl: mapa['comprobante_url'],
-          monto: (mapa['monto'] as num).toDouble(),
-          estado: mapa['estado'] ?? 'PENDIENTE',
-          payloadCreacion: mapa['payload_creacion'] as Map<String, dynamic>?,
-          usuario: mapa['usuario'] != null 
-              ? Usuario.fromMap(mapa['usuario']) 
-              : null,
-          motivoRechazo: mapa['motivo_rechazo'],
-        );
-      }).toList();
-
-      print('✓ Se cargaron ${pagos.length} pagos');
-      return pagos;
+      return registros.map((mapa) {
+        try {
+          return _construirPagoDesdeMap(mapa);
+        } catch (e) {
+          print('❌ Error en pago #${mapa['id_pago']}: $e');
+          print('   Stack trace: ${StackTrace.current}');
+          return null;
+        }
+      }).whereType<Pago>().toList();
+      
     } catch (e) {
       print('Error al leer pagos: $e');
       return [];
@@ -88,33 +134,17 @@ class PagoCrudImpl {
   // ==================== LEER UN PAGO POR ID ====================
   Future<Pago?> leerPagoPorId(int idPago) async {
     try {
-      final Map<String, dynamic> data = await supabase
-          .from('pagos')
-          .select('''
-            *,
-            facturas(*),
-            usuario(*)
-          ''')
-          .eq('id_pago', idPago)
-          .single();
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        )
+      ''').eq('id_pago', idPago).single();
 
-      return Pago(
-        idPago: data['id_pago'],
-        fechaPago: data['fecha_pago'] != null 
-            ? DateTime.parse(data['fecha_pago']) 
-            : null,
-        factura: data['facturas'] != null 
-            ? Factura.fromMap(data['facturas']) 
-            : null,
-        comprobanteUrl: data['comprobante_url'],
-        monto: (data['monto'] as num).toDouble(),
-        estado: data['estado'] ?? 'PENDIENTE',
-        payloadCreacion: data['payload_creacion'] as Map<String, dynamic>?,
-        usuario: data['usuario'] != null 
-            ? Usuario.fromMap(data['usuario']) 
-            : null,
-        motivoRechazo: data['motivo_rechazo'],
-      );
+      return _construirPagoDesdeMap(data);
     } catch (e) {
       print('Error al leer pago por ID: $e');
       return null;
@@ -124,14 +154,15 @@ class PagoCrudImpl {
   // ==================== BUSCAR PAGOS ====================
   Future<List<Pago>> buscarPagos(String busqueda) async {
     try {
-      final data = await supabase
-          .from('pagos')
-          .select('''
-            *,
-            facturas(*),
-            usuario(*)
-          ''')
-          .or('comprobante_url.ilike.%$busqueda%,estado.ilike.%$busqueda%');
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        )
+      ''').or('comprobante_url.ilike.%$busqueda%,estado.ilike.%$busqueda%');
 
       if (data == null || data.isEmpty) {
         return [];
@@ -140,25 +171,15 @@ class PagoCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<Pago> pagos = registros.map((mapa) {
-        return Pago(
-          idPago: mapa['id_pago'],
-          fechaPago: mapa['fecha_pago'] != null 
-              ? DateTime.parse(mapa['fecha_pago']) 
-              : null,
-          factura: mapa['facturas'] != null 
-              ? Factura.fromMap(mapa['facturas']) 
-              : null,
-          comprobanteUrl: mapa['comprobante_url'],
-          monto: (mapa['monto'] as num).toDouble(),
-          estado: mapa['estado'] ?? 'PENDIENTE',
-          payloadCreacion: mapa['payload_creacion'] as Map<String, dynamic>?,
-          usuario: mapa['usuario'] != null 
-              ? Usuario.fromMap(mapa['usuario']) 
-              : null,
-          motivoRechazo: mapa['motivo_rechazo'],
-        );
-      }).toList();
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
+        try {
+          pagos.add(_construirPagoDesdeMap(mapa));
+        } catch (e) {
+          print('❌ Error al procesar pago #${mapa['id_pago']}: $e');
+          continue;
+        }
+      }
 
       return pagos;
     } catch (e) {
@@ -211,14 +232,15 @@ class PagoCrudImpl {
   // ==================== LEER PAGOS POR FACTURA ====================
   Future<List<Pago>> leerPagosPorFactura(int idFactura) async {
     try {
-      final data = await supabase
-          .from('pagos')
-          .select('''
-            *,
-            facturas(*),
-            usuario(*)
-          ''')
-          .eq('fk_factura', idFactura);
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        )
+      ''').eq('fk_factura', idFactura);
 
       if (data == null || data.isEmpty) {
         return [];
@@ -227,25 +249,15 @@ class PagoCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<Pago> pagos = registros.map((mapa) {
-        return Pago(
-          idPago: mapa['id_pago'],
-          fechaPago: mapa['fecha_pago'] != null 
-              ? DateTime.parse(mapa['fecha_pago']) 
-              : null,
-          factura: mapa['facturas'] != null 
-              ? Factura.fromMap(mapa['facturas']) 
-              : null,
-          comprobanteUrl: mapa['comprobante_url'],
-          monto: (mapa['monto'] as num).toDouble(),
-          estado: mapa['estado'] ?? 'PENDIENTE',
-          payloadCreacion: mapa['payload_creacion'] as Map<String, dynamic>?,
-          usuario: mapa['usuario'] != null 
-              ? Usuario.fromMap(mapa['usuario']) 
-              : null,
-          motivoRechazo: mapa['motivo_rechazo'],
-        );
-      }).toList();
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
+        try {
+          pagos.add(_construirPagoDesdeMap(mapa));
+        } catch (e) {
+          print('❌ Error al procesar pago #${mapa['id_pago']}: $e');
+          continue;
+        }
+      }
 
       return pagos;
     } catch (e) {
@@ -257,14 +269,15 @@ class PagoCrudImpl {
   // ==================== LEER PAGOS POR USUARIO ====================
   Future<List<Pago>> leerPagosPorUsuario(int idUsuario) async {
     try {
-      final data = await supabase
-          .from('pagos')
-          .select('''
-            *,
-            facturas(*),
-            usuario(*)
-          ''')
-          .eq('fk_usuario', idUsuario);
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        )
+      ''').eq('fk_usuario', idUsuario);
 
       if (data == null || data.isEmpty) {
         return [];
@@ -273,25 +286,15 @@ class PagoCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<Pago> pagos = registros.map((mapa) {
-        return Pago(
-          idPago: mapa['id_pago'],
-          fechaPago: mapa['fecha_pago'] != null 
-              ? DateTime.parse(mapa['fecha_pago']) 
-              : null,
-          factura: mapa['facturas'] != null 
-              ? Factura.fromMap(mapa['facturas']) 
-              : null,
-          comprobanteUrl: mapa['comprobante_url'],
-          monto: (mapa['monto'] as num).toDouble(),
-          estado: mapa['estado'] ?? 'PENDIENTE',
-          payloadCreacion: mapa['payload_creacion'] as Map<String, dynamic>?,
-          usuario: mapa['usuario'] != null 
-              ? Usuario.fromMap(mapa['usuario']) 
-              : null,
-          motivoRechazo: mapa['motivo_rechazo'],
-        );
-      }).toList();
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
+        try {
+          pagos.add(_construirPagoDesdeMap(mapa));
+        } catch (e) {
+          print('❌ Error al procesar pago #${mapa['id_pago']}: $e');
+          continue;
+        }
+      }
 
       return pagos;
     } catch (e) {
@@ -303,14 +306,15 @@ class PagoCrudImpl {
   // ==================== LEER PAGOS POR ESTADO ====================
   Future<List<Pago>> leerPagosPorEstado(String estado) async {
     try {
-      final data = await supabase
-          .from('pagos')
-          .select('''
-            *,
-            facturas(*),
-            usuario(*)
-          ''')
-          .eq('estado', estado);
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        )
+      ''').eq('estado', estado);
 
       if (data == null || data.isEmpty) {
         return [];
@@ -319,25 +323,15 @@ class PagoCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<Pago> pagos = registros.map((mapa) {
-        return Pago(
-          idPago: mapa['id_pago'],
-          fechaPago: mapa['fecha_pago'] != null 
-              ? DateTime.parse(mapa['fecha_pago']) 
-              : null,
-          factura: mapa['facturas'] != null 
-              ? Factura.fromMap(mapa['facturas']) 
-              : null,
-          comprobanteUrl: mapa['comprobante_url'],
-          monto: (mapa['monto'] as num).toDouble(),
-          estado: mapa['estado'] ?? 'PENDIENTE',
-          payloadCreacion: mapa['payload_creacion'] as Map<String, dynamic>?,
-          usuario: mapa['usuario'] != null 
-              ? Usuario.fromMap(mapa['usuario']) 
-              : null,
-          motivoRechazo: mapa['motivo_rechazo'],
-        );
-      }).toList();
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
+        try {
+          pagos.add(_construirPagoDesdeMap(mapa));
+        } catch (e) {
+          print('❌ Error al procesar pago #${mapa['id_pago']}: $e');
+          continue;
+        }
+      }
 
       return pagos;
     } catch (e) {
@@ -353,7 +347,6 @@ class PagoCrudImpl {
         'estado': nuevoEstado,
       };
 
-      // Solo agregar motivo de rechazo si se proporciona
       if (motivoRechazo != null) {
         updateData['motivo_rechazo'] = motivoRechazo;
       }
@@ -372,30 +365,6 @@ class PagoCrudImpl {
   }
 
   // ==================== APROBAR PAGO CON FUNCIÓN RPC ====================
-  /// Aprueba un pago y genera automáticamente la factura usando la función RPC de Supabase
-  /// 
-  /// [idPago] - ID del pago a aprobar
-  /// [idUsuarioAdmin] - ID del usuario administrador que aprueba el pago
-  /// 
-  /// Retorna un Map con la respuesta de la función RPC que incluye:
-  /// - success: bool indicando si fue exitoso
-  /// - factura: objeto con los datos de la factura generada
-  /// - error: mensaje de error si falló
-  /// 
-  /// Ejemplo de uso:
-  /// ```dart
-  /// final resultado = await _pagoCrud.aprobarPagoConRPC(
-  ///   idPago: 123,
-  ///   idUsuarioAdmin: 1,
-  /// );
-  /// 
-  /// if (resultado['success'] == true) {
-  ///   final facturaId = resultado['factura']['id_factura'];
-  ///   print('Factura generada: $facturaId');
-  /// } else {
-  ///   print('Error: ${resultado['error']}');
-  /// }
-  /// ```
   Future<Map<String, dynamic>> aprobarPagoConRPC({
     required int idPago,
     required int idUsuarioAdmin,
@@ -403,7 +372,6 @@ class PagoCrudImpl {
     try {
       print('🔄 Aprobando pago #$idPago con usuario admin #$idUsuarioAdmin');
       
-      // Primero verificar que el pago tenga un payload válido
       final pago = await leerPagoPorId(idPago);
       
       if (pago == null) {
@@ -420,7 +388,6 @@ class PagoCrudImpl {
         };
       }
       
-      // Verificar campos requeridos en el payload
       final payload = pago.payloadCreacion!;
       final camposRequeridos = [
         'fk_cliente',
@@ -450,7 +417,6 @@ class PagoCrudImpl {
         };
       }
       
-      // Verificar que tenga detalles
       if (!payload.containsKey('detalles') || payload['detalles'] == null) {
         return {
           'success': false,
@@ -459,7 +425,6 @@ class PagoCrudImpl {
       }
       
       print('✅ Payload validado correctamente');
-      print('📋 Payload: ${payload.toString()}');
       
       final response = await supabase.rpc(
         'aprobar_pago_transferencia',
@@ -482,7 +447,6 @@ class PagoCrudImpl {
     } catch (e) {
       print('❌ Error al aprobar pago con RPC: $e');
       
-      // Extraer mensaje de error más legible
       String errorMsg = e.toString();
       if (e.toString().contains('violates not-null constraint')) {
         final match = RegExp(r'column "(\w+)"').firstMatch(e.toString());
@@ -500,14 +464,6 @@ class PagoCrudImpl {
   }
   
   // ==================== VALIDAR PAYLOAD DE PAGO ====================
-  /// Valida que un pago tenga toda la información necesaria para generar una factura
-  /// 
-  /// [idPago] - ID del pago a validar
-  /// 
-  /// Retorna un Map con:
-  /// - valid: bool indicando si el payload es válido
-  /// - missing_fields: lista de campos faltantes (si aplica)
-  /// - error: mensaje de error (si aplica)
   Future<Map<String, dynamic>> validarPayloadPago(int idPago) async {
     try {
       final pago = await leerPagoPorId(idPago);
@@ -556,7 +512,6 @@ class PagoCrudImpl {
         };
       }
       
-      // Verificar que detalles sea un array no vacío
       if (payload['detalles'] is! List || (payload['detalles'] as List).isEmpty) {
         return {
           'valid': false,
@@ -595,16 +550,17 @@ class PagoCrudImpl {
   // ==================== LEER PAGOS POR RANGO DE FECHAS ====================
   Future<List<Pago>> leerPagosPorRangoFechas(DateTime fechaInicio, DateTime fechaFin) async {
     try {
-      final data = await supabase
-          .from('pagos')
-          .select('''
-            *,
-            facturas(*),
-            usuario(*)
-          ''')
-          .gte('fecha_pago', fechaInicio.toIso8601String())
-          .lte('fecha_pago', fechaFin.toIso8601String())
-          .order('fecha_pago', ascending: false);
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        )
+      ''').gte('fecha_pago', fechaInicio.toIso8601String())
+        .lte('fecha_pago', fechaFin.toIso8601String())
+        .order('fecha_pago', ascending: false);
 
       if (data == null || data.isEmpty) {
         return [];
@@ -613,25 +569,15 @@ class PagoCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<Pago> pagos = registros.map((mapa) {
-        return Pago(
-          idPago: mapa['id_pago'],
-          fechaPago: mapa['fecha_pago'] != null 
-              ? DateTime.parse(mapa['fecha_pago']) 
-              : null,
-          factura: mapa['facturas'] != null 
-              ? Factura.fromMap(mapa['facturas']) 
-              : null,
-          comprobanteUrl: mapa['comprobante_url'],
-          monto: (mapa['monto'] as num).toDouble(),
-          estado: mapa['estado'] ?? 'PENDIENTE',
-          payloadCreacion: mapa['payload_creacion'] as Map<String, dynamic>?,
-          usuario: mapa['usuario'] != null 
-              ? Usuario.fromMap(mapa['usuario']) 
-              : null,
-          motivoRechazo: mapa['motivo_rechazo'],
-        );
-      }).toList();
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
+        try {
+          pagos.add(_construirPagoDesdeMap(mapa));
+        } catch (e) {
+          print('❌ Error al procesar pago #${mapa['id_pago']}: $e');
+          continue;
+        }
+      }
 
       return pagos;
     } catch (e) {
@@ -667,13 +613,14 @@ class PagoCrudImpl {
   // ==================== LEER PAGOS SIN FACTURA ASIGNADA ====================
   Future<List<Pago>> leerPagosSinFactura() async {
     try {
-      final data = await supabase
-          .from('pagos')
-          .select('''
-            *,
-            usuario(*)
-          ''')
-          .isFilter('fk_factura', null);
+      final data = await supabase.from('pagos').select('''
+        *,
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        )
+      ''').isFilter('fk_factura', null);
 
       if (data == null || data.isEmpty) {
         return [];
@@ -682,23 +629,15 @@ class PagoCrudImpl {
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      final List<Pago> pagos = registros.map((mapa) {
-        return Pago(
-          idPago: mapa['id_pago'],
-          fechaPago: mapa['fecha_pago'] != null 
-              ? DateTime.parse(mapa['fecha_pago']) 
-              : null,
-          factura: null,
-          comprobanteUrl: mapa['comprobante_url'],
-          monto: (mapa['monto'] as num).toDouble(),
-          estado: mapa['estado'] ?? 'PENDIENTE',
-          payloadCreacion: mapa['payload_creacion'] as Map<String, dynamic>?,
-          usuario: mapa['usuario'] != null 
-              ? Usuario.fromMap(mapa['usuario']) 
-              : null,
-          motivoRechazo: mapa['motivo_rechazo'],
-        );
-      }).toList();
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
+        try {
+          pagos.add(_construirPagoDesdeMap(mapa));
+        } catch (e) {
+          print('❌ Error al procesar pago #${mapa['id_pago']}: $e');
+          continue;
+        }
+      }
 
       return pagos;
     } catch (e) {

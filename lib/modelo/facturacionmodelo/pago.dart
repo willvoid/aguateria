@@ -47,8 +47,11 @@ class Pago {
       
       estado: map['estado'] ?? 'PENDIENTE',
       
-      // Casting explícito necesario para JSONB
-      payloadCreacion: map['payload_creacion'] as Map<String, dynamic>?,
+      // FIX: Validación de tipo antes de casting para evitar error
+      // cuando payload_creacion no es un Map válido
+      payloadCreacion: map['payload_creacion'] is Map<String, dynamic>
+          ? map['payload_creacion'] as Map<String, dynamic>
+          : null,
       
       usuario: map['usuario'] != null 
           ? Usuario.fromMap(map['usuario']) 
