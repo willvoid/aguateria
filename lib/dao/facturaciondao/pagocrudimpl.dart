@@ -1,6 +1,8 @@
 import 'package:myapp/modelo/facturacionmodelo/factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/pago.dart';
 import 'package:myapp/modelo/usuario/usuario.dart';
+import 'package:myapp/modelo/cliente.dart';
+import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
@@ -36,7 +38,6 @@ class PagoCrudImpl {
         print('🔴 ERROR al parsear FACTURA en pago #${mapa['id_pago']}');
         print('   Error: $e');
         print('   Datos de factura: ${mapa['facturas']}');
-        // No detener el proceso, simplemente dejar factura en null
       }
     }
 
@@ -49,7 +50,30 @@ class PagoCrudImpl {
         print('🔴 ERROR al parsear USUARIO en pago #${mapa['id_pago']}');
         print('   Error: $e');
         print('   Datos de usuario: ${mapa['fk_usuario']}');
-        // No detener el proceso, simplemente dejar usuario en null
+      }
+    }
+
+    // Parsear cliente
+    Cliente? cliente;
+    if (mapa['clientes'] != null) {
+      try {
+        cliente = Cliente.fromMap(mapa['clientes']);
+      } catch (e) {
+        print('🔴 ERROR al parsear CLIENTE en pago #${mapa['id_pago']}');
+        print('   Error: $e');
+        print('   Datos de cliente: ${mapa['clientes']}');
+      }
+    }
+
+    // Parsear modo de pago
+    ModoPago? modoPago;
+    if (mapa['modo_pago'] != null) {
+      try {
+        modoPago = ModoPago.fromMap(mapa['modo_pago']);
+      } catch (e) {
+        print('🔴 ERROR al parsear MODO_PAGO en pago #${mapa['id_pago']}');
+        print('   Error: $e');
+        print('   Datos de modo_pago: ${mapa['modo_pago']}');
       }
     }
 
@@ -68,6 +92,8 @@ class PagoCrudImpl {
       ),
       usuario: usuario,
       motivoRechazo: mapa['motivo_rechazo'],
+      fk_cliente: cliente!,
+      fk_modo_pago: modoPago!,
     );
   }
   
@@ -85,12 +111,29 @@ class PagoCrudImpl {
             'payload_creacion': pago.payloadCreacion,
             'fk_usuario': pago.usuario?.id_usuario,
             'motivo_rechazo': pago.motivoRechazo,
+            'fk_cliente': pago.fk_cliente.idCliente,
+            'fk_modo_pago': pago.fk_modo_pago.id_modo_pago,
           })
-          .select()
+          .select('''
+            *,
+            facturas(*),
+            fk_usuario (
+              *,
+              fk_cargo:cargo(*),
+              fk_tipo_doc:tipo_documento(*)
+            ),
+            clientes(
+              *,
+              tipo_documento(*),
+              barrios(*),
+              tipo_operacion(*)
+            ),
+            modo_pago(*)
+          ''')
           .single();
 
       print('Pago creado exitosamente');
-      return Pago.fromMap(data);
+      return _construirPagoDesdeMap(data);
     } catch (e) {
       print('Error al crear pago: $e');
       return null;
@@ -107,23 +150,41 @@ class PagoCrudImpl {
           *,
           fk_cargo:cargo(*),
           fk_tipo_doc:tipo_documento(*)
-        )
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
       ''');
 
-      if (data == null) return [];
+      if (data == null) {
+        print('⚠️ La consulta devolvió null');
+        return [];
+      }
+
+      if (data.isEmpty) {
+        print('ℹ️ No hay pagos en la base de datos');
+        return [];
+      }
 
       final List<Map<String, dynamic>> registros = 
           List<Map<String, dynamic>>.from(data);
 
-      return registros.map((mapa) {
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
         try {
-          return _construirPagoDesdeMap(mapa);
+          pagos.add(_construirPagoDesdeMap(mapa));
         } catch (e) {
           print('❌ Error en pago #${mapa['id_pago']}: $e');
-          print('   Stack trace: ${StackTrace.current}');
-          return null;
+          continue;
         }
-      }).whereType<Pago>().toList();
+      }
+
+      print('✓ Se cargaron ${pagos.length} pagos');
+      return pagos;
       
     } catch (e) {
       print('Error al leer pagos: $e');
@@ -141,7 +202,14 @@ class PagoCrudImpl {
           *,
           fk_cargo:cargo(*),
           fk_tipo_doc:tipo_documento(*)
-        )
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
       ''').eq('id_pago', idPago).single();
 
       return _construirPagoDesdeMap(data);
@@ -161,7 +229,14 @@ class PagoCrudImpl {
           *,
           fk_cargo:cargo(*),
           fk_tipo_doc:tipo_documento(*)
-        )
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
       ''').or('comprobante_url.ilike.%$busqueda%,estado.ilike.%$busqueda%');
 
       if (data == null || data.isEmpty) {
@@ -202,6 +277,8 @@ class PagoCrudImpl {
             'payload_creacion': pago.payloadCreacion,
             'fk_usuario': pago.usuario?.id_usuario,
             'motivo_rechazo': pago.motivoRechazo,
+            'fk_cliente': pago.fk_cliente.idCliente,
+            'fk_modo_pago': pago.fk_modo_pago.id_modo_pago,
           })
           .eq('id_pago', pago.idPago!);
 
@@ -239,7 +316,14 @@ class PagoCrudImpl {
           *,
           fk_cargo:cargo(*),
           fk_tipo_doc:tipo_documento(*)
-        )
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
       ''').eq('fk_factura', idFactura);
 
       if (data == null || data.isEmpty) {
@@ -276,7 +360,14 @@ class PagoCrudImpl {
           *,
           fk_cargo:cargo(*),
           fk_tipo_doc:tipo_documento(*)
-        )
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
       ''').eq('fk_usuario', idUsuario);
 
       if (data == null || data.isEmpty) {
@@ -313,7 +404,14 @@ class PagoCrudImpl {
           *,
           fk_cargo:cargo(*),
           fk_tipo_doc:tipo_documento(*)
-        )
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
       ''').eq('estado', estado);
 
       if (data == null || data.isEmpty) {
@@ -336,6 +434,94 @@ class PagoCrudImpl {
       return pagos;
     } catch (e) {
       print('Error al leer pagos por estado: $e');
+      return [];
+    }
+  }
+
+  // ==================== LEER PAGOS POR CLIENTE ====================
+  Future<List<Pago>> leerPagosPorCliente(int idCliente) async {
+    try {
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
+      ''').eq('fk_cliente', idCliente);
+
+      if (data == null || data.isEmpty) {
+        return [];
+      }
+
+      final List<Map<String, dynamic>> registros = 
+          List<Map<String, dynamic>>.from(data);
+
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
+        try {
+          pagos.add(_construirPagoDesdeMap(mapa));
+        } catch (e) {
+          print('❌ Error al procesar pago #${mapa['id_pago']}: $e');
+          continue;
+        }
+      }
+
+      return pagos;
+    } catch (e) {
+      print('Error al leer pagos por cliente: $e');
+      return [];
+    }
+  }
+
+  // ==================== LEER PAGOS POR MODO DE PAGO ====================
+  Future<List<Pago>> leerPagosPorModoPago(int idModoPago) async {
+    try {
+      final data = await supabase.from('pagos').select('''
+        *,
+        facturas(*),
+        fk_usuario (
+          *,
+          fk_cargo:cargo(*),
+          fk_tipo_doc:tipo_documento(*)
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
+      ''').eq('fk_modo_pago', idModoPago);
+
+      if (data == null || data.isEmpty) {
+        return [];
+      }
+
+      final List<Map<String, dynamic>> registros = 
+          List<Map<String, dynamic>>.from(data);
+
+      final List<Pago> pagos = [];
+      for (var mapa in registros) {
+        try {
+          pagos.add(_construirPagoDesdeMap(mapa));
+        } catch (e) {
+          print('❌ Error al procesar pago #${mapa['id_pago']}: $e');
+          continue;
+        }
+      }
+
+      return pagos;
+    } catch (e) {
+      print('Error al leer pagos por modo de pago: $e');
       return [];
     }
   }
@@ -557,7 +743,14 @@ class PagoCrudImpl {
           *,
           fk_cargo:cargo(*),
           fk_tipo_doc:tipo_documento(*)
-        )
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
       ''').gte('fecha_pago', fechaInicio.toIso8601String())
         .lte('fecha_pago', fechaFin.toIso8601String())
         .order('fecha_pago', ascending: false);
@@ -619,7 +812,14 @@ class PagoCrudImpl {
           *,
           fk_cargo:cargo(*),
           fk_tipo_doc:tipo_documento(*)
-        )
+        ),
+        clientes(
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*)
+        ),
+        modo_pago(*)
       ''').isFilter('fk_factura', null);
 
       if (data == null || data.isEmpty) {

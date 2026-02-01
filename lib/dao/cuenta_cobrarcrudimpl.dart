@@ -15,7 +15,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
 
-class DeudaCrudImpl {
+class CuentaCobrarCrudImpl {
   // ==================== HELPERS ====================
 
   int _toInt(dynamic value) {

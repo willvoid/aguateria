@@ -165,6 +165,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       builder: (context) => SelectorMetodoPagoDialog(
         totalAPagar: _totalAPagar,
         idUsuario: widget.idUsuario,
+        cliente: widget.cliente,
         payloadFactura: {}, // El payload se construirá después
         onMetodoSeleccionado: (modoPago, pagoCreado) async {
           modoPagoSeleccionado = modoPago;

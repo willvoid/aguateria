@@ -16,7 +16,7 @@ class DetalleFacturaCrudImpl {
   final FacturaCrudImpl _facturaCrud = FacturaCrudImpl();
   final ConceptoCrudImpl _conceptoCrud = ConceptoCrudImpl();
   final ConsumoCrudImpl _consumoCrud = ConsumoCrudImpl();
-  final DeudaCrudImpl _deudaCrud = DeudaCrudImpl();
+  final CuentaCobrarCrudImpl _deudaCrud = CuentaCobrarCrudImpl();
   final CicloCrudImpl _cicloCrud = CicloCrudImpl();
 
   // ==================== HELPERS ====================

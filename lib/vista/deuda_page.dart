@@ -19,7 +19,7 @@ class DeudasPage extends StatefulWidget {
 }
 
 class _DeudasPageState extends State<DeudasPage> {
-  final DeudaCrudImpl _deudaCrud = DeudaCrudImpl();
+  final CuentaCobrarCrudImpl _deudaCrud = CuentaCobrarCrudImpl();
   final ConceptoCrudImpl _conceptoCrud = ConceptoCrudImpl();
   final CicloCrudImpl _cicloCrud = CicloCrudImpl();
   final ConsumoCrudImpl _consumoCrud = ConsumoCrudImpl();

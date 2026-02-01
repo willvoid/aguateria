@@ -21,7 +21,7 @@ class DeudasClientesPage extends StatefulWidget {
 }
 
 class _DeudasClientesPageState extends State<DeudasClientesPage> {
-  final DeudaCrudImpl _deudaCrud = DeudaCrudImpl();
+  final CuentaCobrarCrudImpl _deudaCrud = CuentaCobrarCrudImpl();
   bool _isLoading = true;
   List<CuentaCobrar> _deudas = [];
   String _filtroEstado = 'TODAS';

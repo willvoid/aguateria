@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:myapp/dao/facturaciondao/modo_pagocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/pagocrudimpl.dart';
+import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:myapp/modelo/facturacionmodelo/pago.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,6 +13,7 @@ final supabase = Supabase.instance.client;
 class SelectorMetodoPagoDialog extends StatefulWidget {
   final double totalAPagar;
   final int idUsuario;
+  final Cliente cliente; // AÑADIDO
   final Map<String, dynamic> payloadFactura;
   final Function(ModoPago modoPago, Pago? pagoCreado) onMetodoSeleccionado;
 
@@ -19,6 +21,7 @@ class SelectorMetodoPagoDialog extends StatefulWidget {
     Key? key,
     required this.totalAPagar,
     required this.idUsuario,
+    required this.cliente, // AÑADIDO
     required this.payloadFactura,
     required this.onMetodoSeleccionado,
   }) : super(key: key);
@@ -67,6 +70,7 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
           modoPago: modo,
           totalAPagar: widget.totalAPagar,
           idUsuario: widget.idUsuario,
+          cliente: widget.cliente, // AÑADIDO
           payloadFactura: widget.payloadFactura,
         ),
       );
@@ -335,6 +339,7 @@ class SubirComprobanteDialog extends StatefulWidget {
   final ModoPago modoPago;
   final double totalAPagar;
   final int idUsuario;
+  final Cliente cliente; // AÑADIDO
   final Map<String, dynamic> payloadFactura;
 
   const SubirComprobanteDialog({
@@ -342,6 +347,7 @@ class SubirComprobanteDialog extends StatefulWidget {
     required this.modoPago,
     required this.totalAPagar,
     required this.idUsuario,
+    required this.cliente, // AÑADIDO
     required this.payloadFactura,
   }) : super(key: key);
 
@@ -434,6 +440,8 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
         payloadCreacion: widget.payloadFactura,
         usuario: null, // Se puede cargar el objeto Usuario si lo tienes
         motivoRechazo: null,
+        fk_cliente: widget.cliente, // AÑADIDO
+        fk_modo_pago: widget.modoPago, // AÑADIDO
       );
 
       final pagoCreado = await _pagoService.crearPago(nuevoPago);
