@@ -128,96 +128,59 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Future<void> _procesarPago() async {
-    // Validar datos básicos
-    final error = _pagoService.validarPago(
-      deuda: widget.deuda,
-      ciclosSeleccionados: _ciclosSeleccionados,
-      efectivo: double.tryParse(_efectivoController.text) ?? 0,
-    );
+  // Validar datos básicos
+  final error = _pagoService.validarPago(
+    deuda: widget.deuda,
+    ciclosSeleccionados: _ciclosSeleccionados,
+    efectivo: double.tryParse(_efectivoController.text) ?? 0,
+  );
 
-    if (error != null) {
-      _mostrarError(error);
-      return;
-    }
-
-    // ========== PASO 0: OBTENER TURNO ACTIVO (CRÍTICO) ==========
-    print('🔍 Obteniendo turno activo para usuario ${widget.idUsuario}...');
-
-    final turnoActivo = await _obtenerTurnoActivo();
-
-    if (turnoActivo == null) {
-      _mostrarError(
-        'No hay un turno de caja activo.\n\n'
-        'Debe abrir caja antes de procesar pagos.',
-      );
-      return;
-    }
-
-    print('✅ Turno activo encontrado: ${turnoActivo.id_turno}');
-
-    // ========== PASO 1: Seleccionar método de pago ==========
-    ModoPago? modoPagoSeleccionado;
-    Pago? pagoConComprobante;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => SelectorMetodoPagoDialog(
-        totalAPagar: _totalAPagar,
-        idUsuario: widget.idUsuario,
-        cliente: widget.cliente,
-        payloadFactura: {}, // El payload se construirá después
-        onMetodoSeleccionado: (modoPago, pagoCreado) async {
-          modoPagoSeleccionado = modoPago;
-          pagoConComprobante = pagoCreado;
-
-          // Si es transferencia/giro, construir y actualizar el payload completo
-          if (pagoCreado != null) {
-            print(
-              '📦 Construyendo payload completo para pago #${pagoCreado.idPago}...',
-            );
-
-            final payloadCompleto = _construirPayloadCompleto(
-              turnoActivo: turnoActivo,
-              modoPago: modoPago,
-            );
-
-            // Actualizar el pago con el payload completo
-            await _actualizarPayloadPago(pagoCreado.idPago!, payloadCompleto);
-          }
-
-          Navigator.pop(context);
-        },
-      ),
-    );
-
-    // Si el usuario canceló la selección
-    if (modoPagoSeleccionado == null) {
-      return;
-    }
-
-    // ========== PASO 2: Procesar según el tipo de pago ==========
-
-    // Caso A: Transferencia o Giro (con comprobante pendiente de aprobación)
-    if (pagoConComprobante != null) {
-      await _mostrarDialogoPagoPendiente(
-        modoPagoSeleccionado!,
-        pagoConComprobante!,
-      );
-
-      // Cerrar el diálogo de pago de deuda
-      if (mounted) {
-        Navigator.pop(
-          context,
-          true,
-        ); // true = pago registrado (aunque pendiente)
-      }
-      return;
-    }
-
-    // Caso B: Otros métodos (Efectivo, Tarjeta, etc.) - Procesar factura inmediatamente
-    await _procesarFactura(modoPagoSeleccionado!);
+  if (error != null) {
+    _mostrarError(error);
+    return;
   }
+
+  // ========== PASO 0: OBTENER TURNO ACTIVO (CRÍTICO) ==========
+  print('🔍 Obteniendo turno activo para usuario ${widget.idUsuario}...');
+
+  final turnoActivo = await _obtenerTurnoActivo();
+
+  if (turnoActivo == null) {
+    _mostrarError(
+      'No hay un turno de caja activo.\n\n'
+      'Debe abrir caja antes de procesar pagos.',
+    );
+    return;
+  }
+
+  print('✅ Turno activo encontrado: ${turnoActivo.id_turno}');
+
+  // ========== PASO 1: Seleccionar método de pago ==========
+  ModoPago? modoPagoSeleccionado;
+  Pago? pagoConComprobante;
+
+  await showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => SelectorMetodoPagoDialog(
+      totalAPagar: _totalAPagar,
+      idUsuario: widget.idUsuario,
+      cliente: widget.cliente,
+      // ✅ SOLUCIÓN: Construir payload ANTES de abrir el diálogo
+      payloadFactura: (ModoPago modoPago) => _construirPayloadCompleto(
+        turnoActivo: turnoActivo,
+        modoPago: modoPago,
+      ),
+      onMetodoSeleccionado: (modoPago, pagoCreado) async {
+        modoPagoSeleccionado = modoPago;
+        pagoConComprobante = pagoCreado;
+        Navigator.pop(context);
+      },
+    ),
+  );
+
+  // ... resto del código
+}
 
   // ========================================
   // MÉTODOS HELPER

@@ -1,5 +1,6 @@
 import 'package:myapp/modelo/%20tipo_documento.dart';
 import 'package:myapp/modelo/barrio.dart';
+import 'package:myapp/modelo/empresa/tipo_contribuyente.dart';
 import 'package:myapp/modelo/tipo_operacion.dart';
 
 class Cliente {
@@ -17,6 +18,7 @@ class Cliente {
   String estado;
   TipoDocumento tipoDocumento;
   Barrio barrio;
+  TipoContribuyente? tipo_contribuyente;
 
   Cliente({
     this.idCliente,
@@ -33,6 +35,7 @@ class Cliente {
     required this.estado,
     required this.tipoDocumento,
     required this.barrio,
+    this.tipo_contribuyente,
   });
 
   factory Cliente.fromMap(Map<String, dynamic> map) {
@@ -48,9 +51,13 @@ class Cliente {
       email: map['email'],
       nroCasa: map['nro_casa'],
       tipoOperacion: TipoOperacion.fromMap(map['tipo_operacion']),
-      estado: map['estado'],
+      estado: map['estado_cliente'] ?? map['estado'], // Manejar ambos casos
       tipoDocumento: TipoDocumento.fromMap(map['tipo_documento']),
-      barrio: Barrio.fromMap(map['barrio']),
+      barrio: Barrio.fromMap(map['barrios'] ?? map['barrio']), // Manejar ambos casos
+      // ⚠️ CORRECCIÓN CRÍTICA: Solo llamar fromMap si tipo_contribuyente no es null
+      tipo_contribuyente: map['tipo_contribuyente'] != null 
+          ? TipoContribuyente.fromMap(map['tipo_contribuyente'])
+          : null,
     );
   }
 
@@ -67,11 +74,43 @@ class Cliente {
       'email': email,
       'nro_casa': nroCasa,
       'tipo_operacion': tipoOperacion.toMap(),
-      'estado': estado,
+      'estado_cliente': estado,
+      'tipo_documento': tipoDocumento.toMap(),
       'barrio': barrio.toMap(),
-      'fk_tipo_operacion': tipoOperacion.toMap(),
-      'id_tipo_documento': tipoDocumento.toMap(),
-      'fk_barrio': barrio.toMap(),
+      // Solo incluir si no es null
+      'tipo_contribuyente': tipo_contribuyente?.toMap(),
     };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id_cliente': idCliente,
+      'razon_social': razonSocial,
+      'nombre_fantasia': nombreFantasia,
+      'documento': documento,
+      'telefono': telefono,
+      'celular': celular,
+      'direccion': direccion,
+      'es_proveedor_del_estado': es_proveedor_del_estado,
+      'email': email,
+      'nro_casa': nroCasa,
+      'fk_tipo_operacion': tipoOperacion.id_tipo_operacion,
+      'estado_cliente': estado,
+      'fk_tipo_documento': tipoDocumento.cod_tipo_documento,
+      'fk_barrios': barrio.cod_barrio,
+      // Solo incluir el ID si no es null
+      'tipo_contribuyente': tipo_contribuyente?.id_tipo_contribuyente,
+    };
+  }
+
+  // Método auxiliar para obtener el nombre completo del cliente
+  String get nombreCompleto => nombreFantasia ?? razonSocial;
+
+  // Método auxiliar para verificar si tiene tipo contribuyente
+  bool get tieneContribuyente => tipo_contribuyente != null;
+
+  @override
+  String toString() {
+    return 'Cliente{id: $idCliente, razonSocial: $razonSocial, documento: $documento, estado: $estado}';
   }
 }

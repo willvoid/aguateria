@@ -14,7 +14,7 @@ class SelectorMetodoPagoDialog extends StatefulWidget {
   final double totalAPagar;
   final int idUsuario;
   final Cliente cliente; // AÑADIDO
-  final Map<String, dynamic> payloadFactura;
+  final Map<String, dynamic> Function(ModoPago modoPago) payloadFactura;
   final Function(ModoPago modoPago, Pago? pagoCreado) onMetodoSeleccionado;
 
   const SelectorMetodoPagoDialog({
@@ -27,12 +27,13 @@ class SelectorMetodoPagoDialog extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<SelectorMetodoPagoDialog> createState() => _SelectorMetodoPagoDialogState();
+  State<SelectorMetodoPagoDialog> createState() =>
+      _SelectorMetodoPagoDialogState();
 }
 
 class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
   final ModoPagoCrudImpl _modoPagoService = ModoPagoCrudImpl();
-  
+
   List<ModoPago> _modosPago = [];
   ModoPago? _modoPagoSeleccionado;
   bool _isLoading = true;
@@ -45,7 +46,7 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
 
   Future<void> _cargarModosPago() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final modos = await _modoPagoService.leerModosPago();
       setState(() {
@@ -59,32 +60,32 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
   }
 
   Future<void> _seleccionarMetodo(ModoPago modo) async {
-    setState(() => _modoPagoSeleccionado = modo);
+  setState(() => _modoPagoSeleccionado = modo);
 
-    // Si es Transferencia (id=5) o Giro (id=6), abrir diálogo de comprobante
-    if (modo.id_modo_pago == 5 || modo.id_modo_pago == 6) {
-      final pagoCreado = await showDialog<Pago>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => SubirComprobanteDialog(
-          modoPago: modo,
-          totalAPagar: widget.totalAPagar,
-          idUsuario: widget.idUsuario,
-          cliente: widget.cliente, // AÑADIDO
-          payloadFactura: widget.payloadFactura,
-        ),
-      );
+  // Si es Transferencia (id=5) o Giro (id=6), abrir diálogo de comprobante
+  if (modo.id_modo_pago == 5 || modo.id_modo_pago == 6) {
+    final pagoCreado = await showDialog<Pago>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => SubirComprobanteDialog(
+        modoPago: modo,
+        totalAPagar: widget.totalAPagar,
+        idUsuario: widget.idUsuario,
+        cliente: widget.cliente,
+        payloadFactura: widget.payloadFactura(modo), // ✅ Llamar a la función aquí
+      ),
+    );
 
-      if (pagoCreado != null && mounted) {
-        widget.onMetodoSeleccionado(modo, pagoCreado);
-        Navigator.pop(context);
-      }
-    } else {
-      // Para otros métodos (Efectivo, Tarjeta, etc.), solo devolver el método
-      widget.onMetodoSeleccionado(modo, null);
+    if (pagoCreado != null && mounted) {
+      widget.onMetodoSeleccionado(modo, pagoCreado);
       Navigator.pop(context);
     }
+  } else {
+    // Para otros métodos (Efectivo, Tarjeta, etc.), solo devolver el método
+    widget.onMetodoSeleccionado(modo, null);
+    Navigator.pop(context);
   }
+}
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -113,8 +114,8 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _modosPago.isEmpty
-                      ? _buildEmptyState()
-                      : _buildModosPagoList(),
+                  ? _buildEmptyState()
+                  : _buildModosPagoList(),
             ),
           ],
         ),
@@ -161,10 +162,7 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
                 ),
                 Text(
                   'Total: ${widget.totalAPagar.toStringAsFixed(0)} Gs.',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
                 ),
               ],
             ),
@@ -215,11 +213,11 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
 
   Widget _buildModoPagoCard(ModoPago modo) {
     final isSelected = _modoPagoSeleccionado?.id_modo_pago == modo.id_modo_pago;
-    
+
     // Iconos según el método
     IconData icono;
     Color color;
-    
+
     switch (modo.id_modo_pago) {
       case 1: // Efectivo
         icono = Icons.money;
@@ -358,7 +356,7 @@ class SubirComprobanteDialog extends StatefulWidget {
 class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
   final PagoCrudImpl _pagoService = PagoCrudImpl();
   final ImagePicker _picker = ImagePicker();
-  
+
   File? _imagenSeleccionada;
   bool _isUploading = false;
 
@@ -410,11 +408,12 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
 
     try {
       // 1. Subir imagen a Supabase Storage
-      final fileName = 'comprobante_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName =
+          'comprobante_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final filePath = 'comprobantes/$fileName';
-      
+
       final bytes = await _imagenSeleccionada!.readAsBytes();
-      
+
       await supabase.storage
           .from('pagos') // Nombre del bucket
           .uploadBinary(
@@ -458,7 +457,11 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
             ),
             title: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green.shade600, size: 32),
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.green.shade600,
+                  size: 32,
+                ),
                 const SizedBox(width: 12),
                 const Text('Comprobante Enviado'),
               ],
@@ -507,7 +510,10 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); // Cerrar alerta
-                  Navigator.pop(context, pagoCreado); // Cerrar diálogo con el pago
+                  Navigator.pop(
+                    context,
+                    pagoCreado,
+                  ); // Cerrar diálogo con el pago
                 },
                 child: const Text('Entendido'),
               ),
@@ -535,7 +541,9 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.modoPago.id_modo_pago == 5 ? Colors.teal : Colors.indigo;
+    final color = widget.modoPago.id_modo_pago == 5
+        ? Colors.teal
+        : Colors.indigo;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -735,7 +743,9 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                               ),
                             )
                           : const Icon(Icons.check),
-                      label: Text(_isUploading ? 'Procesando...' : 'Confirmar Pago'),
+                      label: Text(
+                        _isUploading ? 'Procesando...' : 'Confirmar Pago',
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: color,
                         foregroundColor: Colors.white,

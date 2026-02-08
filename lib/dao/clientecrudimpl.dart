@@ -2,6 +2,7 @@ import 'package:myapp/modelo/%20tipo_documento.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/tipo_operacion.dart';
+import 'package:myapp/modelo/empresa/tipo_contribuyente.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
@@ -11,24 +12,37 @@ class ClienteCrudImpl {
   // ==================== CREAR CLIENTE ====================
   Future<Cliente?> crearCliente(Cliente cliente) async {
     try {
+      final Map<String, dynamic> insertData = {
+        'razon_social': cliente.razonSocial,
+        'nombre_fantasia': cliente.nombreFantasia,
+        'documento': cliente.documento,
+        'telefono': cliente.telefono,
+        'celular': cliente.celular,
+        'direccion': cliente.direccion,
+        'es_proveedor_del_estado': cliente.es_proveedor_del_estado,
+        'email': cliente.email,
+        'nro_casa': cliente.nroCasa,
+        'fk_tipo_operacion': cliente.tipoOperacion.id_tipo_operacion,
+        'estado_cliente': cliente.estado,
+        'fk_tipo_documento': cliente.tipoDocumento.cod_tipo_documento,
+        'fk_barrios': cliente.barrio.cod_barrio,
+      };
+
+      // Solo agregar tipo_contribuyente si no es null
+      if (cliente.tipo_contribuyente != null) {
+        insertData['tipo_contribuyente'] = cliente.tipo_contribuyente!.id_tipo_contribuyente;
+      }
+
       final Map<String, dynamic> data = await supabase
           .from('clientes')
-          .insert({
-            'razon_social': cliente.razonSocial,
-            'nombre_fantasia': cliente.nombreFantasia,
-            'documento': cliente.documento,
-            'telefono': cliente.telefono,
-            'celular': cliente.celular,
-            'direccion': cliente.direccion,
-            'es_proveedor_del_estado': cliente.es_proveedor_del_estado,
-            'email': cliente.email,
-            'nro_casa': cliente.nroCasa,
-            'fk_tipo_operacion': cliente.tipoOperacion.id_tipo_operacion,
-            'estado_cliente': cliente.estado,
-            'fk_tipo_documento': cliente.tipoDocumento.cod_tipo_documento,
-            'fk_barrios': cliente.barrio.cod_barrio,
-          })
-          .select()
+          .insert(insertData)
+          .select('''
+            *,
+            tipo_documento(*),
+            barrios(*),
+            tipo_operacion(*),
+            tipo_contribuyente(*)
+          ''')
           .single();
 
       print('Cliente creado exitosamente');
@@ -48,7 +62,8 @@ class ClienteCrudImpl {
             *,
             tipo_documento(*),
             barrios(*),
-            tipo_operacion(*)
+            tipo_operacion(*),
+            tipo_contribuyente(*)
           ''');
 
       if (data == null) {
@@ -80,6 +95,9 @@ class ClienteCrudImpl {
           estado: mapa['estado_cliente'],
           tipoDocumento: TipoDocumento.fromMap(mapa['tipo_documento']),
           barrio: Barrio.fromMap(mapa['barrios']),
+          tipo_contribuyente: mapa['tipo_contribuyente'] != null
+              ? TipoContribuyente.fromMap(mapa['tipo_contribuyente'])
+              : null,
         );
       }).toList();
 
@@ -100,7 +118,8 @@ class ClienteCrudImpl {
             *,
             tipo_documento(*),
             barrios(*),
-            tipo_operacion(*)
+            tipo_operacion(*),
+            tipo_contribuyente(*)
           ''')
           .eq('id_cliente', idCliente)
           .single();
@@ -120,6 +139,9 @@ class ClienteCrudImpl {
         estado: data['estado_cliente'],
         tipoDocumento: TipoDocumento.fromMap(data['tipo_documento']),
         barrio: Barrio.fromMap(data['barrios']),
+        tipo_contribuyente: data['tipo_contribuyente'] != null
+            ? TipoContribuyente.fromMap(data['tipo_contribuyente'])
+            : null,
       );
     } catch (e) {
       print('Error al leer cliente por ID: $e');
@@ -136,7 +158,8 @@ class ClienteCrudImpl {
             *,
             tipo_documento(*),
             barrios(*),
-            tipo_operacion(*)
+            tipo_operacion(*),
+            tipo_contribuyente(*)
           ''')
           .or('razon_social.ilike.%$busqueda%,documento.ilike.%$busqueda%,celular.ilike.%$busqueda%');
 
@@ -163,6 +186,9 @@ class ClienteCrudImpl {
           estado: mapa['estado_cliente'],
           tipoDocumento: TipoDocumento.fromMap(mapa['tipo_documento']),
           barrio: Barrio.fromMap(mapa['barrios']),
+          tipo_contribuyente: mapa['tipo_contribuyente'] != null
+              ? TipoContribuyente.fromMap(mapa['tipo_contribuyente'])
+              : null,
         );
       }).toList();
 
@@ -176,23 +202,30 @@ class ClienteCrudImpl {
   // ==================== ACTUALIZAR CLIENTE ====================
   Future<bool> actualizarCliente(Cliente cliente) async {
     try {
+      final Map<String, dynamic> updateData = {
+        'razon_social': cliente.razonSocial,
+        'nombre_fantasia': cliente.nombreFantasia,
+        'documento': cliente.documento,
+        'telefono': cliente.telefono,
+        'celular': cliente.celular,
+        'direccion': cliente.direccion,
+        'es_proveedor_del_estado': cliente.es_proveedor_del_estado,
+        'email': cliente.email,
+        'nro_casa': cliente.nroCasa,
+        'fk_tipo_operacion': cliente.tipoOperacion.id_tipo_operacion,
+        'estado_cliente': cliente.estado,
+        'fk_tipo_documento': cliente.tipoDocumento.cod_tipo_documento,
+        'fk_barrios': cliente.barrio.cod_barrio,
+      };
+
+      // Solo agregar tipo_contribuyente si no es null
+      if (cliente.tipo_contribuyente != null) {
+        updateData['tipo_contribuyente'] = cliente.tipo_contribuyente!.id_tipo_contribuyente;
+      }
+
       await supabase
           .from('clientes')
-          .update({
-            'razon_social': cliente.razonSocial,
-            'nombre_fantasia': cliente.nombreFantasia,
-            'documento': cliente.documento,
-            'telefono': cliente.telefono,
-            'celular': cliente.celular,
-            'direccion': cliente.direccion,
-            'es_proveedor_del_estado': cliente.es_proveedor_del_estado,
-            'email': cliente.email,
-            'nro_casa': cliente.nroCasa,
-            'fk_tipo_operacion': cliente.tipoOperacion.id_tipo_operacion,
-            'estado_cliente': cliente.estado,
-            'fk_tipo_documento': cliente.tipoDocumento.cod_tipo_documento,
-            'fk_barrios': cliente.barrio.cod_barrio,
-          })
+          .update(updateData)
           .eq('id_cliente', cliente.idCliente!);
 
       print('Cliente actualizado exitosamente');
@@ -228,7 +261,8 @@ class ClienteCrudImpl {
             *,
             tipo_documento(*),
             barrios(*),
-            tipo_operacion(*)
+            tipo_operacion(*),
+            tipo_contribuyente(*)
           ''')
           .eq('fk_barrios', idBarrio);
 
@@ -255,6 +289,9 @@ class ClienteCrudImpl {
           estado: mapa['estado_cliente'],
           tipoDocumento: TipoDocumento.fromMap(mapa['tipo_documento']),
           barrio: Barrio.fromMap(mapa['barrios']),
+          tipo_contribuyente: mapa['tipo_contribuyente'] != null
+              ? TipoContribuyente.fromMap(mapa['tipo_contribuyente'])
+              : null,
         );
       }).toList();
 
@@ -274,7 +311,8 @@ class ClienteCrudImpl {
             *,
             tipo_documento(*),
             barrios(*),
-            tipo_operacion(*)
+            tipo_operacion(*),
+            tipo_contribuyente(*)
           ''')
           .eq('estado_cliente', estado);
 
@@ -301,6 +339,9 @@ class ClienteCrudImpl {
           estado: mapa['estado_cliente'],
           tipoDocumento: TipoDocumento.fromMap(mapa['tipo_documento']),
           barrio: Barrio.fromMap(mapa['barrios']),
+          tipo_contribuyente: mapa['tipo_contribuyente'] != null
+              ? TipoContribuyente.fromMap(mapa['tipo_contribuyente'])
+              : null,
         );
       }).toList();
 
