@@ -60,32 +60,34 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
   }
 
   Future<void> _seleccionarMetodo(ModoPago modo) async {
-  setState(() => _modoPagoSeleccionado = modo);
+    setState(() => _modoPagoSeleccionado = modo);
 
-  // Si es Transferencia (id=5) o Giro (id=6), abrir diálogo de comprobante
-  if (modo.id_modo_pago == 5 || modo.id_modo_pago == 6) {
-    final pagoCreado = await showDialog<Pago>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => SubirComprobanteDialog(
-        modoPago: modo,
-        totalAPagar: widget.totalAPagar,
-        idUsuario: widget.idUsuario,
-        cliente: widget.cliente,
-        payloadFactura: widget.payloadFactura(modo), // ✅ Llamar a la función aquí
-      ),
-    );
+    // Si es Transferencia (id=5) o Giro (id=6), abrir diálogo de comprobante
+    if (modo.id_modo_pago == 5 || modo.id_modo_pago == 6) {
+      final pagoCreado = await showDialog<Pago>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => SubirComprobanteDialog(
+          modoPago: modo,
+          totalAPagar: widget.totalAPagar,
+          idUsuario: widget.idUsuario,
+          cliente: widget.cliente,
+          payloadFactura: widget.payloadFactura(
+            modo,
+          ), // ✅ Llamar a la función aquí
+        ),
+      );
 
-    if (pagoCreado != null && mounted) {
-      widget.onMetodoSeleccionado(modo, pagoCreado);
+      if (pagoCreado != null && mounted) {
+        widget.onMetodoSeleccionado(modo, pagoCreado);
+        Navigator.pop(context);
+      }
+    } else {
+      // Para otros métodos (Efectivo, Tarjeta, etc.), solo devolver el método
+      widget.onMetodoSeleccionado(modo, null);
       Navigator.pop(context);
     }
-  } else {
-    // Para otros métodos (Efectivo, Tarjeta, etc.), solo devolver el método
-    widget.onMetodoSeleccionado(modo, null);
-    Navigator.pop(context);
   }
-}
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -398,6 +400,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
     }
   }
 
+  //Función crítica para crear pagos, detalle pagos y actualizar cuentas cobrar (deudas)
   Future<void> _procesarPago() async {
     if (_imagenSeleccionada == null) {
       _mostrarError('Debe seleccionar un comprobante');
@@ -445,6 +448,27 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
 
       final pagoCreado = await _pagoService.crearPago(nuevoPago);
 
+      print('🔍 payload detalles: ${widget.payloadFactura['detalles']}');
+      print('🔍 fk_inmueble: ${widget.payloadFactura['fk_inmueble']}');
+
+      if (pagoCreado != null) {
+        final detalles = widget.payloadFactura['detalles'] as List<dynamic>;
+        final fkInmueble = widget.payloadFactura['fk_inmueble'] as int;
+
+        //Llama a la función rpc y envía el payload de la factura para insertar en detalle
+        try {
+          await supabase.rpc(
+            'crear_detalle_pago_deuda',
+            params: {
+              'p_id_pago': pagoCreado.idPago,
+              'p_fk_inmueble': fkInmueble,
+              'p_detalles': detalles,
+            },
+          );
+        } catch (e) {
+          print('Error al crear el detalle de pago: $e');
+        }
+      }
       setState(() => _isUploading = false);
 
       if (pagoCreado != null && mounted) {

@@ -166,7 +166,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       totalAPagar: _totalAPagar,
       idUsuario: widget.idUsuario,
       cliente: widget.cliente,
-      // ✅ SOLUCIÓN: Construir payload ANTES de abrir el diálogo
+      // Construir payload ANTES de abrir el diálogo
       payloadFactura: (ModoPago modoPago) => _construirPayloadCompleto(
         turnoActivo: turnoActivo,
         modoPago: modoPago,
@@ -179,7 +179,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     ),
   );
 
-  // ... resto del código
 }
 
   // ========================================

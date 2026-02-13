@@ -366,7 +366,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     } else {
       estadoColor = Colors.orange;
       estadoIcon = Icons.pending;
-      estadoTexto = 'PENDIENTE';
+      estadoTexto = 'EN VERIFICACION';
     }
 
     return Container(
