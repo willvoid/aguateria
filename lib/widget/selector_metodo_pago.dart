@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:myapp/dao/facturaciondao/modo_pagocrudimpl.dart';
@@ -359,27 +360,30 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
   final PagoCrudImpl _pagoService = PagoCrudImpl();
   final ImagePicker _picker = ImagePicker();
 
-  File? _imagenSeleccionada;
+  XFile? _imagenSeleccionada;
+  Uint8List? _imagenBytes;
   bool _isUploading = false;
 
   Future<void> _seleccionarImagen() async {
-    try {
-      final XFile? imagen = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
+  try {
+    final XFile? imagen = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      imageQuality: 85,
+    );
 
-      if (imagen != null) {
-        setState(() {
-          _imagenSeleccionada = File(imagen.path);
-        });
-      }
-    } catch (e) {
-      _mostrarError('Error al seleccionar imagen: $e');
+    if (imagen != null) {
+      final bytes = await imagen.readAsBytes(); // ← AÑADIR
+      setState(() {
+        _imagenSeleccionada = imagen;
+        _imagenBytes = bytes; // ← AÑADIR
+      });
     }
+  } catch (e) {
+    _mostrarError('Error al seleccionar imagen: $e');
   }
+}
 
   Future<void> _tomarFoto() async {
     try {
@@ -391,8 +395,10 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
       );
 
       if (imagen != null) {
+         final bytes = await imagen.readAsBytes();
         setState(() {
-          _imagenSeleccionada = File(imagen.path);
+          _imagenSeleccionada = imagen;
+          _imagenBytes = bytes;
         });
       }
     } catch (e) {
@@ -415,7 +421,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
           'comprobante_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final filePath = 'comprobantes/$fileName';
 
-      final bytes = await _imagenSeleccionada!.readAsBytes();
+      final bytes = _imagenBytes!;
 
       await supabase.storage
           .from('pagos') // Nombre del bucket
@@ -713,8 +719,8 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.file(
-                            _imagenSeleccionada!,
+                          child: Image.memory(
+                            _imagenBytes!,
                             fit: BoxFit.cover,
                           ),
                         ),

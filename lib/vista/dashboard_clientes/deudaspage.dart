@@ -363,8 +363,12 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
       estadoColor = Colors.red;
       estadoIcon = Icons.warning;
       estadoTexto = 'VENCIDA';
-    } else {
+    } else if (deuda.estado == 'PENDIENTE') {
       estadoColor = Colors.orange;
+      estadoIcon = Icons.pending;
+      estadoTexto = 'PENDIENTE';
+    } else {
+      estadoColor = Colors.blue;
       estadoIcon = Icons.pending;
       estadoTexto = 'EN VERIFICACION';
     }
