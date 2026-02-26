@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/vista/dashboard_clientes/deudaspage.dart';
+import 'package:myapp/vista/dashboard_clientes/pagos_clientespage.dart';
 
 class ClienteDashboardPage extends StatelessWidget {
   final Cliente cliente;
@@ -67,7 +68,7 @@ class ClienteDashboardPage extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        cliente.razonSocial.isNotEmpty 
+                        cliente.razonSocial.isNotEmpty
                             ? cliente.razonSocial[0].toUpperCase()
                             : 'C',
                         style: const TextStyle(
@@ -91,10 +92,7 @@ class ClienteDashboardPage extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Doc: ${cliente.documento}',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                 ],
               ),
@@ -106,35 +104,31 @@ class ClienteDashboardPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildInfoCard(
-                    'Inmueble Seleccionado',
-                    Icons.home,
-                    [
-                      _InfoRow('Código', inmueble.cod_inmueble ?? 'N/A'),
-                      _InfoRow('Dirección', inmueble.direccion ?? 'N/A'),
-                      _InfoRow('Categoría', inmueble.categoriaServicio?.nombre ?? 'N/A'),
-                      _InfoRow('Estado', inmueble.estado ?? 'N/A'),
-                    ],
-                  ),
+                  _buildInfoCard('Inmueble Seleccionado', Icons.home, [
+                    _InfoRow('Código', inmueble.cod_inmueble ?? 'N/A'),
+                    _InfoRow('Dirección', inmueble.direccion ?? 'N/A'),
+                    _InfoRow(
+                      'Categoría',
+                      inmueble.categoriaServicio?.nombre ?? 'N/A',
+                    ),
+                    _InfoRow('Estado', inmueble.estado ?? 'N/A'),
+                  ]),
                   const SizedBox(height: 16),
-                  
-                  _buildInfoCard(
-                    'Información Personal',
-                    Icons.person,
-                    [
-                      if (cliente.celular != null && cliente.celular.isNotEmpty)
-                        _InfoRow('Celular', cliente.celular),
-                      if (cliente.telefono != null && cliente.telefono!.isNotEmpty)
-                        _InfoRow('Teléfono', cliente.telefono.toString()),
-                      if (cliente.email != null && cliente.email!.isNotEmpty)
-                        _InfoRow('Email', cliente.email.toString()),
-                      _InfoRow('Barrio', cliente.barrio?.nombre_barrio ?? 'N/A'),
-                      _InfoRow('Dirección', cliente.direccion ?? 'N/A'),
-                    ],
-                  ),
-                  
+
+                  _buildInfoCard('Información Personal', Icons.person, [
+                    if (cliente.celular != null && cliente.celular.isNotEmpty)
+                      _InfoRow('Celular', cliente.celular),
+                    if (cliente.telefono != null &&
+                        cliente.telefono!.isNotEmpty)
+                      _InfoRow('Teléfono', cliente.telefono.toString()),
+                    if (cliente.email != null && cliente.email!.isNotEmpty)
+                      _InfoRow('Email', cliente.email.toString()),
+                    _InfoRow('Barrio', cliente.barrio?.nombre_barrio ?? 'N/A'),
+                    _InfoRow('Dirección', cliente.direccion ?? 'N/A'),
+                  ]),
+
                   const SizedBox(height: 24),
-                  
+
                   // Botones de acción
                   _buildActionButton(
                     context,
@@ -154,7 +148,7 @@ class ClienteDashboardPage extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 12),
-                  
+
                   _buildActionButton(
                     context,
                     'Historial de Consumo',
@@ -165,14 +159,19 @@ class ClienteDashboardPage extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 12),
-                  
+
                   _buildActionButton(
                     context,
                     'Historial de Pagos',
                     Icons.payment,
                     Colors.green,
                     () {
-                      _showComingSoon(context, 'Historial de Pagos');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PagosClientePage(cliente: cliente),
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -216,35 +215,37 @@ class ClienteDashboardPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ...rows.map((row) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 100,
-                  child: Text(
-                    row.label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
+          ...rows.map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 100,
+                    child: Text(
+                      row.label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Text(
-                    row.value,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF111827),
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      row.value,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF111827),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );
