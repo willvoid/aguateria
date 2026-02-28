@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
-import 'package:myapp/vista/dashboard_clientes/deudaspage.dart';
+import 'package:myapp/vista/dashboard_clientes/deudas_clientes_page.dart';
 import 'package:myapp/vista/dashboard_clientes/pagos_clientespage.dart';
 
 class ClienteDashboardPage extends StatelessWidget {
@@ -142,6 +142,7 @@ class ClienteDashboardPage extends StatelessWidget {
                           builder: (_) => DeudasClientesPage(
                             cliente: cliente,
                             inmueble: inmueble,
+                            modo: ModoDeudasClientes.deuda,
                           ),
                         ),
                       );
@@ -155,7 +156,16 @@ class ClienteDashboardPage extends StatelessWidget {
                     Icons.water_drop,
                     Colors.blue,
                     () {
-                      _showComingSoon(context, 'Historial de Consumo');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DeudasClientesPage(
+                            cliente: cliente,
+                            inmueble: inmueble,
+                            modo: ModoDeudasClientes.consumo,
+                          ),
+                        ),
+                      );
                     },
                   ),
                   const SizedBox(height: 12),
