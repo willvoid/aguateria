@@ -136,6 +136,37 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     return DateTime.now().difference(deuda.fk_ciclos!.vencimiento).inDays;
   }
 
+  // ── Helper: abre el diálogo de pago y recarga si tuvo éxito ──────────────
+  Future<void> _abrirPagarDeuda(
+    CuentaCobrar deuda,
+    Cliente cliente,
+    Inmuebles inmueble,
+    int idUsuario,
+  ) async {
+    final resultado = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PagarDeudaDialog(
+        deuda: deuda,
+        cliente: cliente,
+        inmueble: inmueble,
+        idUsuario: idUsuario,
+      ),
+    );
+
+    // ✅ Recargar siempre que el diálogo retorne true (pago registrado)
+    if (resultado == true && mounted) {
+      await _cargarDeudas();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✓ Pago procesado exitosamente'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -435,22 +466,25 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     String estadoTexto;
     final estaVencida = _estaVencida(deuda);
 
+    // ✅ FIX: distinguir EN REVISION del resto
+    final bool enRevision = deuda.estado == 'EN REVISION';
+
     if (deuda.estado == 'PAGADO') {
       estadoColor = Colors.green;
       estadoIcon = Icons.check_circle;
       estadoTexto = 'PAGADA';
+    } else if (enRevision) {
+      estadoColor = Colors.blue;
+      estadoIcon = Icons.hourglass_top;
+      estadoTexto = 'EN VERIFICACIÓN';
     } else if (estaVencida) {
       estadoColor = Colors.red;
       estadoIcon = Icons.warning;
       estadoTexto = 'VENCIDA';
-    } else if (deuda.estado == 'PENDIENTE') {
+    } else {
       estadoColor = Colors.orange;
       estadoIcon = Icons.pending;
       estadoTexto = 'PENDIENTE';
-    } else {
-      estadoColor = Colors.blue;
-      estadoIcon = Icons.pending;
-      estadoTexto = 'EN VERIFICACION';
     }
 
     return Container(
@@ -604,49 +638,56 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                     ),
                   ],
                 ),
-                // Botón pagar — solo en modo deuda y estado pendiente
-                if (!_modoConsumo && deuda.estado == 'PENDIENTE') ...[
+
+                // ✅ FIX: botón solo si PENDIENTE; si EN REVISION muestra aviso
+                if (!_modoConsumo) ...[
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final resultado = await showDialog<bool>(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) => PagarDeudaDialog(
-                            deuda: deuda,
-                            cliente: cliente,
-                            inmueble: inmueble,
-                            idUsuario: idUsuario,
+                  if (deuda.estado == 'PENDIENTE')
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () =>
+                            _abrirPagarDeuda(deuda, cliente, inmueble, idUsuario),
+                        icon: const Icon(Icons.payment, size: 18),
+                        label: const Text('Pagar Ahora'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0085FF),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        );
-                        if (resultado == true) {
-                          await _cargarDeudas();
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('✓ Pago procesado exitosamente'),
-                                backgroundColor: Colors.green,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.payment, size: 18),
-                      label: const Text('Pagar Ahora'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0085FF),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
+                    )
+                  else if (enRevision)
+                    // ✅ Aviso de comprobante enviado — no permite re-pagar
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.hourglass_top,
+                              size: 16, color: Colors.blue.shade700),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Comprobante enviado — pendiente de aprobación',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
+
                 // Alerta de vencimiento
                 if (estaVencida) ...[
                   const SizedBox(height: 12),
@@ -768,49 +809,54 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                 ),
               ],
               const SizedBox(height: 24),
-              // Botón pagar en el detalle — solo en modo deuda
-              if (!_modoConsumo && deuda.estado != 'PAGADO') ...[
-                ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    final resultado = await showDialog<bool>(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => PagarDeudaDialog(
-                        deuda: deuda,
-                        cliente: cliente,
-                        inmueble: inmueble,
-                        idUsuario: idUsuario,
+
+              // ✅ FIX: en el detalle también usar _abrirPagarDeuda
+              // y bloquear si ya está EN REVISION
+              if (!_modoConsumo) ...[
+                if (deuda.estado == 'PENDIENTE')
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context); // cerrar bottom sheet primero
+                      await _abrirPagarDeuda(deuda, cliente, inmueble, idUsuario);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0085FF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                    if (resultado == true) {
-                      await _cargarDeudas();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('✓ Pago procesado exitosamente'),
-                            backgroundColor: Colors.green,
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0085FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
+                    ),
+                    child: const Text(
+                      'Pagar Deuda',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  )
+                else if (deuda.estado == 'EN REVISION')
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.hourglass_top,
+                            color: Colors.blue.shade700),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Su comprobante está pendiente de aprobación.',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: const Text(
-                    'Pagar Deuda',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
               ],
+
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(context),

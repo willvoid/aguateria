@@ -35,7 +35,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   final PagoDeudaService _pagoService = PagoDeudaService();
   final TextEditingController _efectivoController = TextEditingController();
 
-  // Para deudas de consumo: lista de ciclos disponibles
   List<Ciclo> _ciclosDisponibles = [];
   List<Ciclo> _ciclosSeleccionados = [];
 
@@ -59,17 +58,14 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       final esConsumo = widget.deuda.fk_concepto.id == 1;
 
       if (esConsumo) {
-        // Cargar ciclos disponibles para consumo
         final ciclos = await _pagoService.cargarCiclosDisponiblesConsumo(
           widget.inmueble.id!,
         );
-
         setState(() {
           _ciclosDisponibles = ciclos;
           _isLoading = false;
         });
       } else {
-        // Si no es consumo, usar directamente el saldo de la deuda
         setState(() {
           _totalAPagar = widget.deuda.saldo;
           _calcularTotales();
@@ -97,14 +93,12 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final esConsumo = widget.deuda.fk_concepto.id == 1;
 
     if (esConsumo) {
-      // El monto viene del arancel del concepto, multiplicado por cantidad de ciclos
       final montoPorCiclo = widget.deuda.fk_concepto.arancel;
       _totalAPagar = montoPorCiclo * _ciclosSeleccionados.length;
     } else {
       _totalAPagar = widget.deuda.saldo;
     }
 
-    // Calcular IVA y base gravada
     final totales = _pagoService.calcularTotales(
       _totalAPagar,
       widget.deuda.fk_concepto.fk_iva.valor,
@@ -128,90 +122,86 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Future<void> _procesarPago() async {
-  // Validar datos básicos
-  final error = _pagoService.validarPago(
-    deuda: widget.deuda,
-    ciclosSeleccionados: _ciclosSeleccionados,
-    efectivo: double.tryParse(_efectivoController.text) ?? 0,
-  );
-
-  if (error != null) {
-    _mostrarError(error);
-    return;
-  }
-
-  // ========== PASO 0: OBTENER TURNO ACTIVO (CRÍTICO) ==========
-  print('🔍 Obteniendo turno activo para usuario ${widget.idUsuario}...');
-
-  final turnoActivo = await _obtenerTurnoActivo();
-
-  if (turnoActivo == null) {
-    _mostrarError(
-      'No hay un turno de caja activo.\n\n'
-      'Debe abrir caja antes de procesar pagos.',
+    // Validar datos básicos
+    final error = _pagoService.validarPago(
+      deuda: widget.deuda,
+      ciclosSeleccionados: _ciclosSeleccionados,
+      efectivo: double.tryParse(_efectivoController.text) ?? 0,
     );
-    return;
+
+    if (error != null) {
+      _mostrarError(error);
+      return;
+    }
+
+    // ── PASO 0: Obtener turno activo ─────────────────────────────────────
+    final turnoActivo = await _obtenerTurnoActivo();
+
+    if (turnoActivo == null) {
+      _mostrarError(
+        'No hay un turno de caja activo.\n\nDebe abrir caja antes de procesar pagos.',
+      );
+      return;
+    }
+
+    // ── PASO 1: Seleccionar método de pago ───────────────────────────────
+    ModoPago? modoPagoSeleccionado;
+    Pago? pagoConComprobante;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => SelectorMetodoPagoDialog(
+        totalAPagar: _totalAPagar,
+        idUsuario: widget.idUsuario,
+        cliente: widget.cliente,
+        payloadFactura: (ModoPago modoPago) => _construirPayloadCompleto(
+          turnoActivo: turnoActivo,
+          modoPago: modoPago,
+        ),
+        onMetodoSeleccionado: (modoPago, pagoCreado) {
+          modoPagoSeleccionado = modoPago;
+          pagoConComprobante = pagoCreado;
+        },
+      ),
+    );
+
+    // ── Si el usuario cerró el selector sin elegir, no hacer nada ────────
+    if (modoPagoSeleccionado == null || !mounted) return;
+
+    // ── PASO 2: Según el método, procesar de forma diferente ─────────────
+    final esTransferenciaOGiro =
+        modoPagoSeleccionado!.id_modo_pago == 5 ||
+        modoPagoSeleccionado!.id_modo_pago == 6;
+
+    if (esTransferenciaOGiro && pagoConComprobante != null) {
+      // Transferencia/Giro: mostrar diálogo informativo y cerrar con true
+      await _mostrarDialogoPagoPendiente(
+        modoPagoSeleccionado!,
+        pagoConComprobante!,
+      );
+      // ✅ Cerrar PagarDeudaDialog retornando true → dispara _cargarDeudas()
+      if (mounted) Navigator.pop(context, true);
+    } else if (!esTransferenciaOGiro) {
+      // Efectivo, Tarjeta, etc.: procesar factura directamente
+      await _procesarFactura(modoPagoSeleccionado!);
+      // _procesarFactura ya hace Navigator.pop(context, true) al final
+    }
   }
 
-  print('✅ Turno activo encontrado: ${turnoActivo.id_turno}');
+  // ── HELPERS ──────────────────────────────────────────────────────────────
 
-  // ========== PASO 1: Seleccionar método de pago ==========
-  ModoPago? modoPagoSeleccionado;
-  Pago? pagoConComprobante;
-
-  await showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => SelectorMetodoPagoDialog(
-      totalAPagar: _totalAPagar,
-      idUsuario: widget.idUsuario,
-      cliente: widget.cliente,
-      // Construir payload ANTES de abrir el diálogo
-      payloadFactura: (ModoPago modoPago) => _construirPayloadCompleto(
-        turnoActivo: turnoActivo,
-        modoPago: modoPago,
-      ),
-      onMetodoSeleccionado: (modoPago, pagoCreado) async {
-        modoPagoSeleccionado = modoPago;
-        pagoConComprobante = pagoCreado;
-        Navigator.pop(context);
-      },
-    ),
-  );
-
-}
-
-  // ========================================
-  // MÉTODOS HELPER
-  // ========================================
-
-  /// Obtiene el turno de caja activo del usuario actual
-  /// Retorna null si no hay turno activo
   Future<AperturaCierreCaja?> _obtenerTurnoActivo() async {
     try {
-      // Buscar aperturas de caja del usuario que no tienen cierre (están abiertas)
       final crudTurno = AperturaCierreCajaCrudImpl();
-      final aperturas =
-          await crudTurno.leerAperturasPorUsuario(
-            widget.idUsuario,
-          );
+      final aperturas = await crudTurno.leerAperturasPorUsuario(widget.idUsuario);
 
-      if (aperturas.isEmpty) {
-        print('⚠️ No hay turnos para el usuario ${widget.idUsuario}');
-        return null;
-      }
+      if (aperturas.isEmpty) return null;
 
-      // Buscar el turno que no tiene fecha de cierre
       final turnoAbierto = aperturas.firstWhere(
         (apertura) => apertura.cierre == null,
         orElse: () => throw Exception('No hay turno abierto'),
       );
-
-      print('✅ Turno activo encontrado:');
-      print('   - ID Turno: ${turnoAbierto.id_turno}');
-      print('   - Apertura: ${turnoAbierto.apertura}');
-      print('   - Caja: ${turnoAbierto.fk_caja.descripcion_caja}');
-      print('   - Monto Inicial: ${turnoAbierto.monto_inicial}');
 
       return turnoAbierto;
     } catch (e) {
@@ -224,76 +214,49 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     required AperturaCierreCaja turnoActivo,
     required ModoPago modoPago,
   }) {
-    // Calcular totales según IVA
     final ivaValor = widget.deuda.fk_concepto.fk_iva.valor;
     double totalGravado10 = 0;
     double totalGravado5 = 0;
     double totalExenta = 0;
 
     if (ivaValor == 10) {
-      // Base gravada 10% (sin IVA incluido)
       totalGravado10 = _totalGravado;
     } else if (ivaValor == 5) {
-      // Base gravada 5% (sin IVA incluido)
       totalGravado5 = _totalGravado;
     } else {
-      // Exenta de IVA
       totalExenta = _totalAPagar;
     }
 
-    // Construir detalles de la factura
     final detalles = _construirDetallesFactura();
 
-    // Logging para debug
-    print('📋 Construyendo payload:');
-    print('   - Cliente: ${widget.cliente.idCliente}');
-    print('   - Inmueble: ${widget.inmueble.id}');
-    print('   - Turno: ${turnoActivo.id_turno}');
-    print('   - Modo Pago: ${modoPago.id_modo_pago} (${modoPago.descripcion})');
-    print('   - Total: $_totalAPagar Gs.');
-    print('   - Detalles: ${detalles.length}');
-
-    // ESTRUCTURA COMPLETA - Igual a FacturaPayload
     return {
-      // ========== INFORMACIÓN BÁSICA ==========
       'fechaEmision': DateTime.now().toUtc().toIso8601String(),
       'fk_cliente': widget.cliente.idCliente,
       'fk_inmueble': widget.inmueble.id,
-      'condicion_venta': 1, // 1 = Contado
-      // ========== TOTALES (redondeados a 2 decimales) ==========
+      'condicion_venta': 1,
       'total_gravado_10': double.parse(totalGravado10.toStringAsFixed(2)),
       'total_gravado_5': double.parse(totalGravado5.toStringAsFixed(2)),
       'total_exenta': double.parse(totalExenta.toStringAsFixed(2)),
       'total_iva': double.parse(_totalIva.toStringAsFixed(2)),
       'total_general': double.parse(_totalAPagar.toStringAsFixed(2)),
-
-      // ========== INFORMACIÓN DE FACTURACIÓN ==========
       'observacion': _construirObservacion(),
-      'fk_monedas': 1, // 1 = Guaraníes (ajustar si tienes múltiples monedas)
-      'fk_establecimientos':
-          1, // 1 = Establecimiento principal (ajustar según tu lógica)
+      'fk_monedas': 1,
+      'fk_establecimientos': 1,
       'fk_modo_pago': modoPago.id_modo_pago,
-      'fk_tipo_factura': 1, // 1 = Factura normal (ajustar según tu lógica)
-      'nro_secuencial': 0, // Se asignará automáticamente por la función RPC
-      'fk_turno': turnoActivo.id_turno, // ⚠️ CRÍTICO
-      'tipo_emision': 1, // 1 = Normal
+      'fk_tipo_factura': 1,
+      'nro_secuencial': 0,
+      'fk_turno': turnoActivo.id_turno,
+      'tipo_emision': 1,
       'fk_motivo': null,
       'fk_factura_asociada': null,
-
-      // ========== MONTOS DE PAGO ==========
-      // Para transferencias, efectivo y vuelto siempre son 0
       'efectivo': 0,
       'vuelto': 0,
       'descuento_global': 0,
-
-      // ========== DETALLES DE LA FACTURA ==========
       'detalles': detalles,
     };
   }
 
-  /// Procesa la factura para métodos de pago inmediatos (Efectivo, Tarjeta, etc.)
   Future<void> _procesarFactura(ModoPago modoPago) async {
-    // Mostrar loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -322,14 +285,11 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         ciclosSeleccionados: _ciclosSeleccionados,
         efectivo: double.parse(_efectivoController.text),
         idUsuario: widget.idUsuario,
-        idModoPago:
-            modoPago.id_modo_pago, // Pasar el ID del método seleccionado
+        idModoPago: modoPago.id_modo_pago,
       );
 
-      // Cerrar loading
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context); // cerrar loading
 
-      // Mostrar éxito con la factura
       if (mounted) {
         await showDialog(
           context: context,
@@ -337,25 +297,21 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           builder: (context) => FacturaSuccessDialog(
             facturaCreada: facturaCreada,
             clienteNombre: widget.cliente.razonSocial,
-            //metodosPago: modoPago.descripcion,
             onImprimir: () {
               print('📄 Imprimir factura de pago de deuda');
-              // Implementar lógica de impresión
             },
           ),
         );
 
-        // Cerrar el diálogo de pago
-        Navigator.pop(context, true); // true = pago exitoso
+        // ✅ Cerrar retornando true → dispara _cargarDeudas() en DeudasClientesPage
+        if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {
-      // Cerrar loading
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context); // cerrar loading
       _mostrarError('Error al procesar pago: $e');
     }
   }
 
-  /// Muestra diálogo informativo para pagos pendientes (Transferencia/Giro)
   Future<void> _mostrarDialogoPagoPendiente(
     ModoPago modoPago,
     Pago pago,
@@ -400,8 +356,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 style: const TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 16),
-
-              // Información del pago
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -412,19 +366,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow(
-                      'ID de Pago',
-                      '#${pago.idPago}',
-                      Icons.tag,
-                      color,
-                    ),
+                    _buildInfoRow('ID de Pago', '#${pago.idPago}', Icons.tag, color),
                     const Divider(height: 16),
-                    _buildInfoRow(
-                      'Método',
-                      modoPago.descripcion,
-                      Icons.payment,
-                      color,
-                    ),
+                    _buildInfoRow('Método', modoPago.descripcion, Icons.payment, color),
                     const Divider(height: 16),
                     _buildInfoRow(
                       'Monto',
@@ -450,8 +394,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Aviso de aprobación
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -462,27 +404,18 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Colors.blue.shade700,
-                      size: 20,
-                    ),
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'El pago será procesado una vez que un administrador verifique y apruebe el comprobante. Recibirá una notificación cuando esto ocurra.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
+                        'El pago será procesado una vez que un administrador verifique y apruebe el comprobante.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Información de contacto
               Text(
                 'Para consultas, comuníquese con administración presentando el ID de pago #${pago.idPago}.',
                 style: TextStyle(
@@ -495,13 +428,21 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           ),
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
+            // ✅ Botón "Entendido" cierra solo este AlertDialog
+            // El Navigator.pop(context, true) del PagarDeudaDialog
+            // se ejecuta justo después en _procesarPago()
             onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Entendido'),
           ),
         ],
       ),
     );
+    // ← cuando este await termina, _procesarPago() ejecuta Navigator.pop(context, true)
   }
 
   Widget _buildInfoRow(String label, String value, IconData icon, Color color) {
@@ -513,17 +454,11 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              ),
+              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -534,21 +469,11 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   String _formatearFecha(DateTime fecha) {
     final meses = [
-      'Ene',
-      'Feb',
-      'Mar',
-      'Abr',
-      'May',
-      'Jun',
-      'Jul',
-      'Ago',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dic',
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
     ];
-
-    return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year} - ${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
+    return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year} - '
+        '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
   }
 
   void _mostrarError(String mensaje) {
@@ -561,6 +486,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     );
   }
 
+  // ── BUILD ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final esConsumo = widget.deuda.fk_concepto.id == 1;
@@ -572,10 +499,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             _buildHeader(),
-
-            // Contenido scrolleable
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -584,27 +508,17 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Resumen de la deuda
                           _buildResumenDeuda(),
                           const SizedBox(height: 24),
-
-                          // Selector de ciclos o monto fijo
-                          if (esConsumo) ...[
-                            _buildResumenCiclosSeleccionados(),
-                          ] else ...[
+                          if (esConsumo)
+                            _buildResumenCiclosSeleccionados()
+                          else
                             _buildMontoFijo(),
-                          ],
                           const SizedBox(height: 24),
-
-                          // Resumen de totales
                           _buildResumenTotales(),
                           const SizedBox(height: 24),
-
-                          // Input de efectivo
                           _buildInputEfectivo(),
                           const SizedBox(height: 24),
-
-                          // Botones
                           _buildBotones(),
                         ],
                       ),
@@ -621,11 +535,11 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final Color color;
 
     switch (widget.deuda.fk_concepto.id) {
-      case 1: // Consumo
+      case 1:
         icono = Icons.water_drop;
         color = Colors.blue;
         break;
-      case 2: // Conexión
+      case 2:
         icono = Icons.electrical_services;
         color = Colors.orange;
         break;
@@ -709,38 +623,21 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             ],
           ),
           const Divider(height: 16),
-          _buildInfoRowSimple(
-            'Código',
-            widget.inmueble.cod_inmueble,
-          ), // CAMBIADO
+          _buildInfoRowSimple('Código', widget.inmueble.cod_inmueble),
           const SizedBox(height: 8),
-          _buildInfoRowSimple(
-            // CAMBIADO
-            'Dirección',
-            widget.inmueble.direccion ?? "Sin dirección",
-          ),
+          _buildInfoRowSimple('Dirección', widget.inmueble.direccion ?? 'Sin dirección'),
           const SizedBox(height: 8),
-          _buildInfoRowSimple(
-            'Cliente',
-            widget.cliente.razonSocial,
-          ), // CAMBIADO
+          _buildInfoRowSimple('Cliente', widget.cliente.razonSocial),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRowSimple(
-    String label,
-    String value, {
-    bool isBold = false,
-  }) {
+  Widget _buildInfoRowSimple(String label, String value, {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-        ),
+        Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
         Expanded(
           child: Text(
             value,
@@ -781,16 +678,12 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0085FF),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-
         if (_ciclosSeleccionados.isEmpty)
           Container(
             padding: const EdgeInsets.all(20),
@@ -838,11 +731,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                         color: Colors.green.shade50,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        Icons.check_circle,
-                        color: Colors.green.shade600,
-                        size: 20,
-                      ),
+                      child: Icon(Icons.check_circle,
+                          color: Colors.green.shade600, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -852,16 +742,12 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                           Text(
                             '${_ciclosSeleccionados.length} ciclo(s) seleccionado(s)',
                             style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                           Text(
                             'Precio por ciclo: ${montoPorCiclo.toStringAsFixed(0)} Gs.',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
+                                fontSize: 12, color: Colors.grey.shade600),
                           ),
                         ],
                       ),
@@ -871,8 +757,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                       icon: const Icon(Icons.edit, size: 16),
                       label: const Text('Editar'),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF0085FF),
-                      ),
+                          foregroundColor: const Color(0xFF0085FF)),
                     ),
                   ],
                 ),
@@ -882,29 +767,20 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.water_drop,
-                          size: 16,
-                          color: Colors.blue.shade400,
-                        ),
+                        Icon(Icons.water_drop,
+                            size: 16, color: Colors.blue.shade400),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                ciclo.descripcion,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                              Text(ciclo.descripcion,
+                                  style: const TextStyle(
+                                      fontSize: 13, fontWeight: FontWeight.w500)),
                               Text(
                                 'Ciclo ${ciclo.ciclo} - Año ${ciclo.anio}',
                                 style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade600,
-                                ),
+                                    fontSize: 11, color: Colors.grey.shade600),
                               ),
                             ],
                           ),
@@ -912,10 +788,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                         Text(
                           '${montoPorCiclo.toStringAsFixed(0)} Gs.',
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade800,
-                          ),
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade800),
                         ),
                       ],
                     ),
@@ -961,10 +836,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Monto a Pagar',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
+                const Text('Monto a Pagar',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
                 Text(
                   '${widget.deuda.saldo.toStringAsFixed(0)} Gs.',
@@ -983,10 +856,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 if (widget.deuda.pagado > 0) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.green.shade100,
                       borderRadius: BorderRadius.circular(4),
@@ -1027,19 +898,15 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             children: [
               Icon(Icons.calculate, color: Colors.blue.shade700),
               const SizedBox(width: 8),
-              const Text(
-                'Resumen del Pago',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              const Text('Resumen del Pago',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
           const Divider(height: 16),
           _buildTotalRow('Subtotal', _totalGravado),
           const SizedBox(height: 8),
           _buildTotalRow(
-            'IVA (${widget.deuda.fk_concepto.fk_iva.valor}%)',
-            _totalIva,
-          ),
+              'IVA (${widget.deuda.fk_concepto.fk_iva.valor}%)', _totalIva),
           const Divider(height: 16),
           _buildTotalRow('TOTAL', _totalAPagar, isTotal: true),
           if (widget.deuda.fk_concepto.id == 1 &&
@@ -1068,7 +935,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             labelText: 'Efectivo Recibido *',
             prefixIcon: const Icon(Icons.payments),
             suffixText: 'Gs.',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: Colors.white,
           ),
@@ -1088,20 +956,17 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             children: [
               Icon(
                 esValido ? Icons.check_circle : Icons.warning,
-                color: esValido ? Colors.green.shade700 : Colors.red.shade700,
+                color:
+                    esValido ? Colors.green.shade700 : Colors.red.shade700,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Vuelto',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
+                    Text('Vuelto',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade700)),
                     Text(
                       '${_vuelto.toStringAsFixed(0)} Gs.',
                       style: TextStyle(
@@ -1113,13 +978,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                       ),
                     ),
                     if (!esValido)
-                      Text(
-                        'Insuficiente',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red.shade700,
-                        ),
-                      ),
+                      Text('Insuficiente',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.red.shade700)),
                   ],
                 ),
               ),
@@ -1135,10 +996,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final ivaValor = widget.deuda.fk_concepto.fk_iva.valor;
 
     if (esConsumo && _ciclosSeleccionados.isNotEmpty) {
-      // Para consumo: un detalle por cada ciclo seleccionado
       return _ciclosSeleccionados.map((ciclo) {
         final montoPorCiclo = widget.deuda.fk_concepto.arancel;
-
         return {
           'fk_concepto': widget.deuda.fk_concepto.id,
           'monto': double.parse(montoPorCiclo.toStringAsFixed(2)),
@@ -1154,7 +1013,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         };
       }).toList();
     } else {
-      // Para otros conceptos (conexión, multas, etc.): un solo detalle
       return [
         {
           'fk_concepto': widget.deuda.fk_concepto.id,
@@ -1177,36 +1035,11 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final esConsumo = widget.deuda.fk_concepto.id == 1;
 
     if (esConsumo && _ciclosSeleccionados.isNotEmpty) {
-      // Para consumo con ciclos
-      final ciclosTexto = _ciclosSeleccionados
-          .map((c) => 'Ciclo ${c.ciclo}/${c.anio}')
-          .join(', ');
+      final ciclosTexto =
+          _ciclosSeleccionados.map((c) => 'Ciclo ${c.ciclo}/${c.anio}').join(', ');
       return 'Pago de ${widget.deuda.fk_concepto.nombre} - $ciclosTexto - Aprobación de Transferencia';
     } else {
-      // Para otros conceptos
       return 'Pago de ${widget.deuda.fk_concepto.nombre} - Aprobación de Transferencia';
-    }
-  }
-
-  Future<void> _actualizarPayloadPago(
-    int idPago,
-    Map<String, dynamic> payload,
-  ) async {
-    try {
-      print('💾 Actualizando payload para pago #$idPago...');
-
-      final supabase = Supabase.instance.client;
-      await supabase
-          .from('pagos')
-          .update({'payload_creacion': payload})
-          .eq('id_pago', idPago);
-
-      print('✅ Payload actualizado correctamente');
-      print('   Campos incluidos: ${payload.keys.join(", ")}');
-    } catch (e) {
-      print('❌ Error al actualizar payload: $e');
-      // No lanzamos error para no interrumpir el flujo
-      // El pago ya está creado, solo falta el payload
     }
   }
 
@@ -1227,7 +1060,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         Expanded(
           flex: 2,
           child: ElevatedButton.icon(
-            onPressed: _totalAPagar > 0 && _vuelto >= 0 ? _procesarPago : null,
+            onPressed:
+                _totalAPagar > 0 && _vuelto >= 0 ? _procesarPago : null,
             icon: const Icon(Icons.payment),
             label: const Text('Procesar Pago'),
             style: ElevatedButton.styleFrom(
@@ -1258,7 +1092,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           style: TextStyle(
             fontSize: isTotal ? 20 : 16,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-            color: isTotal ? const Color(0xFF0085FF) : Colors.grey.shade800,
+            color:
+                isTotal ? const Color(0xFF0085FF) : Colors.grey.shade800,
           ),
         ),
       ],

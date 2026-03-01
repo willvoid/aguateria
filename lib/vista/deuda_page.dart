@@ -204,86 +204,7 @@ class _DeudasPageState extends State<DeudasPage> {
     );
   }
 
-  void _registrarPago(CuentaCobrar deuda) {
-    final montoController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Registrar Pago'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Concepto: ${deuda.fk_concepto.nombre}'),
-            Text('Saldo pendiente: ${_formatearMonto(deuda.saldo)}'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: montoController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Monto a pagar',
-                hintText: 'Ingrese el monto',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final monto = double.tryParse(montoController.text);
-              if (monto == null || monto <= 0) {
-                _mostrarError('Ingrese un monto válido');
-                return;
-              }
-
-              if (monto > deuda.saldo) {
-                _mostrarError('El monto no puede ser mayor al saldo');
-                return;
-              }
-
-              Navigator.pop(context);
-
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
-
-              final exito = await _deudaCrud.registrarPago(
-                deuda.id_deuda!,
-                monto,
-              );
-              Navigator.pop(context);
-
-              if (exito) {
-                await _cargarDatos();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Pago registrado exitosamente'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                _mostrarError('Error al registrar el pago');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Registrar'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -527,17 +448,6 @@ class _DeudasPageState extends State<DeudasPage> {
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        if (deuda.estado == 'PENDIENTE')
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons.payment,
-                                              size: 18,
-                                              color: Colors.green,
-                                            ),
-                                            onPressed: () =>
-                                                _registrarPago(deuda),
-                                            tooltip: 'Registrar Pago',
-                                          ),
                                         IconButton(
                                           icon: const Icon(
                                             Icons.edit,
@@ -613,7 +523,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
   Ciclo? _cicloSeleccionado;
   Consumo? _consumoSeleccionado;
 
-  final List<String> _estados = ['PENDIENTE', 'PAGADO', 'VENCIDO'];
+  final List<String> _estados = ['PENDIENTE', 'PAGADO', 'VENCIDO', 'EN REVISION'];
 
   @override
   void initState() {
@@ -636,8 +546,19 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
         ? widget.conceptos.first
         : widget.conceptos.first;
 
-    _cicloSeleccionado = widget.deuda?.fk_ciclos;
-    _consumoSeleccionado = widget.deuda?.fk_consumos;
+        _cicloSeleccionado = widget.deuda?.fk_ciclos == null
+        ? null
+        : widget.ciclos.firstWhere(
+            (c) => c.id == widget.deuda!.fk_ciclos!.id,
+            orElse: () => widget.ciclos.first,
+          );
+
+    _consumoSeleccionado = widget.deuda?.fk_consumos == null
+        ? null
+        : widget.consumos.firstWhere(
+            (c) => c.id_consumos == widget.deuda!.fk_consumos!.id_consumos,
+            orElse: () => widget.consumos.first,
+          );
   }
 
   @override
