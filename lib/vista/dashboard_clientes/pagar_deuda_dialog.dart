@@ -44,6 +44,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   double _totalGravado = 0.0;
   double _totalIva = 0.0;
 
+  bool get _esConsumo => widget.deuda.fk_concepto.id == 1;
+
   @override
   void initState() {
     super.initState();
@@ -55,9 +57,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     setState(() => _isLoading = true);
 
     try {
-      final esConsumo = widget.deuda.fk_concepto.id == 1;
-
-      if (esConsumo) {
+      if (_esConsumo) {
         final ciclos = await _pagoService.cargarCiclosDisponiblesConsumo(
           widget.inmueble.id!,
         );
@@ -90,9 +90,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   void _calcularTotales() {
-    final esConsumo = widget.deuda.fk_concepto.id == 1;
-
-    if (esConsumo) {
+    if (_esConsumo) {
       final montoPorCiclo = widget.deuda.fk_concepto.arancel;
       _totalAPagar = montoPorCiclo * _ciclosSeleccionados.length;
     } else {
@@ -126,7 +124,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final error = _pagoService.validarPago(
       deuda: widget.deuda,
       ciclosSeleccionados: _ciclosSeleccionados,
-      efectivo: double.tryParse(_efectivoController.text) ?? 0,
+      // Para consumo no se valida efectivo; para otros tipos sí
+      efectivo: _esConsumo
+          ? _totalAPagar
+          : double.tryParse(_efectivoController.text) ?? 0,
     );
 
     if (error != null) {
@@ -175,17 +176,13 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         modoPagoSeleccionado!.id_modo_pago == 6;
 
     if (esTransferenciaOGiro && pagoConComprobante != null) {
-      // Transferencia/Giro: mostrar diálogo informativo y cerrar con true
       await _mostrarDialogoPagoPendiente(
         modoPagoSeleccionado!,
         pagoConComprobante!,
       );
-      // ✅ Cerrar PagarDeudaDialog retornando true → dispara _cargarDeudas()
       if (mounted) Navigator.pop(context, true);
     } else if (!esTransferenciaOGiro) {
-      // Efectivo, Tarjeta, etc.: procesar factura directamente
       await _procesarFactura(modoPagoSeleccionado!);
-      // _procesarFactura ya hace Navigator.pop(context, true) al final
     }
   }
 
@@ -283,7 +280,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         cliente: widget.cliente,
         inmueble: widget.inmueble,
         ciclosSeleccionados: _ciclosSeleccionados,
-        efectivo: double.parse(_efectivoController.text),
+        // Para consumo se pasa el total directamente; para otros el campo de texto
+        efectivo: _esConsumo
+            ? _totalAPagar
+            : double.parse(_efectivoController.text),
         idUsuario: widget.idUsuario,
         idModoPago: modoPago.id_modo_pago,
       );
@@ -303,7 +303,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           ),
         );
 
-        // ✅ Cerrar retornando true → dispara _cargarDeudas() en DeudasClientesPage
         if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {
@@ -429,9 +428,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         ),
         actions: [
           ElevatedButton(
-            // ✅ Botón "Entendido" cierra solo este AlertDialog
-            // El Navigator.pop(context, true) del PagarDeudaDialog
-            // se ejecuta justo después en _procesarPago()
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: color,
@@ -442,7 +438,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         ],
       ),
     );
-    // ← cuando este await termina, _procesarPago() ejecuta Navigator.pop(context, true)
   }
 
   Widget _buildInfoRow(String label, String value, IconData icon, Color color) {
@@ -490,8 +485,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final esConsumo = widget.deuda.fk_concepto.id == 1;
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
@@ -510,15 +503,18 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                         children: [
                           _buildResumenDeuda(),
                           const SizedBox(height: 24),
-                          if (esConsumo)
+                          if (_esConsumo)
                             _buildResumenCiclosSeleccionados()
                           else
                             _buildMontoFijo(),
                           const SizedBox(height: 24),
                           _buildResumenTotales(),
                           const SizedBox(height: 24),
-                          _buildInputEfectivo(),
-                          const SizedBox(height: 24),
+                          // ── Campo efectivo: solo visible si NO es consumo ──
+                          if (!_esConsumo) ...[
+                            _buildInputEfectivo(),
+                            const SizedBox(height: 24),
+                          ],
                           _buildBotones(),
                         ],
                       ),
@@ -903,14 +899,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             ],
           ),
           const Divider(height: 16),
-          _buildTotalRow('Subtotal', _totalGravado),
-          const SizedBox(height: 8),
-          _buildTotalRow(
-              'IVA (${widget.deuda.fk_concepto.fk_iva.valor}%)', _totalIva),
-          const Divider(height: 16),
           _buildTotalRow('TOTAL', _totalAPagar, isTotal: true),
-          if (widget.deuda.fk_concepto.id == 1 &&
-              _ciclosSeleccionados.isNotEmpty) ...[
+          if (_esConsumo && _ciclosSeleccionados.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
               '${_ciclosSeleccionados.length} ciclo(s) seleccionado(s)',
@@ -992,10 +982,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   List<Map<String, dynamic>> _construirDetallesFactura() {
-    final esConsumo = widget.deuda.fk_concepto.id == 1;
     final ivaValor = widget.deuda.fk_concepto.fk_iva.valor;
 
-    if (esConsumo && _ciclosSeleccionados.isNotEmpty) {
+    if (_esConsumo && _ciclosSeleccionados.isNotEmpty) {
       return _ciclosSeleccionados.map((ciclo) {
         final montoPorCiclo = widget.deuda.fk_concepto.arancel;
         return {
@@ -1032,9 +1021,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   String _construirObservacion() {
-    final esConsumo = widget.deuda.fk_concepto.id == 1;
-
-    if (esConsumo && _ciclosSeleccionados.isNotEmpty) {
+    if (_esConsumo && _ciclosSeleccionados.isNotEmpty) {
       final ciclosTexto =
           _ciclosSeleccionados.map((c) => 'Ciclo ${c.ciclo}/${c.anio}').join(', ');
       return 'Pago de ${widget.deuda.fk_concepto.nombre} - $ciclosTexto - Aprobación de Transferencia';
@@ -1044,6 +1031,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Widget _buildBotones() {
+    // Para consumo no se requiere validar el campo efectivo
+    final puedeProcedar = _totalAPagar > 0 && (_esConsumo || _vuelto >= 0);
+
     return Row(
       children: [
         Expanded(
@@ -1060,8 +1050,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         Expanded(
           flex: 2,
           child: ElevatedButton.icon(
-            onPressed:
-                _totalAPagar > 0 && _vuelto >= 0 ? _procesarPago : null,
+            onPressed: puedeProcedar ? _procesarPago : null,
             icon: const Icon(Icons.payment),
             label: const Text('Procesar Pago'),
             style: ElevatedButton.styleFrom(
