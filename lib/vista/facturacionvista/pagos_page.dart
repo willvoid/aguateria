@@ -12,14 +12,14 @@ class PagosPage extends StatefulWidget {
 
 class _PagosPageState extends State<PagosPage> {
   final PagoCrudImpl _pagoCrud = PagoCrudImpl();
-  
+
   List<Pago> pagos = [];
   List<Pago> pagosFiltrados = [];
-  
+
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   String _filtroEstado = 'TODOS';
-  
+
   final List<String> _estados = ['TODOS', 'PENDIENTE', 'APROBADO', 'RECHAZADO'];
 
   @override
@@ -31,33 +31,29 @@ class _PagosPageState extends State<PagosPage> {
 
   Future<void> _cargarDatos() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final resultado = await _pagoCrud.leerPagos();
-      
+
       setState(() {
         pagos = resultado;
-        // Ordenar por estado: PENDIENTE, APROBADO, RECHAZADO
         pagos.sort((a, b) {
           final ordenEstados = {'PENDIENTE': 0, 'APROBADO': 1, 'RECHAZADO': 2};
           final ordenA = ordenEstados[a.estado] ?? 3;
           final ordenB = ordenEstados[b.estado] ?? 3;
-          
-          if (ordenA != ordenB) {
-            return ordenA.compareTo(ordenB);
-          }
-          
-          // Si tienen el mismo estado, ordenar por fecha (más reciente primero)
+
+          if (ordenA != ordenB) return ordenA.compareTo(ordenB);
+
           if (a.fechaPago != null && b.fechaPago != null) {
             return b.fechaPago!.compareTo(a.fechaPago!);
           }
           return 0;
         });
-        
+
         pagosFiltrados = pagos;
         _isLoading = false;
       });
-      
+
       _aplicarFiltros();
     } catch (e) {
       setState(() => _isLoading = false);
@@ -65,25 +61,18 @@ class _PagosPageState extends State<PagosPage> {
     }
   }
 
-  void _filtrarPagos() {
-    _aplicarFiltros();
-  }
+  void _filtrarPagos() => _aplicarFiltros();
 
   void _aplicarFiltros() {
     final query = _searchController.text.toLowerCase();
-    
+
     setState(() {
       pagosFiltrados = pagos.where((pago) {
-        // Filtro por estado
         if (_filtroEstado != 'TODOS' && pago.estado != _filtroEstado) {
           return false;
         }
-        
-        // Filtro por búsqueda
-        if (query.isEmpty) {
-          return true;
-        }
-        
+        if (query.isEmpty) return true;
+
         return pago.idPago.toString().contains(query) ||
             pago.monto.toString().contains(query) ||
             (pago.usuario?.nombre.toLowerCase().contains(query) ?? false) ||
@@ -110,8 +99,15 @@ class _PagosPageState extends State<PagosPage> {
     );
   }
 
+  // ── Mostrar payload de factura ────────────────────────────────────────────
+  void _mostrarPayloadFactura(Pago pago) {
+    showDialog(
+      context: context,
+      builder: (context) => _DialogoPayloadFactura(pago: pago),
+    );
+  }
+
   Future<void> _aprobarPago(Pago pago) async {
-    // Mostrar diálogo de confirmación
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -124,8 +120,7 @@ class _PagosPageState extends State<PagosPage> {
             const SizedBox(height: 8),
             Text('Monto: ${_formatoMoneda(pago.monto)}'),
             const SizedBox(height: 8),
-            if (pago.usuario != null)
-              Text('Usuario: ${pago.usuario!.nombre}'),
+            if (pago.usuario != null) Text('Usuario: ${pago.usuario!.nombre}'),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -187,22 +182,18 @@ class _PagosPageState extends State<PagosPage> {
         ),
       );
 
-      // TODO: Obtener el ID del usuario admin actual del contexto/sesión
-      // Por ahora usamos un ID temporal - debes reemplazar esto con el ID real del usuario logueado
-      final idUsuarioAdmin = 1; // REEMPLAZAR CON EL ID DEL USUARIO LOGUEADO
+      final idUsuarioAdmin = 1;
 
-      // Llamar a la función RPC de Supabase
       final resultado = await _pagoCrud.aprobarPagoConRPC(
         idPago: pago.idPago!,
         idUsuarioAdmin: idUsuarioAdmin,
       );
 
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
 
       if (resultado['success'] == true) {
         await _cargarDatos();
-        
-        // Mostrar diálogo de éxito con información de la factura
+
         final facturaId = resultado['factura']?['id_factura'];
         showDialog(
           context: context,
@@ -234,9 +225,7 @@ class _PagosPageState extends State<PagosPage> {
                         const Text(
                           'Factura Generada',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
+                              fontWeight: FontWeight.bold, color: Colors.green),
                         ),
                         const SizedBox(height: 4),
                         Text('ID: #$facturaId'),
@@ -260,8 +249,6 @@ class _PagosPageState extends State<PagosPage> {
         );
       } else {
         final error = resultado['error'] ?? 'Error desconocido';
-        
-        // Mostrar diálogo de error con más detalles
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -276,10 +263,8 @@ class _PagosPageState extends State<PagosPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'No se pudo aprobar el pago:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+                const Text('No se pudo aprobar el pago:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -288,52 +273,9 @@ class _PagosPageState extends State<PagosPage> {
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: Colors.red.shade200),
                   ),
-                  child: SelectableText(
-                    error,
-                    style: const TextStyle(fontSize: 13),
-                  ),
+                  child: SelectableText(error,
+                      style: const TextStyle(fontSize: 13)),
                 ),
-                const SizedBox(height: 16),
-                if (resultado.containsKey('missing_fields')) ...[
-                  const Text(
-                    'Campos faltantes:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  ...((resultado['missing_fields'] as List?)?.map((field) => 
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8, top: 2),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.circle, size: 6, color: Colors.red),
-                          const SizedBox(width: 6),
-                          Text('$field', style: const TextStyle(fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ) ?? []),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 16, color: Colors.orange),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'El pago no fue creado con toda la información necesaria para generar la factura.',
-                            style: TextStyle(fontSize: 11, color: Colors.orange),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
             actions: [
@@ -353,7 +295,7 @@ class _PagosPageState extends State<PagosPage> {
 
   Future<void> _mostrarDialogoRechazo(Pago pago) async {
     final TextEditingController motivoController = TextEditingController();
-    
+
     final resultado = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => AlertDialog(
@@ -416,7 +358,8 @@ class _PagosPageState extends State<PagosPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (context) =>
+            const Center(child: CircularProgressIndicator()),
       );
 
       final exito = await _pagoCrud.cambiarEstadoPago(
@@ -508,7 +451,8 @@ class _PagosPageState extends State<PagosPage> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ),
@@ -529,13 +473,12 @@ class _PagosPageState extends State<PagosPage> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   items: _estados.map((estado) {
                     return DropdownMenuItem(
-                      value: estado,
-                      child: Text(estado),
-                    );
+                        value: estado, child: Text(estado));
                   }).toList(),
                   onChanged: (value) {
                     setState(() => _filtroEstado = value!);
@@ -552,7 +495,6 @@ class _PagosPageState extends State<PagosPage> {
             ],
           ),
           const SizedBox(height: 16),
-          // Estadísticas rápidas
           Row(
             children: [
               _buildEstadistica(
@@ -589,11 +531,13 @@ class _PagosPageState extends State<PagosPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.payment_outlined, size: 64, color: Colors.grey.shade400),
+                              Icon(Icons.payment_outlined,
+                                  size: 64, color: Colors.grey.shade400),
                               const SizedBox(height: 16),
                               const Text(
                                 'No hay pagos para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
+                                style: TextStyle(
+                                    color: Color(0xFF6B7280), fontSize: 16),
                               ),
                             ],
                           ),
@@ -602,7 +546,8 @@ class _PagosPageState extends State<PagosPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(
+                                  const Color(0xFFF9FAFB)),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Fecha')),
@@ -610,7 +555,7 @@ class _PagosPageState extends State<PagosPage> {
                                 DataColumn(label: Text('Monto')),
                                 DataColumn(label: Text('Factura')),
                                 DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Info')),
+                                DataColumn(label: Text('Info Factura')), // ← RENOMBRADO
                                 DataColumn(label: Text('Comprobante')),
                                 DataColumn(label: Text('Acciones')),
                               ],
@@ -618,7 +563,8 @@ class _PagosPageState extends State<PagosPage> {
                                 return DataRow(
                                   cells: [
                                     DataCell(Text('#${pago.idPago}')),
-                                    DataCell(Text(_formatoFecha(pago.fechaPago))),
+                                    DataCell(
+                                        Text(_formatoFecha(pago.fechaPago))),
                                     DataCell(
                                       SizedBox(
                                         width: 150,
@@ -631,7 +577,8 @@ class _PagosPageState extends State<PagosPage> {
                                     DataCell(
                                       Text(
                                         _formatoMoneda(pago.monto),
-                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w600),
                                       ),
                                     ),
                                     DataCell(
@@ -643,10 +590,13 @@ class _PagosPageState extends State<PagosPage> {
                                     ),
                                     DataCell(
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: _getColorEstado(pago.estado).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(4),
+                                          color: _getColorEstado(pago.estado)
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           pago.estado,
@@ -658,27 +608,76 @@ class _PagosPageState extends State<PagosPage> {
                                         ),
                                       ),
                                     ),
+
+                                    // ✅ NUEVO: botón que abre el diálogo de payload
                                     DataCell(
-                                      Tooltip(
-                                        message: pago.payloadCreacion != null 
-                                            ? 'Tiene información de facturación' 
-                                            : 'No tiene información de facturación',
-                                        child: Icon(
-                                          pago.payloadCreacion != null 
-                                              ? Icons.check_circle 
-                                              : Icons.warning,
-                                          color: pago.payloadCreacion != null 
-                                              ? Colors.green 
-                                              : Colors.orange,
-                                          size: 20,
-                                        ),
-                                      ),
+                                      pago.payloadCreacion != null
+                                          ? Tooltip(
+                                              message: 'Ver datos de factura',
+                                              child: InkWell(
+                                                onTap: () =>
+                                                    _mostrarPayloadFactura(pago),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                          horizontal: 10,
+                                                          vertical: 6),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.blue.shade50,
+                                                    borderRadius:
+                                                        BorderRadius.circular(6),
+                                                    border: Border.all(
+                                                        color:
+                                                            Colors.blue.shade200),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .receipt_long_outlined,
+                                                        size: 14,
+                                                        color:
+                                                            Colors.blue.shade700,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        'Ver',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors
+                                                              .blue.shade700,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : Tooltip(
+                                              message:
+                                                  'Sin información de factura',
+                                              child: Icon(
+                                                Icons.warning_amber_rounded,
+                                                color: Colors.orange.shade400,
+                                                size: 20,
+                                              ),
+                                            ),
                                     ),
+
                                     DataCell(
                                       pago.comprobanteUrl != null
                                           ? IconButton(
-                                              icon: const Icon(Icons.image, color: Color(0xFF0085FF)),
-                                              onPressed: () => _mostrarImagenComprobante(pago.comprobanteUrl!),
+                                              icon: const Icon(Icons.image,
+                                                  color: Color(0xFF0085FF)),
+                                              onPressed: () =>
+                                                  _mostrarImagenComprobante(
+                                                      pago.comprobanteUrl!),
                                               tooltip: 'Ver comprobante',
                                             )
                                           : const Text('-'),
@@ -688,19 +687,28 @@ class _PagosPageState extends State<PagosPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.visibility, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDetallesPago(pago),
+                                            icon: const Icon(Icons.visibility,
+                                                size: 18,
+                                                color: Color(0xFF0085FF)),
+                                            onPressed: () =>
+                                                _mostrarDetallesPago(pago),
                                             tooltip: 'Ver detalles',
                                           ),
                                           if (pago.estado == 'PENDIENTE') ...[
                                             IconButton(
-                                              icon: const Icon(Icons.check_circle, size: 18, color: Colors.green),
-                                              onPressed: () => _aprobarPago(pago),
+                                              icon: const Icon(
+                                                  Icons.check_circle,
+                                                  size: 18,
+                                                  color: Colors.green),
+                                              onPressed: () =>
+                                                  _aprobarPago(pago),
                                               tooltip: 'Aprobar',
                                             ),
                                             IconButton(
-                                              icon: const Icon(Icons.cancel, size: 18, color: Colors.red),
-                                              onPressed: () => _mostrarDialogoRechazo(pago),
+                                              icon: const Icon(Icons.cancel,
+                                                  size: 18, color: Colors.red),
+                                              onPressed: () =>
+                                                  _mostrarDialogoRechazo(pago),
                                               tooltip: 'Rechazar',
                                             ),
                                           ],
@@ -732,21 +740,14 @@ class _PagosPageState extends State<PagosPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 14,
-              ),
-            ),
+            Text(label,
+                style:
+                    TextStyle(color: Colors.grey.shade600, fontSize: 14)),
             const SizedBox(height: 8),
             Text(
               cantidad.toString(),
               style: TextStyle(
-                color: color,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+                  color: color, fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -778,10 +779,9 @@ class _PagosPageState extends State<PagosPage> {
                     const Text(
                       'Comprobante de Pago',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600),
                     ),
                     const Spacer(),
                     IconButton(
@@ -817,7 +817,8 @@ class _PagosPageState extends State<PagosPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.error_outline, size: 48, color: Colors.red),
+                              Icon(Icons.error_outline,
+                                  size: 48, color: Colors.red),
                               SizedBox(height: 8),
                               Text('Error al cargar la imagen'),
                             ],
@@ -841,6 +842,560 @@ class _PagosPageState extends State<PagosPage> {
     super.dispose();
   }
 }
+
+// ============================================================================
+// DIÁLOGO DE PAYLOAD DE FACTURA
+// ============================================================================
+
+class _DialogoPayloadFactura extends StatelessWidget {
+  final Pago pago;
+
+  const _DialogoPayloadFactura({required this.pago});
+
+  String _formatoMoneda(double monto) {
+    final formato = NumberFormat.currency(symbol: '₲', decimalDigits: 0);
+    return formato.format(monto);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final payload = pago.payloadCreacion!;
+
+    // ── Extraer datos del payload ──────────────────────────────────────────
+    final fkCliente = payload['fk_cliente']?.toString() ?? '-';
+    final fkInmueble = payload['fk_inmueble']?.toString() ?? '-';
+    final totalGeneral =
+        double.tryParse(payload['total_general']?.toString() ?? '0') ?? 0.0;
+    final totalGravado10 =
+        double.tryParse(payload['total_gravado_10']?.toString() ?? '0') ?? 0.0;
+    final totalGravado5 =
+        double.tryParse(payload['total_gravado_5']?.toString() ?? '0') ?? 0.0;
+    final totalExenta =
+        double.tryParse(payload['total_exenta']?.toString() ?? '0') ?? 0.0;
+    final totalIva =
+        double.tryParse(payload['total_iva']?.toString() ?? '0') ?? 0.0;
+    final observacion =
+        payload['observacion']?.toString() ?? '';
+    final detalles =
+        (payload['detalles'] as List<dynamic>?) ?? [];
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: 680,
+        constraints: const BoxConstraints(maxHeight: 700),
+        child: Column(
+          children: [
+            // ── Header ──────────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF0085FF),
+                    Colors.blue.shade400,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.receipt_long,
+                        color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Información de Factura',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Pago #${pago.idPago} · ${_formatoMoneda(pago.monto)}',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Contenido scrolleable ────────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Datos generales ──────────────────────────────────────
+                    _SeccionTitulo(
+                      icono: Icons.info_outline,
+                      titulo: 'Datos Generales',
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          _FilaInfo(
+                            icono: Icons.person_outline,
+                            label: 'Cliente',
+                            valor: 'ID: $fkCliente',
+                            primero: true,
+                          ),
+                          _Divisor(),
+                          _FilaInfo(
+                            icono: Icons.home_outlined,
+                            label: 'Inmueble',
+                            valor: 'ID: $fkInmueble',
+                          ),
+                          if (observacion.isNotEmpty) ...[
+                            _Divisor(),
+                            _FilaInfo(
+                              icono: Icons.notes_outlined,
+                              label: 'Observación',
+                              valor: observacion,
+                              ultimo: true,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Detalles de factura ──────────────────────────────────
+                    _SeccionTitulo(
+                      icono: Icons.list_alt_outlined,
+                      titulo: 'Detalle de Items',
+                      badge: detalles.length.toString(),
+                    ),
+                    const SizedBox(height: 12),
+
+                    if (detalles.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded,
+                                color: Colors.orange.shade600),
+                            const SizedBox(width: 12),
+                            const Text('No hay detalles de items disponibles'),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            // Cabecera tabla
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0085FF).withOpacity(0.06),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(10),
+                                  topRight: Radius.circular(10),
+                                ),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Expanded(
+                                    flex: 4,
+                                    child: Text('Descripción',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF374151))),
+                                  ),
+                                  SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 60,
+                                    child: Text('IVA',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF374151))),
+                                  ),
+                                  SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 110,
+                                    child: Text('Monto',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF374151))),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Filas de detalles
+                            ...detalles.asMap().entries.map((entry) {
+                              final i = entry.key;
+                              final detalle =
+                                  entry.value as Map<String, dynamic>;
+                              final descripcion =
+                                  detalle['descripcion']?.toString() ??
+                                      'Sin descripción';
+                              final monto = double.tryParse(
+                                      detalle['monto']?.toString() ?? '0') ??
+                                  0.0;
+                              final iva =
+                                  detalle['iva_aplicado']?.toString() ?? '0';
+                              final esPar = i % 2 == 0;
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: esPar
+                                      ? Colors.white
+                                      : Colors.grey.shade50,
+                                  borderRadius: i == detalles.length - 1
+                                      ? const BorderRadius.only(
+                                          bottomLeft: Radius.circular(10),
+                                          bottomRight: Radius.circular(10),
+                                        )
+                                      : null,
+                                  border: Border(
+                                    top: BorderSide(
+                                        color: Colors.grey.shade200, width: 1),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 4,
+                                      child: Text(
+                                        descripcion,
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Color(0xFF1F2937)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      width: 60,
+                                      child: Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '$iva%',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.blue.shade700,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      width: 110,
+                                      child: Text(
+                                        _formatoMoneda(monto),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF1F2937),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Resumen de totales ───────────────────────────────────
+                    _SeccionTitulo(
+                      icono: Icons.calculate_outlined,
+                      titulo: 'Resumen de Totales',
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blue.shade50,
+                            Colors.blue.shade100.withOpacity(0.4),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        border:
+                            Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          if (totalGravado10 > 0)
+                            _FilaTotalSimple(
+                                label: 'Base gravada 10%',
+                                valor: _formatoMoneda(totalGravado10)),
+                          if (totalGravado5 > 0)
+                            _FilaTotalSimple(
+                                label: 'Base gravada 5%',
+                                valor: _formatoMoneda(totalGravado5)),
+                          if (totalExenta > 0)
+                            _FilaTotalSimple(
+                                label: 'Exenta',
+                                valor: _formatoMoneda(totalExenta)),
+                          if (totalIva > 0)
+                            _FilaTotalSimple(
+                                label: 'IVA',
+                                valor: _formatoMoneda(totalIva)),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Divider(height: 1),
+                          ),
+                          // Total general destacado
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'TOTAL GENERAL',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
+                              Text(
+                                _formatoMoneda(totalGeneral),
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0085FF),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Footer ──────────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                border:
+                    Border(top: BorderSide(color: Colors.grey.shade200)),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Widgets auxiliares del diálogo ───────────────────────────────────────────
+
+class _SeccionTitulo extends StatelessWidget {
+  final IconData icono;
+  final String titulo;
+  final String? badge;
+
+  const _SeccionTitulo({
+    required this.icono,
+    required this.titulo,
+    this.badge,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icono, size: 18, color: const Color(0xFF0085FF)),
+        const SizedBox(width: 8),
+        Text(
+          titulo,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF374151),
+          ),
+        ),
+        if (badge != null) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0085FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              badge!,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _FilaInfo extends StatelessWidget {
+  final IconData icono;
+  final String label;
+  final String valor;
+  final bool primero;
+  final bool ultimo;
+
+  const _FilaInfo({
+    required this.icono,
+    required this.label,
+    required this.valor,
+    this.primero = false,
+    this.ultimo = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icono, size: 16, color: Colors.grey.shade500),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              valor,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF1F2937),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Divisor extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Divider(height: 1, color: Colors.grey.shade200);
+  }
+}
+
+class _FilaTotalSimple extends StatelessWidget {
+  final String label;
+  final String valor;
+
+  const _FilaTotalSimple({required this.label, required this.valor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+          Text(valor,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151))),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// DIÁLOGO DE DETALLES DEL PAGO (sin cambios)
+// ============================================================================
 
 class _DialogoDetallesPago extends StatelessWidget {
   final Pago pago;
@@ -887,10 +1442,9 @@ class _DialogoDetallesPago extends StatelessWidget {
                   Text(
                     'Detalles del Pago #${pago.idPago}',
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
                   IconButton(
@@ -913,16 +1467,13 @@ class _DialogoDetallesPago extends StatelessWidget {
                     if (pago.usuario != null)
                       _buildInfoRow('Usuario', pago.usuario!.nombre),
                     if (pago.factura != null)
-                      _buildInfoRow('Factura', '#${pago.factura!.id_factura}'),
+                      _buildInfoRow(
+                          'Factura', '#${pago.factura!.id_factura}'),
                     if (pago.motivoRechazo != null) ...[
                       const Divider(height: 24),
-                      const Text(
-                        'Motivo de Rechazo:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
+                      const Text('Motivo de Rechazo:',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
                       const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
@@ -932,21 +1483,16 @@ class _DialogoDetallesPago extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: Colors.red.shade200),
                         ),
-                        child: Text(
-                          pago.motivoRechazo!,
-                          style: TextStyle(color: Colors.red.shade900),
-                        ),
+                        child: Text(pago.motivoRechazo!,
+                            style:
+                                TextStyle(color: Colors.red.shade900)),
                       ),
                     ],
                     if (pago.comprobanteUrl != null) ...[
                       const Divider(height: 24),
-                      const Text(
-                        'Comprobante:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
+                      const Text('Comprobante:',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
                       const SizedBox(height: 8),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
@@ -957,8 +1503,7 @@ class _DialogoDetallesPago extends StatelessWidget {
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return const Center(
-                              child: CircularProgressIndicator(),
-                            );
+                                child: CircularProgressIndicator());
                           },
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
@@ -988,7 +1533,8 @@ class _DialogoDetallesPago extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
-                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                  border:
+                      Border(top: BorderSide(color: Colors.grey.shade300)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -1000,7 +1546,8 @@ class _DialogoDetallesPago extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1011,7 +1558,8 @@ class _DialogoDetallesPago extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                       ),
                     ),
                   ],
@@ -1031,19 +1579,14 @@ class _DialogoDetallesPago extends StatelessWidget {
         children: [
           SizedBox(
             width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF374151),
-              ),
-            ),
+            child: Text('$label:',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF374151))),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Color(0xFF6B7280)),
-            ),
+            child: Text(value,
+                style: const TextStyle(color: Color(0xFF6B7280))),
           ),
         ],
       ),
