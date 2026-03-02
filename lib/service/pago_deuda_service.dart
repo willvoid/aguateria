@@ -252,9 +252,9 @@ class PagoDeudaService {
       montoTotal = deuda.saldo;
     }
 
-    if (efectivo < montoTotal) {
+    /*if (efectivo < montoTotal) {
       return 'El efectivo debe ser mayor o igual al total a pagar';
-    }
+    }*/
 
     if (efectivo <= 0) {
       return 'El efectivo debe ser mayor a 0';

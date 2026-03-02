@@ -34,6 +34,8 @@ class PagarDeudaDialog extends StatefulWidget {
 class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   final PagoDeudaService _pagoService = PagoDeudaService();
   final TextEditingController _efectivoController = TextEditingController();
+  // ── Controller exclusivo para monto parcial en conexión (id=2) ──
+  final TextEditingController _montoController = TextEditingController();
 
   List<Ciclo> _ciclosDisponibles = [];
   List<Ciclo> _ciclosSeleccionados = [];
@@ -45,12 +47,27 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   double _totalIva = 0.0;
 
   bool get _esConsumo => widget.deuda.fk_concepto.id == 1;
+  bool get _esConexion => widget.deuda.fk_concepto.id == 2;
 
   @override
   void initState() {
     super.initState();
     _cargarDatos();
     _efectivoController.addListener(_calcularVuelto);
+    // Cuando el cliente escribe el monto parcial, recalcular totales
+    _montoController.addListener(_onMontoConexionChanged);
+  }
+
+  void _onMontoConexionChanged() {
+    final ingresado = double.tryParse(_montoController.text) ?? 0;
+    // Clampear al saldo máximo
+    final montoValido = ingresado.clamp(0.0, widget.deuda.saldo);
+    if (_totalAPagar != montoValido) {
+      setState(() {
+        _totalAPagar = montoValido;
+        _recalcularIva();
+      });
+    }
   }
 
   Future<void> _cargarDatos() async {
@@ -67,7 +84,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         });
       } else {
         setState(() {
-          _totalAPagar = widget.deuda.saldo;
+          // Para conexión arrancamos en 0 hasta que el cliente escriba
+          _totalAPagar = _esConexion ? 0.0 : widget.deuda.saldo;
           _calcularTotales();
           _isLoading = false;
         });
@@ -93,10 +111,16 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     if (_esConsumo) {
       final montoPorCiclo = widget.deuda.fk_concepto.arancel;
       _totalAPagar = montoPorCiclo * _ciclosSeleccionados.length;
-    } else {
-      _totalAPagar = widget.deuda.saldo;
+    } else if (!_esConexion) {
+      // Para otros conceptos distintos de consumo y conexión, usar saldo completo
+      _totalAPagar = double.tryParse(_montoController.text) ?? 0;
     }
+    // Para conexión (_esConexion), _totalAPagar es gestionado por _onMontoConexionChanged
 
+    _recalcularIva();
+  }
+
+  void _recalcularIva() {
     final totales = _pagoService.calcularTotales(
       _totalAPagar,
       widget.deuda.fk_concepto.fk_iva.valor,
@@ -120,12 +144,25 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Future<void> _procesarPago() async {
-    // Validar datos básicos
+    // Validación extra para conexión: el monto debe ser > 0 y <= saldo
+    if (_esConexion) {
+      final ingresado = double.tryParse(_montoController.text) ?? 0;
+      if (ingresado <= 0) {
+        _mostrarError('Ingrese un monto a pagar mayor a 0');
+        return;
+      }
+      if (ingresado > widget.deuda.saldo) {
+        _mostrarError(
+          'El monto no puede superar ${widget.deuda.saldo.toStringAsFixed(0)} Gs.',
+        );
+        return;
+      }
+    }
+
     final error = _pagoService.validarPago(
       deuda: widget.deuda,
       ciclosSeleccionados: _ciclosSeleccionados,
-      // Para consumo no se valida efectivo; para otros tipos sí
-      efectivo: _esConsumo
+      efectivo: _esConsumo || _esConexion
           ? _totalAPagar
           : double.tryParse(_efectivoController.text) ?? 0,
     );
@@ -167,10 +204,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       ),
     );
 
-    // ── Si el usuario cerró el selector sin elegir, no hacer nada ────────
     if (modoPagoSeleccionado == null || !mounted) return;
 
-    // ── PASO 2: Según el método, procesar de forma diferente ─────────────
     final esTransferenciaOGiro =
         modoPagoSeleccionado!.id_modo_pago == 5 ||
         modoPagoSeleccionado!.id_modo_pago == 6;
@@ -280,15 +315,14 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         cliente: widget.cliente,
         inmueble: widget.inmueble,
         ciclosSeleccionados: _ciclosSeleccionados,
-        // Para consumo se pasa el total directamente; para otros el campo de texto
-        efectivo: _esConsumo
+        efectivo: _esConsumo || _esConexion
             ? _totalAPagar
             : double.parse(_efectivoController.text),
         idUsuario: widget.idUsuario,
         idModoPago: modoPago.id_modo_pago,
       );
 
-      if (mounted) Navigator.pop(context); // cerrar loading
+      if (mounted) Navigator.pop(context);
 
       if (mounted) {
         await showDialog(
@@ -306,7 +340,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context); // cerrar loading
+      if (mounted) Navigator.pop(context);
       _mostrarError('Error al procesar pago: $e');
     }
   }
@@ -505,13 +539,15 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                           const SizedBox(height: 24),
                           if (_esConsumo)
                             _buildResumenCiclosSeleccionados()
+                          else if (_esConexion)
+                            _buildMontoConexion()
                           else
                             _buildMontoFijo(),
                           const SizedBox(height: 24),
                           _buildResumenTotales(),
                           const SizedBox(height: 24),
-                          // ── Campo efectivo: solo visible si NO es consumo ──
-                          if (!_esConsumo) ...[
+                          // Efectivo + vuelto: solo para conceptos que no sean consumo ni conexión
+                          if (!_esConsumo && !_esConexion) ...[
                             _buildInputEfectivo(),
                             const SizedBox(height: 24),
                           ],
@@ -648,6 +684,65 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           ),
         ),
       ],
+    );
+  }
+
+  // ── Widget exclusivo para conexión (id=2): monto parcial editable ──────
+  Widget _buildMontoConexion() {
+    final montoIngresado = double.tryParse(_montoController.text) ?? 0;
+    final excedeLimite = montoIngresado > widget.deuda.saldo;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.edit_note, color: Colors.orange.shade700, size: 24),
+              const SizedBox(width: 8),
+              const Text(
+                'Monto a Pagar',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Máximo: ${widget.deuda.saldo.toStringAsFixed(0)} Gs.',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _montoController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Ingrese el monto *',
+              prefixIcon: const Icon(Icons.attach_money),
+              suffixText: 'Gs.',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              filled: true,
+              fillColor: Colors.white,
+              errorText: excedeLimite
+                  ? 'No puede superar ${widget.deuda.saldo.toStringAsFixed(0)} Gs.'
+                  : null,
+            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.deuda.descripcion ?? widget.deuda.fk_concepto.nombre,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -925,8 +1020,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             labelText: 'Efectivo Recibido *',
             prefixIcon: const Icon(Icons.payments),
             suffixText: 'Gs.',
-            border:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: Colors.white,
           ),
@@ -946,8 +1040,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             children: [
               Icon(
                 esValido ? Icons.check_circle : Icons.warning,
-                color:
-                    esValido ? Colors.green.shade700 : Colors.red.shade700,
+                color: esValido ? Colors.green.shade700 : Colors.red.shade700,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1031,8 +1124,14 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Widget _buildBotones() {
-    // Para consumo no se requiere validar el campo efectivo
-    final puedeProcedar = _totalAPagar > 0 && (_esConsumo || _vuelto >= 0);
+    final montoConexionValido = _esConexion
+        ? (_totalAPagar > 0 && _totalAPagar <= widget.deuda.saldo)
+        : true;
+
+    final puedeProcedar =
+        _totalAPagar > 0 &&
+        montoConexionValido &&
+        (_esConsumo || _esConexion || _vuelto >= 0);
 
     return Row(
       children: [
@@ -1081,8 +1180,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           style: TextStyle(
             fontSize: isTotal ? 20 : 16,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-            color:
-                isTotal ? const Color(0xFF0085FF) : Colors.grey.shade800,
+            color: isTotal ? const Color(0xFF0085FF) : Colors.grey.shade800,
           ),
         ),
       ],
@@ -1092,6 +1190,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   @override
   void dispose() {
     _efectivoController.dispose();
+    _montoController.dispose();
     super.dispose();
   }
 }

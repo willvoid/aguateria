@@ -86,9 +86,9 @@ class FacturaRpcService {
     if (payload.totalGeneral <= 0) {
       throw Exception('Total general debe ser mayor a 0');
     }
-    if (payload.efectivo < payload.totalGeneral) {
+    /*if (payload.efectivo < payload.totalGeneral) {
       throw Exception('El efectivo debe ser mayor o igual al total');
-    }
+    }*/
     
     // Validar detalles
     if (payload.detalles.isEmpty) {
