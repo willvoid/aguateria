@@ -97,6 +97,24 @@ class PagoCrudImpl {
     );
   }
   
+  Future<Map<String, dynamic>> rechazarPagoConRPC({
+  required int idPago,
+  required String motivo,
+  required int idUsuarioAdmin,
+}) async {
+  try {
+    final resultado = await supabase.rpc('rechazar_pago', params: {
+      'p_id_pago': idPago,
+      'p_motivo': motivo,
+      'p_id_usuario_admin': idUsuarioAdmin,
+    });
+
+    return Map<String, dynamic>.from(resultado);
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
+  }
+}
+  
   // ==================== CREAR PAGO ====================
   Future<Pago?> crearPago(Pago pago) async {
     try {

@@ -354,33 +354,35 @@ class _PagosPageState extends State<PagosPage> {
   }
 
   Future<void> _rechazarPago(Pago pago, String motivo) async {
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) =>
-            const Center(child: CircularProgressIndicator()),
-      );
+  try {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
-      final exito = await _pagoCrud.cambiarEstadoPago(
-        pago.idPago!,
-        'RECHAZADO',
-        motivoRechazo: motivo,
-      );
+    const idUsuarioAdmin = 1;
 
-      Navigator.pop(context);
+    final resultado = await _pagoCrud.rechazarPagoConRPC(
+      idPago: pago.idPago!,
+      motivo: motivo,
+      idUsuarioAdmin: idUsuarioAdmin,
+    );
 
-      if (exito) {
-        await _cargarDatos();
-        _mostrarExito('Pago rechazado');
-      } else {
-        _mostrarError('Error al rechazar el pago');
-      }
-    } catch (e) {
-      Navigator.pop(context);
-      _mostrarError('Error: $e');
+    Navigator.pop(context);
+
+    if (resultado['success'] == true) {
+      await _cargarDatos();
+      _mostrarExito('Pago rechazado correctamente');
+    } else {
+      final error = resultado['error'] ?? 'Error desconocido';
+      _mostrarError('Error al rechazar el pago: $error');
     }
+  } catch (e) {
+    Navigator.pop(context);
+    _mostrarError('Error inesperado: $e');
   }
+}
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
