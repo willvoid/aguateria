@@ -20,14 +20,20 @@ class SelectorCiclosDialog extends StatefulWidget {
 }
 
 class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
-  late List<Ciclo> _ciclosSeleccionadosTemp;
+  /// IDs de los ciclos actualmente seleccionados (comparación segura por id).
+  late Set<int> _idsSeleccionados;
+
   int? _anioSeleccionado;
   List<int> _aniosDisponibles = [];
 
   @override
   void initState() {
     super.initState();
-    _ciclosSeleccionadosTemp = List.from(widget.ciclosSeleccionados);
+    // Inicializar con los ids de los ciclos pre-seleccionados
+    _idsSeleccionados = widget.ciclosSeleccionados
+        .where((c) => c.id != null)
+        .map((c) => c.id!)
+        .toSet();
     _cargarAniosDisponibles();
   }
 
@@ -36,14 +42,14 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
         .map((ciclo) => ciclo.anio)
         .toSet()
         .toList()
-      ..sort((a, b) => b.compareTo(a)); // Ordenar descendente
+      ..sort((a, b) => b.compareTo(a));
 
     setState(() {
       _aniosDisponibles = anios;
       if (anios.isNotEmpty) {
-        // Seleccionar el año actual si está disponible, sino el más reciente
         final anioActual = DateTime.now().year;
-        _anioSeleccionado = anios.contains(anioActual) ? anioActual : anios.first;
+        _anioSeleccionado =
+            anios.contains(anioActual) ? anioActual : anios.first;
       }
     });
   }
@@ -55,43 +61,49 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
         .toList();
   }
 
+  /// Devuelve los objetos Ciclo que corresponden a los ids seleccionados.
+  List<Ciclo> get _ciclosSeleccionadosActuales {
+    return widget.ciclosDisponibles
+        .where((c) => c.id != null && _idsSeleccionados.contains(c.id))
+        .toList();
+  }
+
   void _toggleCiclo(Ciclo ciclo) {
+    if (ciclo.id == null) return;
     setState(() {
-      if (_ciclosSeleccionadosTemp.contains(ciclo)) {
-        _ciclosSeleccionadosTemp.remove(ciclo);
+      if (_idsSeleccionados.contains(ciclo.id)) {
+        _idsSeleccionados.remove(ciclo.id);
       } else {
-        _ciclosSeleccionadosTemp.add(ciclo);
+        _idsSeleccionados.add(ciclo.id!);
       }
     });
   }
 
   void _seleccionarTodos() {
     setState(() {
-      final ciclosFiltrados = _getCiclosFiltrados();
-      for (var ciclo in ciclosFiltrados) {
-        if (!_ciclosSeleccionadosTemp.contains(ciclo)) {
-          _ciclosSeleccionadosTemp.add(ciclo);
-        }
+      for (final ciclo in _getCiclosFiltrados()) {
+        if (ciclo.id != null) _idsSeleccionados.add(ciclo.id!);
       }
     });
   }
 
   void _deseleccionarTodos() {
     setState(() {
-      final ciclosFiltrados = _getCiclosFiltrados();
-      _ciclosSeleccionadosTemp.removeWhere((c) => ciclosFiltrados.contains(c));
+      final idsFiltrados =
+          _getCiclosFiltrados().map((c) => c.id).whereType<int>().toSet();
+      _idsSeleccionados.removeAll(idsFiltrados);
     });
   }
 
   void _confirmarSeleccion() {
-    widget.onCiclosSeleccionados(_ciclosSeleccionadosTemp);
+    widget.onCiclosSeleccionados(_ciclosSeleccionadosActuales);
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final ciclosFiltrados = _getCiclosFiltrados();
-    final totalSeleccionados = _ciclosSeleccionadosTemp.length;
+    final totalSeleccionados = _idsSeleccionados.length;
     final totalPagar = totalSeleccionados * widget.montoPorCiclo;
 
     return Dialog(
@@ -103,20 +115,16 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             _buildHeader(totalSeleccionados, totalPagar),
-            
-            // Filtro por año
             _buildFiltroAnio(),
-            
-            // Contenido scrolleable
             Expanded(
               child: ciclosFiltrados.isEmpty
                   ? _buildSinCiclos()
                   : ListView(
                       padding: const EdgeInsets.all(20),
                       children: ciclosFiltrados.map((ciclo) {
-                        final isSelected = _ciclosSeleccionadosTemp.contains(ciclo);
+                        final isSelected = ciclo.id != null &&
+                            _idsSeleccionados.contains(ciclo.id);
                         return _CicloItem(
                           ciclo: ciclo,
                           isSelected: isSelected,
@@ -126,8 +134,6 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                       }).toList(),
                     ),
             ),
-            
-            // Footer con botones
             _buildFooter(),
           ],
         ),
@@ -180,10 +186,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                     ),
                     Text(
                       'Elige los ciclos que deseas pagar',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white70,
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.white70),
                     ),
                   ],
                 ),
@@ -210,9 +213,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                     Text(
                       'Ciclos seleccionados',
                       style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
+                          fontSize: 11, color: Colors.grey.shade600),
                     ),
                     Text(
                       '$totalSeleccionados',
@@ -225,19 +226,14 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                   ],
                 ),
                 Container(
-                  height: 40,
-                  width: 1,
-                  color: Colors.grey.shade300,
-                ),
+                    height: 40, width: 1, color: Colors.grey.shade300),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       'Total a pagar',
                       style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
+                          fontSize: 11, color: Colors.grey.shade600),
                     ),
                     Text(
                       '${totalPagar.toStringAsFixed(0)} Gs.',
@@ -262,23 +258,21 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Icon(Icons.filter_list, size: 20, color: Colors.grey.shade700),
+              Icon(Icons.filter_list,
+                  size: 20, color: Colors.grey.shade700),
               const SizedBox(width: 8),
               Text(
                 'Filtrar por año:',
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
-                ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -299,7 +293,9 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                           },
                           selectedColor: Colors.blue,
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : Colors.grey.shade700,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.grey.shade700,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -350,29 +346,21 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.event_busy,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.event_busy, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'No hay ciclos disponibles',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
             _anioSeleccionado != null
                 ? 'para el año $_anioSeleccionado'
                 : 'en este momento',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
         ],
       ),
@@ -412,13 +400,11 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
           Expanded(
             flex: 2,
             child: ElevatedButton.icon(
-              onPressed: _ciclosSeleccionadosTemp.isNotEmpty
+              onPressed: _idsSeleccionados.isNotEmpty
                   ? _confirmarSeleccion
                   : null,
               icon: const Icon(Icons.check_circle),
-              label: Text(
-                'Confirmar (${_ciclosSeleccionadosTemp.length})',
-              ),
+              label: Text('Confirmar (${_idsSeleccionados.length})'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0085FF),
                 foregroundColor: Colors.white,
@@ -498,9 +484,7 @@ class _CicloItem extends StatelessWidget {
                           if (isVencido)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
+                                  horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.red.shade100,
                                 borderRadius: BorderRadius.circular(12),
@@ -519,32 +503,22 @@ class _CicloItem extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
-                            Icons.water_drop,
-                            size: 14,
-                            color: Colors.grey.shade600,
-                          ),
+                          Icon(Icons.water_drop,
+                              size: 14, color: Colors.grey.shade600),
                           const SizedBox(width: 4),
                           Text(
                             'Ciclo: ${ciclo.ciclo}',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
+                                fontSize: 12, color: Colors.grey.shade600),
                           ),
                           const SizedBox(width: 12),
-                          Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: Colors.grey.shade600,
-                          ),
+                          Icon(Icons.calendar_today,
+                              size: 14, color: Colors.grey.shade600),
                           const SizedBox(width: 4),
                           Text(
                             'Año: ${ciclo.anio}',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
+                                fontSize: 12, color: Colors.grey.shade600),
                           ),
                         ],
                       ),
@@ -587,15 +561,15 @@ class _CicloItem extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.blue : Colors.grey.shade800,
+                        color: isSelected
+                            ? Colors.blue
+                            : Colors.grey.shade800,
                       ),
                     ),
                     Text(
                       'Gs.',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
+                          fontSize: 12, color: Colors.grey.shade600),
                     ),
                   ],
                 ),

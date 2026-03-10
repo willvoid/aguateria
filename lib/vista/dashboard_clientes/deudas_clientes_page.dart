@@ -53,12 +53,10 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
         widget.inmueble.id!,
       );
 
-      // Filtrar según el modo
       final deudasDelModo = _modoConsumo
           ? todasLasDeudas.where((d) => d.estado == 'PAGADO').toList()
           : todasLasDeudas.where((d) => d.estado != 'PAGADO').toList();
 
-      // Extraer años disponibles para modo consumo
       final anios = deudasDelModo
           .where((d) => d.fk_ciclos != null)
           .map((d) => _extraerAnio(d))
@@ -85,7 +83,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     }
   }
 
-  /// Extrae el año del ciclo. Ajusta según tu modelo (ej. ciclo.anio o parsear ciclo.ciclo "YYYY-MM").
   int? _extraerAnio(CuentaCobrar deuda) {
     if (deuda.fk_ciclos == null) return null;
     try {
@@ -98,14 +95,12 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
   List<CuentaCobrar> get _deudasFiltradas {
     List<CuentaCobrar> resultado = _deudas;
 
-    // Filtro por año (solo modo consumo)
     if (_modoConsumo && _anioSeleccionado != null) {
       resultado = resultado
           .where((d) => _extraerAnio(d) == _anioSeleccionado)
           .toList();
     }
 
-    // Filtro por estado (solo modo deuda, en consumo ya están todos pagados)
     if (!_modoConsumo && _filtroEstado != 'TODAS') {
       resultado = resultado.where((d) => d.estado == _filtroEstado).toList();
     }
@@ -136,13 +131,17 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     return DateTime.now().difference(deuda.fk_ciclos!.vencimiento).inDays;
   }
 
-  // ── Helper: abre el diálogo de pago y recarga si tuvo éxito ──────────────
+  // ── Abre el diálogo de pago pre-seleccionando el ciclo de la deuda ───────
   Future<void> _abrirPagarDeuda(
     CuentaCobrar deuda,
     Cliente cliente,
     Inmuebles inmueble,
     int idUsuario,
   ) async {
+    // Si la deuda tiene ciclo asociado, lo pasamos como pre-selección
+    final ciclosIniciales =
+        deuda.fk_ciclos != null ? [deuda.fk_ciclos!] : <dynamic>[];
+
     final resultado = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -151,10 +150,12 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
         cliente: cliente,
         inmueble: inmueble,
         idUsuario: idUsuario,
+        ciclosIniciales: deuda.fk_ciclos != null
+            ? [deuda.fk_ciclos!]   // ← ciclo de esta deuda pre-seleccionado
+            : const [],
       ),
     );
 
-    // ✅ Recargar siempre que el diálogo retorne true (pago registrado)
     if (resultado == true && mounted) {
       await _cargarDeudas();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -181,7 +182,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Header con resumen
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -197,7 +197,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                   ),
                   child: Column(
                     children: [
-                      // Inmueble
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -210,7 +209,8 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.home, color: Colors.white, size: 16),
+                            const Icon(Icons.home,
+                                color: Colors.white, size: 16),
                             const SizedBox(width: 8),
                             Text(
                               'Inmueble: ${widget.inmueble.cod_inmueble ?? 'N/A'}',
@@ -224,12 +224,11 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      // Total adeudado — solo en modo deuda
                       if (!_modoConsumo) ...[
                         const Text(
                           'Total Adeudado',
-                          style: TextStyle(color: Colors.white70, fontSize: 14),
+                          style: TextStyle(
+                              color: Colors.white70, fontSize: 14),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -241,7 +240,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Estadísticas
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
@@ -273,7 +271,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                           ],
                         ),
                       ] else ...[
-                        // En modo consumo solo mostramos el total de registros
                         _buildEstadistica(
                           'Consumos pagados',
                           _deudas.length.toString(),
@@ -283,8 +280,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                     ],
                   ),
                 ),
-
-                // ── Filtros ──────────────────────────────────────────────────
                 Container(
                   padding: const EdgeInsets.all(16),
                   color: Colors.white,
@@ -292,8 +287,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                       ? _buildFiltrosAnio()
                       : _buildFiltrosEstado(),
                 ),
-
-                // Lista de deudas
                 Expanded(
                   child: _deudasFiltradas.isEmpty
                       ? Center(
@@ -324,7 +317,8 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                                         ? '¡Felicidades! No tienes deudas pendientes'
                                         : 'No se encontraron deudas con este filtro',
                                 style: TextStyle(
-                                    fontSize: 14, color: Colors.grey[400]),
+                                    fontSize: 14,
+                                    color: Colors.grey[400]),
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -352,11 +346,11 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     );
   }
 
-  // ── Filtro por estado (modo deuda) ────────────────────────────────────────
   Widget _buildFiltrosEstado() {
     return Row(
       children: [
-        const Icon(Icons.filter_list, size: 20, color: Color(0xFF6B7280)),
+        const Icon(Icons.filter_list,
+            size: 20, color: Color(0xFF6B7280)),
         const SizedBox(width: 12),
         Expanded(
           child: SingleChildScrollView(
@@ -376,12 +370,12 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     );
   }
 
-  // ── Filtro por año (modo consumo) ─────────────────────────────────────────
   Widget _buildFiltrosAnio() {
     if (_aniosDisponibles.isEmpty) return const SizedBox.shrink();
     return Row(
       children: [
-        const Icon(Icons.calendar_today, size: 20, color: Color(0xFF6B7280)),
+        const Icon(Icons.calendar_today,
+            size: 20, color: Color(0xFF6B7280)),
         const SizedBox(width: 12),
         Expanded(
           child: SingleChildScrollView(
@@ -396,7 +390,9 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                     selected: seleccionado,
                     selectedColor: const Color(0xFF0085FF),
                     labelStyle: TextStyle(
-                      color: seleccionado ? Colors.white : Colors.black87,
+                      color: seleccionado
+                          ? Colors.white
+                          : Colors.black87,
                       fontWeight: seleccionado
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -427,7 +423,9 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(label,
+            style:
+                const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }
@@ -448,8 +446,9 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
       selectedColor: const Color(0xFF0085FF).withOpacity(0.2),
       checkmarkColor: const Color(0xFF0085FF),
       labelStyle: TextStyle(
-        color:
-            isSelected ? const Color(0xFF0085FF) : const Color(0xFF6B7280),
+        color: isSelected
+            ? const Color(0xFF0085FF)
+            : const Color(0xFF6B7280),
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
     );
@@ -465,8 +464,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     IconData estadoIcon;
     String estadoTexto;
     final estaVencida = _estaVencida(deuda);
-
-    // ✅ FIX: distinguir EN REVISION del resto
     final bool enRevision = deuda.estado == 'EN REVISION';
 
     if (deuda.estado == 'PAGADO') {
@@ -493,8 +490,9 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color:
-              estaVencida ? Colors.red.withOpacity(0.3) : Colors.grey[200]!,
+          color: estaVencida
+              ? Colors.red.withOpacity(0.3)
+              : Colors.grey[200]!,
           width: estaVencida ? 2 : 1,
         ),
         boxShadow: [
@@ -525,8 +523,8 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                         color: estadoColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child:
-                          Icon(estadoIcon, color: estadoColor, size: 20),
+                      child: Icon(estadoIcon,
+                          color: estadoColor, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -595,7 +593,8 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                           Text(
                             'Pagado: ${_formatoMoneda.format(deuda.pagado)}',
                             style: TextStyle(
-                                fontSize: 11, color: Colors.green[600]),
+                                fontSize: 11,
+                                color: Colors.green[600]),
                           ),
                         ],
                       ],
@@ -629,7 +628,8 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                               Text(
                                 'Vence: ${DateFormat('dd/MM/yyyy').format(deuda.fk_ciclos!.vencimiento)}',
                                 style: TextStyle(
-                                    fontSize: 12, color: Colors.grey[600]),
+                                    fontSize: 12,
+                                    color: Colors.grey[600]),
                               ),
                             ],
                           ),
@@ -638,22 +638,21 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                     ),
                   ],
                 ),
-
-                // ✅ FIX: botón solo si PENDIENTE; si EN REVISION muestra aviso
                 if (!_modoConsumo) ...[
                   const SizedBox(height: 12),
                   if (deuda.estado == 'PENDIENTE')
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () =>
-                            _abrirPagarDeuda(deuda, cliente, inmueble, idUsuario),
+                        onPressed: () => _abrirPagarDeuda(
+                            deuda, cliente, inmueble, idUsuario),
                         icon: const Icon(Icons.payment, size: 18),
                         label: const Text('Pagar Ahora'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0085FF),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -661,7 +660,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                       ),
                     )
                   else if (enRevision)
-                    // ✅ Aviso de comprobante enviado — no permite re-pagar
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
@@ -687,8 +685,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                       ),
                     ),
                 ],
-
-                // Alerta de vencimiento
                 if (estaVencida) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -770,7 +766,8 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                   'Monto Total', _formatoMoneda.format(deuda.monto)),
               _buildDetalleRow(
                   'Pagado', _formatoMoneda.format(deuda.pagado)),
-              _buildDetalleRow('Saldo', _formatoMoneda.format(deuda.saldo)),
+              _buildDetalleRow(
+                  'Saldo', _formatoMoneda.format(deuda.saldo)),
               if (deuda.fk_ciclos != null) ...[
                 _buildDetalleRow(
                   'Período',
@@ -809,15 +806,13 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                 ),
               ],
               const SizedBox(height: 24),
-
-              // ✅ FIX: en el detalle también usar _abrirPagarDeuda
-              // y bloquear si ya está EN REVISION
               if (!_modoConsumo) ...[
                 if (deuda.estado == 'PENDIENTE')
                   ElevatedButton(
                     onPressed: () async {
-                      Navigator.pop(context); // cerrar bottom sheet primero
-                      await _abrirPagarDeuda(deuda, cliente, inmueble, idUsuario);
+                      Navigator.pop(context);
+                      await _abrirPagarDeuda(
+                          deuda, cliente, inmueble, idUsuario);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0085FF),
@@ -856,7 +851,6 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                     ),
                   ),
               ],
-
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(context),
