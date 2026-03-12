@@ -177,7 +177,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Seleccionar Ciclos',
+                      'Seleccionar Meses',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -185,7 +185,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                       ),
                     ),
                     Text(
-                      'Elige los ciclos que deseas pagar',
+                      'Elige los Meses que deseas pagar',
                       style: TextStyle(fontSize: 13, color: Colors.white70),
                     ),
                   ],
@@ -211,7 +211,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ciclos seleccionados',
+                      'Meses seleccionados',
                       style: TextStyle(
                           fontSize: 11, color: Colors.grey.shade600),
                     ),
@@ -261,50 +261,48 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.filter_list,
-                  size: 20, color: Colors.grey.shade700),
-              const SizedBox(width: 8),
+              Icon(Icons.filter_list, size: 13, color: Colors.grey.shade400),
+              const SizedBox(width: 4),
               Text(
-                'Filtrar por año:',
+                'Filtrar por año',
                 style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _aniosDisponibles.map((anio) {
-                      final isSelected = _anioSeleccionado == anio;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(anio.toString()),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(() {
-                              _anioSeleccionado = selected ? anio : null;
-                            });
-                          },
-                          selectedColor: Colors.blue,
-                          labelStyle: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : Colors.grey.shade700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade400),
               ),
             ],
+          ),
+          const SizedBox(height: 6),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _aniosDisponibles.map((anio) {
+                final isSelected = _anioSeleccionado == anio;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(anio.toString()),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        _anioSeleccionado = selected ? anio : null;
+                      });
+                    },
+                    selectedColor: Colors.blue,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
           const SizedBox(height: 8),
           Row(
@@ -349,7 +347,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
           Icon(Icons.event_busy, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
-            'No hay ciclos disponibles',
+            'No hay Meses disponibles',
             style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -507,7 +505,7 @@ class _CicloItem extends StatelessWidget {
                               size: 14, color: Colors.grey.shade600),
                           const SizedBox(width: 4),
                           Text(
-                            'Ciclo: ${ciclo.ciclo}',
+                            'Mes: ${ciclo.ciclo}',
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey.shade600),
                           ),

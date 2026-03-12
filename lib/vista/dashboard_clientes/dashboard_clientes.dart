@@ -115,7 +115,7 @@ class ClienteDashboardPage extends StatelessWidget {
                   ]),
                   const SizedBox(height: 16),
 
-                  _buildInfoCard('Información Personal', Icons.person, [
+                  /*_buildInfoCard('Información Personal', Icons.person, [
                     if (cliente.celular != null && cliente.celular.isNotEmpty)
                       _InfoRow('Celular', cliente.celular),
                     if (cliente.telefono != null &&
@@ -125,7 +125,7 @@ class ClienteDashboardPage extends StatelessWidget {
                       _InfoRow('Email', cliente.email.toString()),
                     _InfoRow('Barrio', cliente.barrio?.nombre_barrio ?? 'N/A'),
                     _InfoRow('Dirección', cliente.direccion ?? 'N/A'),
-                  ]),
+                  ]),*/
 
                   const SizedBox(height: 24),
 

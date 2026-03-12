@@ -801,7 +801,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             const SizedBox(width: 8),
             const Expanded(
               child: Text(
-                'Ciclos a Pagar',
+                'Meses a Pagar',
                 style:
                     TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
@@ -836,7 +836,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                     color: Colors.blue.shade300, size: 48),
                 const SizedBox(height: 12),
                 Text(
-                  'No hay ciclos seleccionados',
+                  'No hay Meses seleccionados',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -845,7 +845,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Toca el botón "Agregar" para seleccionar ciclos',
+                  'Toca el botón "Agregar" para seleccionar Meses',
                   style: TextStyle(
                       fontSize: 12, color: Colors.grey.shade600),
                   textAlign: TextAlign.center,
@@ -880,13 +880,13 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${_ciclosSeleccionados.length} ciclo(s) seleccionado(s)',
+                            '${_ciclosSeleccionados.length} Meses seleccionados',
                             style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            'Precio por ciclo: ${montoPorCiclo.toStringAsFixed(0)} Gs.',
+                            'Precio por mes: ${montoPorCiclo.toStringAsFixed(0)} Gs.',
                             style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600),
@@ -914,7 +914,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500)),
                               Text(
-                                'Ciclo ${ciclo.ciclo} - Año ${ciclo.anio}',
+                                'Mes ${ciclo.ciclo} - Año ${ciclo.anio}',
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey.shade600),
@@ -1047,7 +1047,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           if (_esConsumo && _ciclosSeleccionados.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              '${_ciclosSeleccionados.length} ciclo(s) seleccionado(s)',
+              '${_ciclosSeleccionados.length} Meses seleccionados',
               style:
                   TextStyle(fontSize: 12, color: Colors.grey.shade700),
             ),
