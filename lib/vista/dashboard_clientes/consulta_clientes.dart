@@ -6,6 +6,7 @@ import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/vista/dashboard_clientes/dashboard_clientes.dart';
 import 'package:myapp/vista/loginpage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ClienteConsultaPage extends StatefulWidget {
   const ClienteConsultaPage({Key? key}) : super(key: key);
@@ -32,7 +33,9 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   }
 
   Future<void> _buscarCliente() async {
-    if (_documentoController.text.trim().isEmpty) {
+    final documento = _documentoController.text.trim();
+
+    if (documento.isEmpty) {
       setState(() {
         _errorMessage = 'Por favor, ingrese su número de documento';
       });
@@ -48,20 +51,27 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     });
 
     try {
-      // Buscar cliente por documento
-      final cliente = await _clienteCrud.buscarClientePorDocumento(
-        _documentoController.text.trim(),
+      // 1. RECONSTRUIMOS EL CORREO FICTICIO Y LA CONTRASEÑA
+      final String correoFicticio = '$documento@santarosa.local';
+      
+      // 2. INICIAMOS SESIÓN EN SUPABASE AUTH
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: correoFicticio,
+        password: documento,
       );
+
+      // 3. SI EL LOGIN FUE EXITOSO, BUSCAMOS SUS DATOS EN TU TABLA (Tu código original)
+      final cliente = await _clienteCrud.buscarClientePorDocumento(documento);
 
       if (cliente == null) {
         setState(() {
-          _errorMessage = 'No se encontró ningún cliente con ese documento';
+          _errorMessage = 'No se encontró información adicional del cliente';
           _isLoading = false;
         });
         return;
       }
 
-      // Buscar inmuebles del cliente
+      // 4. BUSCAMOS SUS INMUEBLES
       final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
         cliente.idCliente!,
       );
@@ -77,11 +87,14 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
           _errorMessage = 'No tiene inmuebles registrados';
         });
       }
+
     } catch (e) {
+      // Si el login falla (ej: documento no existe en Auth) o falla la base de datos
       setState(() {
-        _errorMessage = 'Error al buscar cliente: $e';
+        _errorMessage = 'Documento incorrecto o no registrado.';
         _isLoading = false;
       });
+      print('Error en el login/búsqueda: $e'); // Para que veas en consola el error real
     }
   }
 

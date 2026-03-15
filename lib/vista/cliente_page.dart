@@ -7,6 +7,7 @@ import 'package:myapp/modelo/%20tipo_documento.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/tipo_operacion.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ClientesPage extends StatefulWidget {
   const ClientesPage({Key? key}) : super(key: key);
@@ -108,7 +109,9 @@ class _ClientesPageState extends State<ClientesPage> {
       );
 
       bool exito;
+      
       if (cliente.idCliente == null) {
+        // --- 1. CREACIÓN DE UN NUEVO CLIENTE ---
         final documentoExiste = await _clienteCrud.verificarDocumentoExistente(cliente.documento);
         
         if (documentoExiste) {
@@ -117,9 +120,35 @@ class _ClientesPageState extends State<ClientesPage> {
           return;
         }
 
+        // --- 2. CREAR USUARIO EN SUPABASE AUTH (EDGE FUNCTION) ---
+        try {
+          String correo = '${cliente.documento}@santarosa.local';
+          print('⏳ Llamando a la Edge Function...');
+          
+          final response = await Supabase.instance.client.functions.invoke(
+            'crear_usuario_admin',
+            body: {
+              'email': correo,
+              'password': cliente.documento, 
+              'user_metadata': {
+                'nombre': cliente.razonSocial,
+                'rol': 'cliente'
+              }
+            },
+          );
+          print('✅ Respuesta de Supabase: ${response.data}');
+        } on FunctionException catch (e) {
+          print('❌ Error de la Edge Function: ${e.reasonPhrase} - Detalles: ${e.details}');
+        } catch (e) {
+          print('❌ Error general al crear usuario: $e');
+        }
+
+        // --- 3. GUARDAR EL CLIENTE EN LA BASE DE DATOS (SOLO UNA VEZ) ---
         final clienteCreado = await _clienteCrud.crearCliente(cliente);
         exito = clienteCreado != null;
+
       } else {
+        // --- ACTUALIZACIÓN DE UN CLIENTE EXISTENTE ---
         final documentoExiste = await _clienteCrud.verificarDocumentoExistente(
           cliente.documento,
           idClienteExcluir: cliente.idCliente,
