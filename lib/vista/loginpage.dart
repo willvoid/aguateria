@@ -4,6 +4,7 @@ import 'package:myapp/modelo/usuario/authprovider.dart';
 import 'package:myapp/vista/registro_usuariopage.dart';
 import 'package:myapp/widget/dashboard_widget.dart';
 import 'package:provider/provider.dart' show Provider;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -22,23 +23,34 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // En login_page.dart
-Future<void> _iniciarSesion() async {
+  Future<void> _iniciarSesion() async {
   if (!_formKey.currentState!.validate()) return;
 
   setState(() => _isLoading = true);
 
   try {
-    final usuario = await _usuarioCrud.autenticarUsuario(
-      _usuarioController.text.trim(),
-      _claveController.text,
+    final supabase = Supabase.instance.client;
+    
+    // Ahora esperamos que el empleado ingrese su CORREO REAL
+    final String correoReal = _usuarioController.text.trim();
+    final String password = _claveController.text;
+
+    // 1. Autenticación estándar con Supabase Auth
+    final AuthResponse res = await supabase.auth.signInWithPassword(
+      email: correoReal,
+      password: password, 
     );
 
-    setState(() => _isLoading = false);
+    // 2. Si las credenciales son correctas
+    if (res.user != null) {
+      
+      // 3. Opcional: Buscamos los datos adicionales del empleado en tu tabla (nombre, rol, etc.)
+      final usuario = await _usuarioCrud.obtenerDatosUsuarioPorCorreo(correoReal); 
 
-    if (usuario != null) {
-      // Guardar sesión con Provider
-      if (mounted) {
+      setState(() => _isLoading = false);
+
+      if (usuario != null && mounted) {
+        // Guardamos la sesión en tu Provider
         await Provider.of<AuthProvider>(context, listen: false).login(usuario);
         
         ScaffoldMessenger.of(context).showSnackBar(
@@ -53,15 +65,16 @@ Future<void> _iniciarSesion() async {
           context,
           MaterialPageRoute(builder: (_) => const DashboardWidget()),
         );
-      }
-    } else {
-      if (mounted) {
-        _mostrarError('Usuario o contraseña incorrectos');
+      } else {
+        if (mounted) _mostrarError('Error: Empleado no encontrado en la base de datos.');
       }
     }
+  } on AuthException catch (e) {
+    setState(() => _isLoading = false);
+    if (mounted) _mostrarError('Correo electrónico o contraseña incorrectos');
   } catch (e) {
     setState(() => _isLoading = false);
-    _mostrarError('Error al iniciar sesión: $e');
+    if (mounted) _mostrarError('Error inesperado al iniciar sesión');
   }
 }
 

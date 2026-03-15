@@ -32,6 +32,22 @@ class UsuarioCrudImpl {
     }
   }
 
+Future<Usuario?> obtenerUsuarioPorCedula(String cedula) async {
+  final supabase = Supabase.instance.client;
+  
+  // Como el usuario ya inició sesión con Supabase Auth en el paso anterior,
+  // el RLS le permitirá leer su propio registro en esta tabla.
+  final response = await supabase
+      .from('clientes') // O la tabla donde guardes tus usuarios/clientes
+      .select()
+      .eq('cedula', cedula) // O el campo que uses
+      .maybeSingle();
+
+  if (response == null) return null;
+  
+  return Usuario.fromMap(response); // Tu modelo actual
+}
+
   // ==================== CREAR USUARIO ====================
 
   Future<Usuario?> crearUsuario(Usuario usuario) async {
@@ -446,6 +462,29 @@ class UsuarioCrudImpl {
     } catch (e) {
       print('Error al leer usuarios ordenados: $e');
       return [];
+    }
+  }
+
+  // ==================== OBTENER USUARIO POR CORREO (NUEVO LOGIN) ====================
+
+  Future<Usuario?> obtenerDatosUsuarioPorCorreo(String correo) async {
+    try {
+      final data = await supabase
+          .from('usuario')
+          .select('''
+            *,
+            fk_cargo:cargo(*),
+            fk_tipo_doc:tipo_documento(*)
+          ''')
+          .eq('correo', correo)
+          .maybeSingle(); // Usamos maybeSingle para que devuelva null si no lo encuentra
+
+      if (data == null) return null;
+      
+      return Usuario.fromMap(data);
+    } catch (e) {
+      print('Error al obtener usuario por correo: $e');
+      return null;
     }
   }
 }

@@ -388,4 +388,46 @@ class ClienteCrudImpl {
       return false;
     }
   }
+
+  // ==================== BUSCAR CLIENTE POR DOCUMENTO EXACTO ====================
+Future<Cliente?> buscarClientePorDocumento(String documento) async {
+  try {
+    final data = await supabase
+        .from('clientes')
+        .select('''
+          *,
+          tipo_documento(*),
+          barrios(*),
+          tipo_operacion(*),
+          tipo_contribuyente(*)
+        ''')
+        .eq('documento', documento)
+        .maybeSingle();
+
+    if (data == null) return null;
+
+    return Cliente(
+      idCliente: data['id_cliente'],
+      razonSocial: data['razon_social'],
+      nombreFantasia: data['nombre_fantasia'],
+      documento: data['documento'],
+      telefono: data['telefono'],
+      celular: data['celular'],
+      direccion: data['direccion'],
+      es_proveedor_del_estado: data['es_proveedor_del_estado'],
+      email: data['email'],
+      nroCasa: data['nro_casa'],
+      tipoOperacion: TipoOperacion.fromMap(data['tipo_operacion']),
+      estado: data['estado_cliente'],
+      tipoDocumento: TipoDocumento.fromMap(data['tipo_documento']),
+      barrio: Barrio.fromMap(data['barrios']),
+      tipo_contribuyente: data['tipo_contribuyente'] != null
+          ? TipoContribuyente.fromMap(data['tipo_contribuyente'])
+          : null,
+    );
+  } catch (e) {
+    print('Error al buscar cliente por documento: $e');
+    return null;
+  }
+}
 }

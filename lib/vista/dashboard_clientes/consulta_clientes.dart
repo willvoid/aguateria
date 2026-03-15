@@ -18,7 +18,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   final TextEditingController _documentoController = TextEditingController();
   final ClienteCrudImpl _clienteCrud = ClienteCrudImpl();
   final InmuebleCrudImpl _inmuebleCrud = InmuebleCrudImpl();
-  
+
   bool _isLoading = false;
   Cliente? _clienteEncontrado;
   List<Inmuebles> _inmuebles = [];
@@ -49,9 +49,11 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
     try {
       // Buscar cliente por documento
-      final clientes = await _clienteCrud.buscarClientes(_documentoController.text.trim());
-      
-      if (clientes.isEmpty) {
+      final cliente = await _clienteCrud.buscarClientePorDocumento(
+        _documentoController.text.trim(),
+      );
+
+      if (cliente == null) {
         setState(() {
           _errorMessage = 'No se encontró ningún cliente con ese documento';
           _isLoading = false;
@@ -59,11 +61,11 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         return;
       }
 
-      final cliente = clientes.first;
-      
       // Buscar inmuebles del cliente
-      final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(cliente.idCliente!);
-      
+      final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
+        cliente.idCliente!,
+      );
+
       setState(() {
         _clienteEncontrado = cliente;
         _inmuebles = inmuebles;
@@ -125,17 +127,17 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF0085FF),
-                    const Color(0xFF0066CC),
-                  ],
+                  colors: [const Color(0xFF0085FF), const Color(0xFF0066CC)],
                 ),
               ),
               child: Stack(
                 children: [
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 32,
+                      horizontal: 24,
+                    ),
                     child: Column(
                       children: [
                         Container(
@@ -189,9 +191,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const LoginPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
                         );
                       },
                       icon: const Icon(
@@ -294,9 +294,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                                   decoration: BoxDecoration(
                                     color: Colors.red[50],
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.red[200]!,
-                                    ),
+                                    border: Border.all(color: Colors.red[200]!),
                                   ),
                                   child: Row(
                                     children: [
@@ -328,7 +326,9 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF0085FF),
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -340,9 +340,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                                         width: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            Colors.white,
-                                          ),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
                                         ),
                                       )
                                     : const Text(
@@ -359,19 +360,22 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                                 const SizedBox(height: 24),
                                 const Divider(),
                                 const SizedBox(height: 24),
-                                
+
                                 Row(
                                   children: [
                                     Container(
                                       width: 50,
                                       height: 50,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF0085FF).withOpacity(0.1),
+                                        color: const Color(
+                                          0xFF0085FF,
+                                        ).withOpacity(0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Center(
                                         child: Text(
-                                          _clienteEncontrado!.razonSocial[0].toUpperCase(),
+                                          _clienteEncontrado!.razonSocial[0]
+                                              .toUpperCase(),
                                           style: const TextStyle(
                                             color: Color(0xFF0085FF),
                                             fontSize: 24,
@@ -383,7 +387,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             _clienteEncontrado!.razonSocial,
@@ -419,7 +424,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  
+
                                   DropdownButtonFormField<Inmuebles>(
                                     value: _inmuebleSeleccionado,
                                     decoration: InputDecoration(
@@ -449,8 +454,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                                       return DropdownMenuItem<Inmuebles>(
                                         value: inmueble,
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             Text(
                                               'Código: ${inmueble.cod_inmueble}',
@@ -498,10 +505,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
               padding: const EdgeInsets.all(16),
               child: Text(
                 '© 2024 Servicio de Agua Santa Rosa',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
             ),
