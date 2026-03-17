@@ -12,9 +12,13 @@ class TipoRegimen {
   factory TipoRegimen.fromMap(Map<String, dynamic> map) {
     return TipoRegimen(
       id_regimen: map['id_regimen'],
-      codigo_regimen: map['codigo_regimen'],
-      descripcion: map['descripcion'],
+      codigo_regimen: map['codigo_regimen'] ?? 0,
+      descripcion: map['descripcion'] ?? '',
     );
+  }
+
+  factory TipoRegimen.vacio() {
+    return TipoRegimen(codigo_regimen: 0, descripcion: '');
   }
 
   Map<String, dynamic> toMap() {
@@ -24,5 +28,4 @@ class TipoRegimen {
       'descripcion': descripcion,
     };
   }
-
 }

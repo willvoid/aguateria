@@ -1,4 +1,6 @@
+import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/contabilidad/asiento.dart';
+import 'package:myapp/modelo/empresa/dato_empresa.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,9 +9,9 @@ final supabase = Supabase.instance.client;
 class AsientosCrudImpl {
 
   static const String _select = '''
-    *,
-    establecimientos(*)
-  ''';
+  *,
+  establecimientos(*)
+''';
 
   // ==================== CREAR ====================
   Future<Asientos?> crear(Asientos asiento) async {
@@ -116,15 +118,20 @@ class AsientosCrudImpl {
   // ==================== LEER POR RANGO DE FECHAS ====================
   Future<List<Asientos>> leerPorRangoFechas(DateTime desde, DateTime hasta) async {
     try {
+      // Convertir a UTC para que coincida con el timezone en que Supabase guarda
       final data = await supabase
           .from('asientos')
           .select(_select)
-          .gte('fecha', desde.toIso8601String())
-          .lte('fecha', hasta.toIso8601String())
+          .gte('fecha', desde.toUtc().toIso8601String())
+          .lte('fecha', hasta.toUtc().toIso8601String())
           .order('fecha', ascending: false);
 
-      if (data == null || data.isEmpty) return [];
+      if (data == null || data.isEmpty) {
+        print('⚠️ asientos: sin datos en el rango ${desde.toUtc()} - ${hasta.toUtc()}');
+        return [];
+      }
 
+      print('✓ asientos encontrados: ${data.length}');
       return List<Map<String, dynamic>>.from(data)
           .map((m) => _fromMap(m))
           .toList();
@@ -212,16 +219,37 @@ class AsientosCrudImpl {
   }
 
   // ==================== HELPER PRIVADO ====================
-  Asientos _fromMap(Map<String, dynamic> m) {
-    return Asientos(
-      id: m['id'],
-      fecha: DateTime.parse(m['fecha']),
-      descripcion: m['descripcion'],
-      nroAsiento: m['nro_asiento'],
-      sucursal: Establecimiento.fromMap(m['establecimientos']),
-      estado: m['estado'],
-      origenTipo: m['origen_tipo'],
-      fkOrigen: m['fk_origen'],
-    );
-  }
+Asientos _fromMap(Map<String, dynamic> m) {
+  final estMap = m['establecimientos'];
+
+  // fk_barrio y fk_empresa llegan como int (solo ID), no como objetos anidados
+  // Se construye Establecimiento directamente sin intentar parsear esas relaciones
+  final Establecimiento sucursal = estMap != null
+      ? Establecimiento(
+          id_establecimiento: estMap['id_establecimiento'],
+          codigo_establecimiento: estMap['codigo_establecimiento'] ?? '',
+          direccion: estMap['direccion'] ?? '',
+          numero_casa: estMap['numero_casa'] ?? '',
+          complemento_direccion_1: estMap['complemento_direccion_1'] ?? '',
+          complemento_direccion_2: estMap['complemento_direccion_2'],
+          telefono: estMap['telefono'],
+          email: estMap['email'],
+          denominacion: estMap['denominacion'] ?? '',
+          estado_establecimiento: estMap['estado_establecimiento'] ?? '',
+          fk_barrio: Barrio.vacio(),
+          fk_empresa: DatoEmpresa.vacio(),
+        )
+      : Establecimiento.vacio();
+
+  return Asientos(
+    id: m['id'],
+    fecha: DateTime.parse(m['fecha']),
+    descripcion: m['descripcion'],
+    nroAsiento: m['nro_asiento'],
+    sucursal: sucursal,
+    estado: m['estado'],
+    origenTipo: m['origen_tipo'],
+    fkOrigen: m['fk_origen'],
+  );
+}
 }

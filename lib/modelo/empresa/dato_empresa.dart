@@ -23,19 +23,34 @@ class DatoEmpresa {
   factory DatoEmpresa.fromMap(Map<String, dynamic> map) {
     return DatoEmpresa(
       id_empresa: map['id_empresa'],
-      ruc: map['ruc'],
-      razon_social: map['razon_social'],
-      nombre_fantasia: map['nombre_fantasia'],
-      fk_contribuyente: TipoContribuyente.fromMap(map['fk_contribuyente']),
-      fk_regimen: TipoRegimen.fromMap(map['fk_regimen']),
-      estado: map['estado'],
-      );
+      ruc: map['ruc'] ?? '',
+      razon_social: map['razon_social'] ?? '',
+      nombre_fantasia: map['nombre_fantasia'] ?? '',
+      fk_contribuyente: map['fk_contribuyente'] != null
+          ? TipoContribuyente.fromMap(map['fk_contribuyente'])
+          : TipoContribuyente.vacio(),
+      fk_regimen: map['fk_regimen'] != null
+          ? TipoRegimen.fromMap(map['fk_regimen'])
+          : TipoRegimen.vacio(),
+      estado: map['estado'] ?? '',
+    );
+  }
+
+  factory DatoEmpresa.vacio() {
+    return DatoEmpresa(
+      ruc: '',
+      razon_social: '',
+      nombre_fantasia: '',
+      fk_contribuyente: TipoContribuyente.vacio(),
+      fk_regimen: TipoRegimen.vacio(),
+      estado: '',
+    );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'id_empresa': id_empresa,
-      'ruc': ruc,   
+      'ruc': ruc,
       'razon_social': razon_social,
       'nombre_fantasia': nombre_fantasia,
       'fk_contribuyente': fk_contribuyente.toMap(),

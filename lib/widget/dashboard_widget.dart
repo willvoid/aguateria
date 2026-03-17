@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
+import 'package:myapp/vista/dashboard_principal/dashboard_resumen.dart';
 import 'package:myapp/vista/empresavista/cajapage.dart';
 import 'package:myapp/vista/empresavista/dato_empresapage.dart';
 import 'package:myapp/vista/empresavista/establecimientopage.dart';
@@ -28,7 +29,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
     with TickerProviderStateMixin {
   int selectedIndex = 0;
   int? selectedSubIndex;
-  bool isSidebarVisible = true; // Controla la visibilidad del sidebar
+  bool isSidebarVisible = true;
   late AnimationController _animationController;
   late Animation<double> _sidebarAnimation;
 
@@ -42,8 +43,6 @@ class _DashboardWidgetState extends State<DashboardWidget>
     _sidebarAnimation = Tween<double>(begin: 0.0, end: 240.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-
-    // Iniciar con el sidebar visible
     _animationController.forward();
   }
 
@@ -66,11 +65,11 @@ class _DashboardWidgetState extends State<DashboardWidget>
 
   Widget _getSelectedWidget() {
     switch (selectedIndex) {
-      case 0:
+      case 0: // Dashboard
+        return const DashboardResumenPage();
+      case 1: // Clientes
         return const ClientesPage();
-      case 1:
-        //return const CategoriaServicioPage();
-        // Sub-items de Deudas
+      case 2: // Inmuebles
         if (selectedSubIndex != null) {
           switch (selectedSubIndex) {
             case 0:
@@ -83,11 +82,10 @@ class _DashboardWidgetState extends State<DashboardWidget>
               return const TarifaPage();
           }
         }
-
         return const InmueblesPage();
-      case 2: return const PagosPage();
-        
-      case 3: //Datos Empresa
+      case 3: // Deudas / Pagos
+        return const PagosPage();
+      case 4: // Datos Empresa
         if (selectedSubIndex != null) {
           switch (selectedSubIndex) {
             case 0:
@@ -101,7 +99,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
           }
         }
         return const DatoEmpresaPage();
-      case 4: //Facturacion
+      case 5: // Facturación
         if (selectedSubIndex != null) {
           switch (selectedSubIndex) {
             case 0:
@@ -111,7 +109,9 @@ class _DashboardWidgetState extends State<DashboardWidget>
           }
         }
         return const CrearFacturaPage();
-      case 5:
+      case 6: // Contabilidad
+        return const DashboardResumenPage();
+      case 7: // Opciones
         return Container(
           padding: const EdgeInsets.all(24),
           child: const Center(
@@ -137,10 +137,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
   String _getSelectedTitle() {
     if (selectedIndex >= 0 && selectedIndex < sidebarItems.length) {
       final item = sidebarItems[selectedIndex];
-      if (selectedIndex == 1 &&
-          selectedSubIndex != null &&
-          item.subItems != null) {
-        // Si estamos en Deudas y hay un subitem seleccionado
+      if (selectedSubIndex != null && item.subItems != null) {
         return '${item.title} - ${item.subItems![selectedSubIndex!].title}';
       }
       return item.title;
@@ -151,10 +148,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
   IconData _getSelectedIcon() {
     if (selectedIndex >= 0 && selectedIndex < sidebarItems.length) {
       final item = sidebarItems[selectedIndex];
-      if (selectedIndex == 1 &&
-          selectedSubIndex != null &&
-          item.subItems != null) {
-        // Si estamos en Deudas y hay un subitem seleccionado
+      if (selectedSubIndex != null && item.subItems != null) {
         return item.subItems![selectedSubIndex!].icon;
       }
       return item.icon;
@@ -164,9 +158,13 @@ class _DashboardWidgetState extends State<DashboardWidget>
 
   final List<SidebarItem> sidebarItems = [
     SidebarItem(
+      icon: Icons.dashboard_outlined,
+      title: 'Dashboard',
+      isSelected: true,
+    ),
+    SidebarItem(
       icon: Icons.account_circle,
       title: 'Clientes',
-      isSelected: true,
     ),
     SidebarItem(
       icon: Icons.home,
@@ -181,7 +179,6 @@ class _DashboardWidgetState extends State<DashboardWidget>
     SidebarItem(
       icon: Icons.receipt_long,
       title: 'Deudas',
-      isSelected: false,
       subItems: [
         SidebarSubItem(icon: Icons.home, title: 'Casas'),
         SidebarSubItem(icon: Icons.water_drop, title: 'Cuentas Consumo'),
@@ -198,7 +195,9 @@ class _DashboardWidgetState extends State<DashboardWidget>
         SidebarSubItem(icon: Icons.place, title: 'Establecimientos'),
         SidebarSubItem(icon: Icons.point_of_sale_outlined, title: 'Cajas'),
         SidebarSubItem(icon: Icons.electrical_services, title: 'Timbrados'),
-        SidebarSubItem(icon: Icons.watch_later_outlined, title: 'Apertura y Cierre de Caja')
+        SidebarSubItem(
+            icon: Icons.watch_later_outlined,
+            title: 'Apertura y Cierre de Caja'),
       ],
     ),
     SidebarItem(
@@ -209,8 +208,14 @@ class _DashboardWidgetState extends State<DashboardWidget>
         SidebarSubItem(icon: Icons.calendar_month, title: 'Ciclos'),
       ],
     ),
-    SidebarItem(icon: Icons.trending_up, title: 'Contabilidad'),
-    SidebarItem(icon: Icons.settings, title: 'Opciones'),
+    SidebarItem(
+      icon: Icons.trending_up,
+      title: 'Contabilidad',
+    ),
+    SidebarItem(
+      icon: Icons.settings,
+      title: 'Opciones',
+    ),
   ];
 
   @override
@@ -285,9 +290,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
                             // Sidebar Items
                             Expanded(
                               child: ListView.builder(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                                 itemCount: _getTotalItemCount(),
                                 itemBuilder: (context, index) {
                                   return _buildSidebarItem(index);
@@ -320,7 +324,6 @@ class _DashboardWidgetState extends State<DashboardWidget>
                   ),
                   child: Row(
                     children: [
-                      // Botón para mostrar/ocultar sidebar
                       IconButton(
                         onPressed: _toggleSidebar,
                         icon: Icon(
@@ -348,111 +351,111 @@ class _DashboardWidgetState extends State<DashboardWidget>
                         ),
                       ),
                       const Spacer(),
-                      // En dashboard_widget.dart - Agregar en el TopBar después del Spacer()
+                      Consumer<AuthProvider>(
+                        builder: (context, authProvider, _) {
+                          return Row(
+                            children: [
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    authProvider.usuarioNombre,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  Text(
+                                    authProvider.cargoNombre,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF0085FF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    authProvider.usuarioNombre.isNotEmpty
+                                        ? authProvider.usuarioNombre[0]
+                                            .toUpperCase()
+                                        : 'U',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert,
+                                    size: 20, color: Color(0xFF6B7280)),
+                                onSelected: (value) async {
+                                  if (value == 'logout') {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title:
+                                            const Text('Cerrar Sesión'),
+                                        content: const Text(
+                                            '¿Estás seguro de que deseas cerrar sesión?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('Cancelar'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            style: TextButton.styleFrom(
+                                                foregroundColor: Colors.red),
+                                            child: const Text('Cerrar Sesión'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
 
-Consumer<AuthProvider>(
-  builder: (context, authProvider, _) {
-    return Row(
-      children: [
-        // Información del usuario
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              authProvider.usuarioNombre,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF111827),
-              ),
-            ),
-            Text(
-              authProvider.cargoNombre,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6B7280),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        
-        // Avatar
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: const Color(0xFF0085FF),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              authProvider.usuarioNombre.isNotEmpty 
-                  ? authProvider.usuarioNombre[0].toUpperCase()
-                  : 'U',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        
-        // Botón de cerrar sesión
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, size: 20, color: Color(0xFF6B7280)),
-          onSelected: (value) async {
-            if (value == 'logout') {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Cerrar Sesión'),
-                  content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
+                                    if (confirm == true && context.mounted) {
+                                      await authProvider.logout();
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => const LoginPage()),
+                                      );
+                                    }
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'logout',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.logout,
+                                            size: 18, color: Colors.red),
+                                        SizedBox(width: 12),
+                                        Text('Cerrar Sesión'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                      child: const Text('Cerrar Sesión'),
-                    ),
-                  ],
-                ),
-              );
-              
-              if (confirm == true && context.mounted) {
-                await authProvider.logout();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                );
-              }
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'logout',
-              child: Row(
-                children: [
-                  Icon(Icons.logout, size: 18, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Cerrar Sesión'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  },
-),
                     ],
                   ),
                 ),
@@ -462,7 +465,8 @@ Consumer<AuthProvider>(
                 Container(
                   height: 32,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: const BoxDecoration(color: Color(0xFF374151)),
+                  decoration:
+                      const BoxDecoration(color: Color(0xFF374151)),
                   child: Row(
                     children: [
                       Container(
@@ -476,7 +480,8 @@ Consumer<AuthProvider>(
                       const SizedBox(width: 8),
                       const Text(
                         'Sistema Activo',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
+                        style:
+                            TextStyle(color: Colors.white, fontSize: 12),
                       ),
                       const Spacer(),
                       Text(
@@ -500,9 +505,9 @@ Consumer<AuthProvider>(
   int _getTotalItemCount() {
     int count = 0;
     for (int i = 0; i < sidebarItems.length; i++) {
-      count++; // Item principal
+      count++;
       if (sidebarItems[i].isExpanded && sidebarItems[i].subItems != null) {
-        count += sidebarItems[i].subItems!.length; // Sub-items
+        count += sidebarItems[i].subItems!.length;
       }
     }
     return count;
@@ -510,15 +515,11 @@ Consumer<AuthProvider>(
 
   Widget _buildSidebarItem(int displayIndex) {
     int currentIndex = 0;
-
     for (int i = 0; i < sidebarItems.length; i++) {
       if (currentIndex == displayIndex) {
-        // Es un item principal
         return _buildMainItem(i);
       }
       currentIndex++;
-
-      // Si el item está expandido, construir los sub-items
       if (sidebarItems[i].isExpanded && sidebarItems[i].subItems != null) {
         for (int j = 0; j < sidebarItems[i].subItems!.length; j++) {
           if (currentIndex == displayIndex) {
@@ -528,8 +529,7 @@ Consumer<AuthProvider>(
         }
       }
     }
-
-    return Container(); // Fallback
+    return Container();
   }
 
   Widget _buildMainItem(int index) {
@@ -545,31 +545,31 @@ Consumer<AuthProvider>(
           borderRadius: BorderRadius.circular(6),
           onTap: () {
             setState(() {
-              // Desmarcar todos los items
               for (var sidebarItem in sidebarItems) {
                 sidebarItem.isSelected = false;
                 sidebarItem.isExpanded = false;
               }
-              // Marcar el item seleccionado
               sidebarItems[index].isSelected = true;
               selectedIndex = index;
               selectedSubIndex = null;
-
-              // Si tiene sub-items, expandir
               if (hasSubItems) {
                 sidebarItems[index].isExpanded = true;
               }
             });
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF3A4553) : Colors.transparent,
+              color: isSelected
+                  ? const Color(0xFF3A4553)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
-                Icon(item.icon, color: Colors.white.withOpacity(0.9), size: 18),
+                Icon(item.icon,
+                    color: Colors.white.withOpacity(0.9), size: 18),
                 if (_sidebarAnimation.value > 120) ...[
                   const SizedBox(width: 12),
                   Expanded(
@@ -596,9 +596,7 @@ Consumer<AuthProvider>(
                   if (item.badge != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0085FF),
                         borderRadius: BorderRadius.circular(3),
@@ -624,7 +622,8 @@ Consumer<AuthProvider>(
   Widget _buildSubItem(int parentIndex, int subIndex) {
     final parentItem = sidebarItems[parentIndex];
     final subItem = parentItem.subItems![subIndex];
-    final isSelected = parentItem.isSelected && selectedSubIndex == subIndex;
+    final isSelected =
+        parentItem.isSelected && selectedSubIndex == subIndex;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
@@ -634,12 +633,10 @@ Consumer<AuthProvider>(
           borderRadius: BorderRadius.circular(6),
           onTap: () {
             setState(() {
-              // Desmarcar todos los items principales
               for (var sidebarItem in sidebarItems) {
                 sidebarItem.isSelected = false;
                 sidebarItem.isExpanded = false;
               }
-              // Marcar el item padre y el sub-item
               sidebarItems[parentIndex].isSelected = true;
               sidebarItems[parentIndex].isExpanded = true;
               selectedIndex = parentIndex;
@@ -654,7 +651,9 @@ Consumer<AuthProvider>(
               bottom: 8,
             ),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF3A4553) : Colors.transparent,
+              color: isSelected
+                  ? const Color(0xFF3A4553)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
@@ -688,8 +687,6 @@ Consumer<AuthProvider>(
     );
   }
 }
-
-
 
 class SidebarItem {
   final IconData icon;

@@ -33,17 +33,37 @@ class Establecimiento {
   factory Establecimiento.fromMap(Map<String, dynamic> map) {
     return Establecimiento(
       id_establecimiento: map['id_establecimiento'],
-      codigo_establecimiento: map['codigo_establecimiento'],
-      direccion: map['direccion'],
-      numero_casa: map['numero_casa'],
-      complemento_direccion_1: map['complemento_direccion_1'],
+      codigo_establecimiento: map['codigo_establecimiento'] ?? '',
+      direccion: map['direccion'] ?? '',
+      numero_casa: map['numero_casa'] ?? '',
+      complemento_direccion_1: map['complemento_direccion_1'] ?? '',
       complemento_direccion_2: map['complemento_direccion_2'],
       telefono: map['telefono'],
       email: map['email'],
-      denominacion: map['denominacion'],
-      estado_establecimiento: map['estado_establecimiento'],
-      fk_barrio: Barrio.fromMap(map['fk_barrio']),
-      fk_empresa: DatoEmpresa.fromMap(map['fk_empresa']),
+      denominacion: map['denominacion'] ?? '',
+      estado_establecimiento: map['estado_establecimiento'] ?? '',
+      // En el select de asientos no se hace join anidado de barrio/empresa,
+      // así que estos llegan null — se manejan con vacio()
+      fk_barrio: map['fk_barrio'] != null
+          ? Barrio.fromMap(map['fk_barrio'])
+          : Barrio.vacio(),
+      fk_empresa: map['fk_empresa'] != null
+          ? DatoEmpresa.fromMap(map['fk_empresa'])
+          : DatoEmpresa.vacio(),
+    );
+  }
+
+  // Constructor para cuando el join no trae datos o falla
+  factory Establecimiento.vacio() {
+    return Establecimiento(
+      codigo_establecimiento: '',
+      direccion: '',
+      numero_casa: '',
+      complemento_direccion_1: '',
+      denominacion: 'Sin sucursal',
+      estado_establecimiento: '',
+      fk_barrio: Barrio.vacio(),
+      fk_empresa: DatoEmpresa.vacio(),
     );
   }
 
