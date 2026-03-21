@@ -2,9 +2,11 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:myapp/dao/empresadao/datos_transferenciacrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/modo_pagocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/pagocrudimpl.dart';
 import 'package:myapp/modelo/cliente.dart';
+import 'package:myapp/modelo/empresa/datos_transferencia.dart';
 import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:myapp/modelo/facturacionmodelo/pago.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -358,32 +360,215 @@ class SubirComprobanteDialog extends StatefulWidget {
 
 class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
   final PagoCrudImpl _pagoService = PagoCrudImpl();
+  final DatosTransferenciaCrudImpl _transferenciaCrud = DatosTransferenciaCrudImpl(); // ← NUEVO
   final ImagePicker _picker = ImagePicker();
 
   XFile? _imagenSeleccionada;
   Uint8List? _imagenBytes;
   bool _isUploading = false;
 
-  Future<void> _seleccionarImagen() async {
-  try {
-    final XFile? imagen = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1920,
-      maxHeight: 1920,
-      imageQuality: 85,
-    );
+  List<DatosTransferencia> _cuentas = []; // ← NUEVO
+  bool _loadingCuentas = true;            // ← NUEVO
 
-    if (imagen != null) {
-      final bytes = await imagen.readAsBytes(); // ← AÑADIR
-      setState(() {
-        _imagenSeleccionada = imagen;
-        _imagenBytes = bytes; // ← AÑADIR
-      });
-    }
-  } catch (e) {
-    _mostrarError('Error al seleccionar imagen: $e');
+  @override
+  void initState() {
+    super.initState();
+    _cargarCuentas(); // ← NUEVO
   }
+
+  // ── NUEVO: carga las cuentas de la sucursal 1 ──────────────────
+  Future<void> _cargarCuentas() async {
+    try {
+      final resultado =
+          await _transferenciaCrud.leerDatosTransferenciaPorSucursal(1);
+      setState(() {
+        _cuentas = resultado;
+        _loadingCuentas = false;
+      });
+    } catch (e) {
+      setState(() => _loadingCuentas = false);
+    }
+  }
+
+  // ── NUEVO: bloque de tarjetas de cuenta ───────────────────────
+  Widget _buildDatosCuentas(Color color) {
+    if (_loadingCuentas) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_cuentas.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.grey.shade500, size: 18),
+            const SizedBox(width: 8),
+            const Text(
+              'No hay cuentas registradas para esta sucursal',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.account_balance, color: color, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              widget.modoPago.id_modo_pago == 5
+                  ? 'Datos para la transferencia'
+                  : 'Datos para el giro',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ..._cuentas.map((cuenta) => _buildTarjetaCuenta(cuenta, color)),
+      ],
+    );
+  }
+
+  Widget _buildTarjetaCuenta(DatosTransferencia cuenta, Color color) {
+  final esTransferencia = widget.modoPago.id_modo_pago == 5;
+  final esGiro = widget.modoPago.id_modo_pago == 6;
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: color.withOpacity(0.3)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Transferencia: todos los datos menos nro_giro ──────
+        if (esTransferencia) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                cuenta.banco,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  cuenta.banco,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 16),
+          if (cuenta.alias != null && cuenta.alias!.isNotEmpty) ...[
+            _buildFilaDato(Icons.label_outline, 'Alias', cuenta.alias!),
+            const SizedBox(height: 6),
+          ],
+          _buildFilaDato(Icons.person_outline, 'Titular', cuenta.titular_cuenta),
+          const SizedBox(height: 6),
+          _buildFilaDato(Icons.badge_outlined, 'CI', cuenta.ci),
+          const SizedBox(height: 6),
+          _buildFilaDato(Icons.numbers, 'Nro. Cuenta', cuenta.num_cuenta),
+        ],
+
+        // ── Giro: solo nro_giro ────────────────────────────────
+        if (esGiro && cuenta.nro_giro != null && cuenta.nro_giro!.isNotEmpty) ...[
+          _buildFilaDato(Icons.sync_alt, 'Número Giro', cuenta.nro_giro!),
+        ],
+
+        if (esGiro && (cuenta.nro_giro == null || cuenta.nro_giro!.isEmpty))
+          Row(
+            children: [
+              Icon(Icons.warning_amber_outlined,
+                  size: 15, color: Colors.orange.shade400),
+              const SizedBox(width: 6),
+              Text(
+                'Sin número receptor registrado',
+                style: TextStyle(fontSize: 12, color: Colors.orange.shade600),
+              ),
+            ],
+          ),
+      ],
+    ),
+  );
 }
+
+  Widget _buildFilaDato(IconData icono, String label, String valor) {
+    return Row(
+      children: [
+        Icon(icono, size: 15, color: Colors.grey.shade500),
+        const SizedBox(width: 6),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            valor,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Sin cambios desde aquí ─────────────────────────────────────
+
+  Future<void> _seleccionarImagen() async {
+    try {
+      final XFile? imagen = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      if (imagen != null) {
+        final bytes = await imagen.readAsBytes();
+        setState(() {
+          _imagenSeleccionada = imagen;
+          _imagenBytes = bytes;
+        });
+      }
+    } catch (e) {
+      _mostrarError('Error al seleccionar imagen: $e');
+    }
+  }
 
   Future<void> _tomarFoto() async {
     try {
@@ -393,9 +578,8 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
         maxHeight: 1920,
         imageQuality: 85,
       );
-
       if (imagen != null) {
-         final bytes = await imagen.readAsBytes();
+        final bytes = await imagen.readAsBytes();
         setState(() {
           _imagenSeleccionada = imagen;
           _imagenBytes = bytes;
@@ -406,26 +590,19 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
     }
   }
 
-  //Función crítica para crear pagos, detalle pagos y actualizar cuentas cobrar (deudas)
   Future<void> _procesarPago() async {
     if (_imagenSeleccionada == null) {
       _mostrarError('Debe seleccionar un comprobante');
       return;
     }
-
     setState(() => _isUploading = true);
-
     try {
-      // 1. Subir imagen a Supabase Storage
       final fileName =
           'comprobante_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final filePath = 'comprobantes/$fileName';
-
       final bytes = _imagenBytes!;
 
-      await supabase.storage
-          .from('pagos') // Nombre del bucket
-          .uploadBinary(
+      await supabase.storage.from('pagos').uploadBinary(
             filePath,
             bytes,
             fileOptions: const FileOptions(
@@ -434,22 +611,19 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
             ),
           );
 
-      // 2. Obtener URL pública
-      final String publicUrl = supabase.storage
-          .from('pagos')
-          .getPublicUrl(filePath);
+      final String publicUrl =
+          supabase.storage.from('pagos').getPublicUrl(filePath);
 
-      // 3. Crear el pago en la BD
       final nuevoPago = Pago(
         fechaPago: DateTime.now(),
         comprobanteUrl: publicUrl,
         monto: widget.totalAPagar,
-        estado: 'PENDIENTE', // Estado inicial pendiente de aprobación
+        estado: 'PENDIENTE',
         payloadCreacion: widget.payloadFactura,
-        usuario: null, // Se puede cargar el objeto Usuario si lo tienes
+        usuario: null,
         motivoRechazo: null,
-        fk_cliente: widget.cliente, // AÑADIDO
-        fk_modo_pago: widget.modoPago, // AÑADIDO
+        fk_cliente: widget.cliente,
+        fk_modo_pago: widget.modoPago,
       );
 
       final pagoCreado = await _pagoService.crearPago(nuevoPago);
@@ -460,8 +634,6 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
       if (pagoCreado != null) {
         final detalles = widget.payloadFactura['detalles'] as List<dynamic>;
         final fkInmueble = widget.payloadFactura['fk_inmueble'] as int;
-
-        //Llama a la función rpc y envía el payload de la factura para insertar en detalle
         try {
           await supabase.rpc(
             'crear_detalle_pago_deuda',
@@ -475,23 +647,19 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
           print('Error al crear el detalle de pago: $e');
         }
       }
+
       setState(() => _isUploading = false);
 
       if (pagoCreado != null && mounted) {
-        // Mostrar éxito
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+                borderRadius: BorderRadius.circular(16)),
             title: Row(
               children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.green.shade600,
-                  size: 32,
-                ),
+                Icon(Icons.check_circle,
+                    color: Colors.green.shade600, size: 32),
                 const SizedBox(width: 12),
                 const Text('Comprobante Enviado'),
               ],
@@ -517,9 +685,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                       Text(
                         'ID de Pago: #${pagoCreado.idPago}',
                         style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -539,11 +705,8 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // Cerrar alerta
-                  Navigator.pop(
-                    context,
-                    pagoCreado,
-                  ); // Cerrar diálogo con el pago
+                  Navigator.pop(context);
+                  Navigator.pop(context, pagoCreado);
                 },
                 child: const Text('Entendido'),
               ),
@@ -571,18 +734,17 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.modoPago.id_modo_pago == 5
-        ? Colors.teal
-        : Colors.indigo;
+    final color =
+        widget.modoPago.id_modo_pago == 5 ? Colors.teal : Colors.indigo;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 650),
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700), // ← altura aumentada
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
+            // Header (sin cambios)
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -624,9 +786,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         Text(
                           widget.modoPago.descripcion,
                           style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade700,
-                          ),
+                              fontSize: 14, color: Colors.grey.shade700),
                         ),
                       ],
                     ),
@@ -647,7 +807,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Monto
+                    // Monto (sin cambios)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -661,13 +821,10 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                       ),
                       child: Column(
                         children: [
-                          Text(
-                            'Monto a Pagar',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
+                          Text('Monto a Pagar',
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700)),
                           const SizedBox(height: 8),
                           Text(
                             '${widget.totalAPagar.toStringAsFixed(0)} Gs.',
@@ -680,9 +837,14 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
-                    // Instrucciones
+                    // ── NUEVO: datos de transferencia ──────────────
+                    _buildDatosCuentas(color),
+                    const SizedBox(height: 20),
+                    // ──────────────────────────────────────────────
+
+                    // Instrucciones (sin cambios)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -693,15 +855,15 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.info_outline, color: Colors.blue.shade700),
+                          Icon(Icons.info_outline,
+                              color: Colors.blue.shade700),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Por favor, suba una foto o captura de pantalla del comprobante de pago. El pago quedará en estado PENDIENTE hasta su aprobación.',
                               style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade700,
-                              ),
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700),
                             ),
                           ),
                         ],
@@ -709,7 +871,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Previsualización de imagen
+                    // Previsualización (sin cambios)
                     if (_imagenSeleccionada != null) ...[
                       Container(
                         height: 200,
@@ -719,25 +881,25 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.memory(
-                            _imagenBytes!,
-                            fit: BoxFit.cover,
-                          ),
+                          child: Image.memory(_imagenBytes!,
+                              fit: BoxFit.cover),
                         ),
                       ),
                       const SizedBox(height: 16),
                     ],
 
-                    // Botones para seleccionar imagen
+                    // Botones galería/cámara (sin cambios)
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: _isUploading ? null : _seleccionarImagen,
+                            onPressed:
+                                _isUploading ? null : _seleccionarImagen,
                             icon: const Icon(Icons.photo_library),
                             label: const Text('Galería'),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16),
                             ),
                           ),
                         ),
@@ -748,7 +910,8 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                             icon: const Icon(Icons.camera_alt),
                             label: const Text('Cámara'),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16),
                             ),
                           ),
                         ),
@@ -756,11 +919,12 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Botón de procesar
+                    // Botón confirmar (sin cambios)
                     ElevatedButton.icon(
-                      onPressed: _isUploading || _imagenSeleccionada == null
-                          ? null
-                          : _procesarPago,
+                      onPressed:
+                          _isUploading || _imagenSeleccionada == null
+                              ? null
+                              : _procesarPago,
                       icon: _isUploading
                           ? const SizedBox(
                               width: 20,
@@ -768,18 +932,18 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
+                                    Colors.white),
                               ),
                             )
                           : const Icon(Icons.check),
-                      label: Text(
-                        _isUploading ? 'Procesando...' : 'Confirmar Pago',
-                      ),
+                      label: Text(_isUploading
+                          ? 'Procesando...'
+                          : 'Confirmar Pago'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: color,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 16),
                         disabledBackgroundColor: Colors.grey.shade300,
                       ),
                     ),

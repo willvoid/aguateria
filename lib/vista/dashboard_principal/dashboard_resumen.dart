@@ -1,8 +1,10 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/contabilidad/asientos_crud.dart';
-import 'package:myapp/dao/contabilidad/saldos_mensuales_crud.dart' hide supabase;
 import 'package:myapp/modelo/contabilidad/asiento.dart';
-import 'package:myapp/modelo/contabilidad/saldo_mensual.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+final supabase = Supabase.instance.client;
 
 class DashboardResumenPage extends StatefulWidget {
   const DashboardResumenPage({Key? key}) : super(key: key);
@@ -15,12 +17,16 @@ class DashboardResumenPage extends StatefulWidget {
 class _DashboardResumenPageState
     extends State<DashboardResumenPage> {
   final AsientosCrudImpl _asientosCrud = AsientosCrudImpl();
-  final SaldosMensualesCrudImpl _saldosCrud = SaldosMensualesCrudImpl();
 
   List<Asientos> _asientosDelMes = [];
-  List<SaldosMensuales> _saldosDelMes = [];
-  bool _isLoading = true;
+  List<Map<String, dynamic>> _resumenCuentas = [];
+  double _totalDebe = 0;
+  double _totalHaber = 0;
 
+  // Datos para el gráfico: lista de { mes, label, debe, haber }
+  List<Map<String, dynamic>> _datosMensuales = [];
+
+  bool _isLoading = true;
   final DateTime _ahora = DateTime.now();
 
   @override
@@ -30,29 +36,144 @@ class _DashboardResumenPageState
   }
 
   Future<void> _cargarDatos() async {
-  setState(() => _isLoading = true);
-  try {
-    final inicio = DateTime.utc(_ahora.year, _ahora.month, 1);
-    final fin = DateTime.utc(_ahora.year, _ahora.month + 1, 1);
+    setState(() => _isLoading = true);
+    try {
+      final inicio = DateTime.utc(_ahora.year, _ahora.month, 1);
+      final fin = DateTime.utc(_ahora.year, _ahora.month + 1, 1);
 
-    print('🔵 llamando DAO asientos...');
-    final asientos = await _asientosCrud.leerPorRangoFechas(inicio, fin);
-    print('🟢 asientos del DAO: ${asientos.length}');
+      // 1. Asientos del mes actual
+      final asientos = await _asientosCrud.leerPorRangoFechas(inicio, fin);
 
-    final saldos = await _saldosCrud.leerPorMesAnio(_ahora.month, _ahora.year);
-    print('🟢 saldos del DAO: ${saldos.length}');
+      // 2. Detalles del mes actual para totales y resumen por cuenta
+      double debe = 0;
+      double haber = 0;
+      final Map<String, Map<String, dynamic>> porCuenta = {};
 
-    setState(() {
-      _asientosDelMes = asientos;
-      _saldosDelMes = saldos;
-      _isLoading = false;
-    });
-  } catch (e, stack) {
-    print('❌ ERROR en _cargarDatos: $e');
-    print('❌ STACK: $stack');
-    setState(() => _isLoading = false);
+      if (asientos.isNotEmpty) {
+        final ids = asientos
+            .where((a) => a.id != null)
+            .map((a) => a.id!)
+            .toList();
+
+        final detalles = await supabase
+            .from('detalle_asientos')
+            .select('debe, haber, cuentas_contables(nombre, codigo)')
+            .inFilter('fk_asientos', ids);
+
+        for (final d in detalles) {
+          final debeVal = (d['debe'] as num?)?.toDouble() ?? 0;
+          final haberVal = (d['haber'] as num?)?.toDouble() ?? 0;
+          debe += debeVal;
+          haber += haberVal;
+
+          final cuenta = d['cuentas_contables'];
+          if (cuenta != null) {
+            final nombre = cuenta['nombre'] as String? ?? 'Sin nombre';
+            final codigo = cuenta['codigo'] as String? ?? '';
+            if (!porCuenta.containsKey(nombre)) {
+              porCuenta[nombre] = {
+                'nombre': nombre,
+                'codigo': codigo,
+                'debe': 0.0,
+                'haber': 0.0,
+              };
+            }
+            porCuenta[nombre]!['debe'] =
+                (porCuenta[nombre]!['debe'] as double) + debeVal;
+            porCuenta[nombre]!['haber'] =
+                (porCuenta[nombre]!['haber'] as double) + haberVal;
+          }
+        }
+      }
+
+      final resumen = porCuenta.values.map((c) {
+        final saldo = (c['haber'] as double) - (c['debe'] as double);
+        return {...c, 'saldo': saldo};
+      }).toList();
+      resumen.sort((a, b) => (b['saldo'] as double)
+          .abs()
+          .compareTo((a['saldo'] as double).abs()));
+
+      // 3. Datos de los últimos 6 meses para el gráfico
+      final datosMensuales = await _cargarUltimosSeisMeses();
+
+      setState(() {
+        _asientosDelMes = asientos;
+        _totalDebe = debe;
+        _totalHaber = haber;
+        _resumenCuentas = resumen;
+        _datosMensuales = datosMensuales;
+        _isLoading = false;
+      });
+    } catch (e, stack) {
+      print('❌ ERROR en _cargarDatos: $e');
+      print('❌ STACK: $stack');
+      setState(() => _isLoading = false);
+      _mostrarError('Error al cargar datos contables: $e');
+    }
   }
-}
+
+  Future<List<Map<String, dynamic>>> _cargarUltimosSeisMeses() async {
+    const mesesLabel = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ];
+
+    final List<Map<String, dynamic>> resultado = [];
+
+    for (int i = 5; i >= 0; i--) {
+      // Calcular el mes correspondiente
+      int mes = _ahora.month - i;
+      int anio = _ahora.year;
+      while (mes <= 0) {
+        mes += 12;
+        anio -= 1;
+      }
+
+      final inicioMes = DateTime.utc(anio, mes, 1);
+      final finMes = DateTime.utc(anio, mes + 1, 1);
+
+      try {
+        // Traer asientos del mes
+        final asientosMes =
+            await _asientosCrud.leerPorRangoFechas(inicioMes, finMes);
+
+        double debeTotal = 0;
+        double haberTotal = 0;
+
+        if (asientosMes.isNotEmpty) {
+          final ids = asientosMes
+              .where((a) => a.id != null)
+              .map((a) => a.id!)
+              .toList();
+
+          final detalles = await supabase
+              .from('detalle_asientos')
+              .select('debe, haber')
+              .inFilter('fk_asientos', ids);
+
+          for (final d in detalles) {
+            debeTotal += (d['debe'] as num?)?.toDouble() ?? 0;
+            haberTotal += (d['haber'] as num?)?.toDouble() ?? 0;
+          }
+        }
+
+        resultado.add({
+          'label': mesesLabel[mes - 1],
+          'debe': debeTotal,
+          'haber': haberTotal,
+        });
+      } catch (_) {
+        resultado.add({
+          'label': mesesLabel[mes - 1],
+          'debe': 0.0,
+          'haber': 0.0,
+        });
+      }
+    }
+
+    return resultado;
+  }
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -66,16 +187,8 @@ class _DashboardResumenPageState
 
   // ── Cálculos derivados ──────────────────────────────────────────────────────
 
-  double get _totalDebe =>
-      _saldosDelMes.fold(0, (sum, s) => sum + s.saldoDebeAcumulado);
-
-  double get _totalHaber =>
-      _saldosDelMes.fold(0, (sum, s) => sum + s.saldoHaberAcumulado);
-
-  double get _resultadoPeriodo => _totalHaber - _totalDebe;
-
-  int get _asientosActivos =>
-      _asientosDelMes.where((a) => a.estado == 'ACTIVO').length;
+  int get _asientosAsentados =>
+      _asientosDelMes.where((a) => a.estado == 'ASENTADO').length;
 
   int get _asientosPendientes =>
       _asientosDelMes.where((a) => a.estado == 'PENDIENTE').length;
@@ -84,11 +197,8 @@ class _DashboardResumenPageState
 
   String _formatGuarani(double valor) {
     final abs = valor.abs();
-    if (abs >= 1000000) {
-      return '₲ ${(abs / 1000000).toStringAsFixed(1)}M';
-    } else if (abs >= 1000) {
-      return '₲ ${(abs / 1000).toStringAsFixed(0)}K';
-    }
+    if (abs >= 1000000) return '₲ ${(abs / 1000000).toStringAsFixed(1)}M';
+    if (abs >= 1000) return '₲ ${(abs / 1000).toStringAsFixed(0)}K';
     return '₲ ${abs.toStringAsFixed(0)}';
   }
 
@@ -118,14 +228,14 @@ class _DashboardResumenPageState
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 24),
-                  _buildMetricCards(),
-                  const SizedBox(height: 20),
+                  _buildTopRow(),
+                  const SizedBox(height: 16),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(flex: 3, child: _buildTablaAsientos()),
                       const SizedBox(width: 16),
-                      Expanded(flex: 2, child: _buildResumenSaldos()),
+                      Expanded(flex: 2, child: _buildResumenCuentas()),
                     ],
                   ),
                 ],
@@ -153,7 +263,8 @@ class _DashboardResumenPageState
             const SizedBox(height: 2),
             Text(
               'Período: ${_formatMesAnio(_ahora)}',
-              style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              style:
+                  const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
             ),
           ],
         ),
@@ -167,61 +278,97 @@ class _DashboardResumenPageState
     );
   }
 
-  // ── Tarjetas de métricas ────────────────────────────────────────────────────
+  // ── Fila superior: 3 tarjetas + gráfico ────────────────────────────────────
 
-  Widget _buildMetricCards() {
-    final resultado = _resultadoPeriodo;
-    final esSuperavit = resultado >= 0;
-
+  Widget _buildTopRow() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: _MetricCard(
-            label: 'Total ingresos (haber)',
-            value: _formatGuarani(_totalHaber),
-            icon: Icons.arrow_downward_rounded,
-            iconColor: Colors.green.shade600,
-            iconBg: Colors.green.shade50,
+        // Columna de 3 tarjetas métricas apiladas
+        SizedBox(
+          width: 200,
+          child: Column(
+            children: [
+              _MetricCard(
+                label: 'Total haber',
+                value: _formatGuarani(_totalHaber),
+                icon: Icons.arrow_downward_rounded,
+                iconColor: Colors.green.shade600,
+                iconBg: Colors.green.shade50,
+              ),
+              const SizedBox(height: 10),
+              _MetricCard(
+                label: 'Total debe',
+                value: _formatGuarani(_totalDebe),
+                icon: Icons.arrow_upward_rounded,
+                iconColor: Colors.red.shade600,
+                iconBg: Colors.red.shade50,
+              ),
+              const SizedBox(height: 10),
+              _MetricCard(
+                label: 'Asientos del mes',
+                value: '${_asientosDelMes.length}',
+                icon: Icons.receipt_long_rounded,
+                iconColor: const Color(0xFF0085FF),
+                iconBg: const Color(0xFFE6F0FF),
+                subtitle:
+                    '$_asientosAsentados asentados · $_asientosPendientes pendientes',
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MetricCard(
-            label: 'Total egresos (debe)',
-            value: _formatGuarani(_totalDebe),
-            icon: Icons.arrow_upward_rounded,
-            iconColor: Colors.red.shade600,
-            iconBg: Colors.red.shade50,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MetricCard(
-            label: 'Resultado del período',
-            value: '${esSuperavit ? '+' : '-'}${_formatGuarani(resultado)}',
-            icon: esSuperavit
-                ? Icons.trending_up_rounded
-                : Icons.trending_down_rounded,
-            iconColor:
-                esSuperavit ? Colors.green.shade600 : Colors.red.shade600,
-            iconBg: esSuperavit ? Colors.green.shade50 : Colors.red.shade50,
-            valueColor:
-                esSuperavit ? Colors.green.shade700 : Colors.red.shade700,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MetricCard(
-            label: 'Asientos del mes',
-            value: '${_asientosDelMes.length}',
-            icon: Icons.receipt_long_rounded,
-            iconColor: const Color(0xFF0085FF),
-            iconBg: const Color(0xFFE6F0FF),
-            subtitle:
-                '$_asientosActivos activos · $_asientosPendientes pendientes',
-          ),
-        ),
+        const SizedBox(width: 16),
+        // Gráfico de línea — ocupa el resto del ancho
+        Expanded(child: _buildGraficoEvolucion()),
       ],
+    );
+  }
+
+  // ── Gráfico de evolución ────────────────────────────────────────────────────
+
+  Widget _buildGraficoEvolucion() {
+    return Container(
+      height: 210,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Evolución últimos 6 meses',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const Spacer(),
+              _LeyendaPunto(color: const Color(0xFF10B981), label: 'Haber'),
+              const SizedBox(width: 16),
+              _LeyendaPunto(color: const Color(0xFFEF4444), label: 'Debe'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: _datosMensuales.isEmpty
+                ? const Center(
+                    child: Text('Sin datos',
+                        style: TextStyle(
+                            color: Color(0xFF9CA3AF), fontSize: 13)),
+                  )
+                : CustomPaint(
+                    painter: _LineChartPainter(datos: _datosMensuales),
+                    size: Size.infinite,
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -251,8 +398,8 @@ class _DashboardResumenPageState
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(20),
@@ -273,8 +420,8 @@ class _DashboardResumenPageState
               : SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    headingRowColor:
-                        WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                    headingRowColor: WidgetStateProperty.all(
+                        const Color(0xFFF9FAFB)),
                     dataRowMinHeight: 44,
                     dataRowMaxHeight: 44,
                     headingRowHeight: 42,
@@ -294,21 +441,21 @@ class _DashboardResumenPageState
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF0085FF)),
                         )),
-                        DataCell(Text(_formatFechaCorta(asiento.fecha))),
                         DataCell(
-                          SizedBox(
-                            width: 180,
-                            child: Text(
-                              asiento.descripcion,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            Text(_formatFechaCorta(asiento.fecha))),
+                        DataCell(SizedBox(
+                          width: 180,
+                          child: Text(
+                            asiento.descripcion,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
+                        )),
                         DataCell(Text(
                           asiento.sucursal.denominacion,
                           overflow: TextOverflow.ellipsis,
                         )),
-                        DataCell(_buildEstadoBadge(asiento.estado)),
+                        DataCell(
+                            _buildEstadoBadge(asiento.estado)),
                       ]);
                     }).toList(),
                   ),
@@ -318,8 +465,8 @@ class _DashboardResumenPageState
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
                 'Mostrando 10 de ${_asientosDelMes.length} asientos',
-                style:
-                    const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                style: const TextStyle(
+                    fontSize: 12, color: Color(0xFF9CA3AF)),
               ),
             ),
           const SizedBox(height: 8),
@@ -328,9 +475,9 @@ class _DashboardResumenPageState
     );
   }
 
-  // ── Resumen de saldos ───────────────────────────────────────────────────────
+  // ── Resumen por cuentas ─────────────────────────────────────────────────────
 
-  Widget _buildResumenSaldos() {
+  Widget _buildResumenCuentas() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -345,7 +492,7 @@ class _DashboardResumenPageState
             child: Row(
               children: [
                 const Text(
-                  'Saldos por cuenta',
+                  'Movimiento por cuenta',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -354,14 +501,14 @@ class _DashboardResumenPageState
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${_saldosDelMes.length} cuentas',
+                    '${_resumenCuentas.length} cuentas',
                     style: const TextStyle(
                         fontSize: 12, color: Color(0xFF6B7280)),
                   ),
@@ -370,18 +517,19 @@ class _DashboardResumenPageState
             ),
           ),
           Divider(color: Colors.grey.shade200, height: 1),
-          _saldosDelMes.isEmpty
-              ? _buildEmptyState(
-                  Icons.account_balance_outlined, 'Sin saldos este mes')
+          _resumenCuentas.isEmpty
+              ? _buildEmptyState(Icons.account_balance_outlined,
+                  'Sin movimientos este mes')
               : ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _saldosDelMes.take(8).length,
+                  itemCount: _resumenCuentas.take(8).length,
                   separatorBuilder: (_, __) =>
                       Divider(color: Colors.grey.shade100, height: 1),
                   itemBuilder: (context, index) {
-                    final saldo = _saldosDelMes[index];
-                    final esSuperavit = saldo.saldoFinal >= 0;
+                    final c = _resumenCuentas[index];
+                    final saldo = c['saldo'] as double;
+                    final esSuperavit = saldo >= 0;
                     return Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
@@ -389,10 +537,11 @@ class _DashboardResumenPageState
                         children: [
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  saldo.cuenta.nombre,
+                                  c['nombre'] as String,
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -400,9 +549,9 @@ class _DashboardResumenPageState
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                if (saldo.cuenta.codigo != null)
+                                if ((c['codigo'] as String).isNotEmpty)
                                   Text(
-                                    saldo.cuenta.codigo!,
+                                    c['codigo'] as String,
                                     style: const TextStyle(
                                         fontSize: 11,
                                         color: Color(0xFF9CA3AF)),
@@ -411,28 +560,39 @@ class _DashboardResumenPageState
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            '${esSuperavit ? '+' : ''}${_formatGuarani(saldo.saldoFinal)}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: esSuperavit
-                                  ? Colors.green.shade700
-                                  : Colors.red.shade700,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${esSuperavit ? '+' : ''}${_formatGuarani(saldo)}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: esSuperavit
+                                      ? Colors.green.shade700
+                                      : Colors.red.shade700,
+                                ),
+                              ),
+                              Text(
+                                'D: ${_formatGuarani(c['debe'] as double)}  H: ${_formatGuarani(c['haber'] as double)}',
+                                style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Color(0xFF9CA3AF)),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     );
                   },
                 ),
-          if (_saldosDelMes.length > 8)
+          if (_resumenCuentas.length > 8)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
-                'Mostrando 8 de ${_saldosDelMes.length} cuentas',
-                style:
-                    const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                'Mostrando 8 de ${_resumenCuentas.length} cuentas',
+                style: const TextStyle(
+                    fontSize: 12, color: Color(0xFF9CA3AF)),
               ),
             ),
           const SizedBox(height: 8),
@@ -447,7 +607,7 @@ class _DashboardResumenPageState
     Color bg;
     Color fg;
     switch (estado.toUpperCase()) {
-      case 'ACTIVO':
+      case 'ASENTADO':
         bg = Colors.green.shade50;
         fg = Colors.green.shade700;
         break;
@@ -465,12 +625,12 @@ class _DashboardResumenPageState
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(
+          color: bg, borderRadius: BorderRadius.circular(4)),
       child: Text(
         estado,
-        style:
-            TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: fg),
+        style: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w500, color: fg),
       ),
     );
   }
@@ -483,10 +643,9 @@ class _DashboardResumenPageState
           children: [
             Icon(icon, size: 48, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            Text(
-              mensaje,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
-            ),
+            Text(mensaje,
+                style: const TextStyle(
+                    fontSize: 14, color: Color(0xFF6B7280))),
           ],
         ),
       ),
@@ -494,7 +653,228 @@ class _DashboardResumenPageState
   }
 }
 
-// ── Widget reutilizable: tarjeta de métrica ─────────────────────────────────
+// ── CustomPainter del gráfico de línea ─────────────────────────────────────
+
+class _LineChartPainter extends CustomPainter {
+  final List<Map<String, dynamic>> datos;
+
+  _LineChartPainter({required this.datos});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (datos.isEmpty) return;
+
+    final haberVals =
+        datos.map((d) => (d['haber'] as double)).toList();
+    final debeVals =
+        datos.map((d) => (d['debe'] as double)).toList();
+    final labels =
+        datos.map((d) => d['label'] as String).toList();
+
+    final maxVal = [
+      ...haberVals,
+      ...debeVals,
+    ].fold(0.0, (prev, v) => v > prev ? v : prev);
+
+    // Si todo es 0, mostrar eje vacío
+    final effectiveMax = maxVal == 0 ? 1.0 : maxVal * 1.15;
+
+    final paddingLeft = 48.0;
+    final paddingBottom = 28.0;
+    final paddingTop = 8.0;
+    final chartW = size.width - paddingLeft;
+    final chartH = size.height - paddingBottom - paddingTop;
+
+    // ── Grilla horizontal ──
+    final gridPaint = Paint()
+      ..color = const Color(0xFFF3F4F6)
+      ..strokeWidth = 1;
+
+    final labelStyle = const TextStyle(
+      fontSize: 10,
+      color: Color(0xFF9CA3AF),
+    );
+
+    for (int i = 0; i <= 4; i++) {
+      final y = paddingTop + chartH - (chartH * i / 4);
+      canvas.drawLine(
+        Offset(paddingLeft, y),
+        Offset(size.width, y),
+        gridPaint,
+      );
+
+      // Etiqueta eje Y
+      final val = effectiveMax * i / 4;
+      final label = val >= 1000000
+          ? '${(val / 1000000).toStringAsFixed(1)}M'
+          : val >= 1000
+              ? '${(val / 1000).toStringAsFixed(0)}K'
+              : val.toStringAsFixed(0);
+
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: labelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(paddingLeft - tp.width - 6, y - tp.height / 2),
+      );
+    }
+
+    // ── Función auxiliar para coordenadas ──
+    double xOf(int i) =>
+        paddingLeft + (i / (datos.length - 1)) * chartW;
+    double yOf(double val) =>
+        paddingTop + chartH - (val / effectiveMax) * chartH;
+
+    // ── Área rellena haber ──
+    final haberFillPath = Path();
+    haberFillPath.moveTo(xOf(0), paddingTop + chartH);
+    for (int i = 0; i < datos.length; i++) {
+      haberFillPath.lineTo(xOf(i), yOf(haberVals[i]));
+    }
+    haberFillPath.lineTo(xOf(datos.length - 1), paddingTop + chartH);
+    haberFillPath.close();
+    canvas.drawPath(
+      haberFillPath,
+      Paint()
+        ..color = const Color(0xFF10B981).withOpacity(0.08)
+        ..style = PaintingStyle.fill,
+    );
+
+    // ── Área rellena debe ──
+    final debeFillPath = Path();
+    debeFillPath.moveTo(xOf(0), paddingTop + chartH);
+    for (int i = 0; i < datos.length; i++) {
+      debeFillPath.lineTo(xOf(i), yOf(debeVals[i]));
+    }
+    debeFillPath.lineTo(xOf(datos.length - 1), paddingTop + chartH);
+    debeFillPath.close();
+    canvas.drawPath(
+      debeFillPath,
+      Paint()
+        ..color = const Color(0xFFEF4444).withOpacity(0.06)
+        ..style = PaintingStyle.fill,
+    );
+
+    // ── Línea haber ──
+    final haberLinePaint = Paint()
+      ..color = const Color(0xFF10B981)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final haberPath = Path();
+    for (int i = 0; i < datos.length; i++) {
+      final x = xOf(i);
+      final y = yOf(haberVals[i]);
+      i == 0 ? haberPath.moveTo(x, y) : haberPath.lineTo(x, y);
+    }
+    canvas.drawPath(haberPath, haberLinePaint);
+
+    // ── Línea debe ──
+    final debeLinePaint = Paint()
+      ..color = const Color(0xFFEF4444)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final debePath = Path();
+    for (int i = 0; i < datos.length; i++) {
+      final x = xOf(i);
+      final y = yOf(debeVals[i]);
+      i == 0 ? debePath.moveTo(x, y) : debePath.lineTo(x, y);
+    }
+    canvas.drawPath(debePath, debeLinePaint);
+
+    // ── Puntos haber ──
+    for (int i = 0; i < datos.length; i++) {
+      final x = xOf(i);
+      final y = yOf(haberVals[i]);
+      canvas.drawCircle(
+          Offset(x, y),
+          3.5,
+          Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.fill);
+      canvas.drawCircle(
+          Offset(x, y),
+          3.5,
+          Paint()
+            ..color = const Color(0xFF10B981)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2);
+    }
+
+    // ── Puntos debe ──
+    for (int i = 0; i < datos.length; i++) {
+      final x = xOf(i);
+      final y = yOf(debeVals[i]);
+      canvas.drawCircle(
+          Offset(x, y),
+          3.5,
+          Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.fill);
+      canvas.drawCircle(
+          Offset(x, y),
+          3.5,
+          Paint()
+            ..color = const Color(0xFFEF4444)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2);
+    }
+
+    // ── Etiquetas eje X ──
+    for (int i = 0; i < labels.length; i++) {
+      final tp = TextPainter(
+        text: TextSpan(text: labels[i], style: labelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(xOf(i) - tp.width / 2,
+            paddingTop + chartH + 8),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LineChartPainter old) => old.datos != datos;
+}
+
+// ── Widget leyenda ──────────────────────────────────────────────────────────
+
+class _LeyendaPunto extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LeyendaPunto({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 11, color: Color(0xFF6B7280))),
+      ],
+    );
+  }
+}
+
+// ── Tarjeta de métrica ──────────────────────────────────────────────────────
 
 class _MetricCard extends StatelessWidget {
   final String label;
@@ -527,39 +907,35 @@ class _MetricCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: iconBg,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: iconColor, size: 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF6B7280)),
-                ),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 11, color: Color(0xFF6B7280))),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: valueColor ?? const Color(0xFF111827),
                   ),
                 ),
                 if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                        fontSize: 11, color: Color(0xFF9CA3AF)),
-                  ),
+                  Text(subtitle!,
+                      style: const TextStyle(
+                          fontSize: 10, color: Color(0xFF9CA3AF))),
               ],
             ),
           ),
