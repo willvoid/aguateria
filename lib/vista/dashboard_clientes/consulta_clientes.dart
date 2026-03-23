@@ -37,7 +37,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
     if (documento.isEmpty) {
       setState(() {
-        _errorMessage = 'Por favor, ingrese su número de documento';
+        _errorMessage = 'Por favor, ingrese su número de CI';
       });
       return;
     }
@@ -91,7 +91,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     } catch (e) {
       // Si el login falla (ej: documento no existe en Auth) o falla la base de datos
       setState(() {
-        _errorMessage = 'Documento incorrecto o no registrado.';
+        _errorMessage = 'CI incorrecto o no registrado.';
         _isLoading = false;
       });
       print('Error en el login/búsqueda: $e'); // Para que veas en consola el error real
@@ -257,7 +257,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Ingresa tu número de documento para continuar',
+                                'Ingresa tu número de Cédula para continuar',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[600],
@@ -274,7 +274,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                                   FilteringTextInputFormatter.digitsOnly,
                                 ],
                                 decoration: InputDecoration(
-                                  labelText: 'Número de Documento',
+                                  labelText: 'Número de CI',
                                   hintText: 'Ej: 1234567',
                                   prefixIcon: const Icon(
                                     Icons.badge,
@@ -517,7 +517,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
             Container(
               padding: const EdgeInsets.all(16),
               child: Text(
-                '© 2024 Servicio de Agua Santa Rosa',
+                '© 2026 Servicio de Agua Santa Rosa',
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
