@@ -42,6 +42,8 @@ dependencies:
   image_picker: ^1.0.7 
   # file_picker: ^6.1.1
   image_picker_web: ^3.1.1
+  pdf: ^3.11.1      # Para crear el archivo PDF
+  printing: ^5.13.0 # Para abrir la ventana de guardar/compartir
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
+import 'package:myapp/reportes/data/screens/pantalla_reporte.dart';
 import 'package:myapp/vista/categoria_servicio_page.dart';
 import 'package:myapp/vista/cliente_page.dart';
+import 'package:myapp/vista/dashboard_principal/dashboard_cliente_inmueble.dart';
 import 'package:myapp/vista/dashboard_principal/dashboard_resumen.dart';
 import 'package:myapp/vista/empresavista/cajapage.dart';
 import 'package:myapp/vista/empresavista/dato_empresapage.dart';
@@ -66,7 +68,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
   Widget _getSelectedWidget() {
     switch (selectedIndex) {
       case 0: // Dashboard
-        return const DashboardResumenPage();
+        return const DashboardClientesInmueblesPage();
       case 1: // Clientes
         return const ClientesPage();
       case 2: // Inmuebles
@@ -111,7 +113,15 @@ class _DashboardWidgetState extends State<DashboardWidget>
         return const CrearFacturaPage();
       case 6: // Contabilidad
         return const DashboardResumenPage();
-      case 7: // Opciones
+      case 7: // Reportes
+        if (selectedSubIndex != null) {
+          switch (selectedSubIndex) {
+            case 0:
+              return const ReporteScreen();
+          }
+        }
+        return const ReporteScreen();
+      case 8: // Opciones
         return Container(
           padding: const EdgeInsets.all(24),
           child: const Center(
@@ -211,6 +221,13 @@ class _DashboardWidgetState extends State<DashboardWidget>
     SidebarItem(
       icon: Icons.trending_up,
       title: 'Contabilidad',
+    ),
+    SidebarItem(
+      icon: Icons.graphic_eq,
+      title: 'Reportes',
+      subItems: [
+        SidebarSubItem(icon: Icons.graphic_eq, title: 'Deudas Clientes'),
+      ],
     ),
     SidebarItem(
       icon: Icons.settings,
