@@ -8,17 +8,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 final supabase = Supabase.instance.client;
 
 class ConfiguracionSistemaCrudImpl {
-  
+
   // ==================== CREAR CONFIGURACIÓN ====================
   Future<ConfiguracionSistema?> crearConfiguracion(ConfiguracionSistema config) async {
     try {
       final Map<String, dynamic> data = await supabase
           .from('configuracion_sistema')
           .insert({
-            'fk_establecimiento_default': config.establecimiento_default.id_establecimiento,
-            'fk_moneda_default': config.moneda_default.id_monedas,
-            'fk_modo_pago_default': config.modo_pago_default.id_modo_pago,
-            'fk_tipo_factura_default': config.tipo_factura_default.id_tipo_factura,
+            'establecimiento_default': config.establecimiento_default.id_establecimiento,
+            'moneda_default': config.moneda_default.id_monedas,
+            'modo_pago_default': config.modo_pago_default.id_modo_pago,
+            'tipo_factura_default': config.tipo_factura_default.id_tipo_factura,
             'condicion_venta_default': config.condicion_venta_default,
           })
           .select()
@@ -32,111 +32,106 @@ class ConfiguracionSistemaCrudImpl {
     }
   }
 
-// ==================== LEER CONFIGURACIÓN ACTUAL ====================
-Future<ConfiguracionSistema?> leerConfiguracionActual() async {
-  try {
-    final configData = await supabase
-        .from('configuracion_sistema')
-        .select()
-        .order('id_config', ascending: false)
-        .limit(1);
+  // ==================== LEER CONFIGURACIÓN ACTUAL ====================
+  Future<ConfiguracionSistema?> leerConfiguracionActual() async {
+    try {
+      final configData = await supabase
+          .from('configuracion_sistema')
+          .select()
+          .order('id_config', ascending: false)
+          .limit(1);
 
-    if (configData == null || configData.isEmpty) {
-      print('⚠️ No se encontró configuración del sistema');
+      if (configData == null || configData.isEmpty) {
+        print('⚠️ No se encontró configuración del sistema');
+        return null;
+      }
+
+      final config = configData.first as Map<String, dynamic>;
+      print('📋 Config base: $config');
+
+      final establecimientoData = await supabase
+          .from('establecimientos')
+          .select('*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*))')
+          .eq('id_establecimiento', config['establecimiento_default'])
+          .maybeSingle();
+
+      if (establecimientoData == null) {
+        print('❌ No se encontró el establecimiento');
+        return null;
+      }
+
+      final monedaData = await supabase
+          .from('monedas')
+          .select()
+          .eq('id_monedas', config['moneda_default'])
+          .maybeSingle();
+
+      if (monedaData == null) {
+        print('❌ No se encontró la moneda');
+        return null;
+      }
+
+      final modoPagoData = await supabase
+          .from('modo_pago')
+          .select()
+          .eq('id_modo_pago', config['modo_pago_default'])
+          .maybeSingle();
+
+      if (modoPagoData == null) {
+        print('❌ No se encontró el modo de pago');
+        return null;
+      }
+
+      final tipoFacturaData = await supabase
+          .from('tipo_factura')
+          .select()
+          .eq('id_tipo_factura', config['tipo_factura_default'])
+          .maybeSingle();
+
+      if (tipoFacturaData == null) {
+        print('❌ No se encontró el tipo de factura');
+        return null;
+      }
+
+      print('✅ Configuración cargada exitosamente');
+
+      return ConfiguracionSistema(
+        id_config: config['id_config'] as int,
+        establecimiento_default: Establecimiento.fromMap(establecimientoData as Map<String, dynamic>),
+        moneda_default: Moneda.fromMap(monedaData as Map<String, dynamic>),
+        modo_pago_default: ModoPago.fromMap(modoPagoData as Map<String, dynamic>),
+        tipo_factura_default: TipoFactura.fromMap(tipoFacturaData as Map<String, dynamic>),
+        condicion_venta_default: config['condicion_venta_default'] as int,
+      );
+    } catch (e, stackTrace) {
+      print('❌ Error al leer configuración actual: $e');
+      print('📍 Stack trace: $stackTrace');
       return null;
     }
-
-    final config = configData.first as Map<String, dynamic>;
-    
-    print('📋 Config base: $config');
-
-    // Usar la MISMA sintaxis que EstablecimientoCrudImpl
-    final establecimientoData = await supabase
-        .from('establecimientos')
-        .select('*, fk_barrio(*), fk_empresa(*, fk_contribuyente(*), fk_regimen(*))')
-        .eq('id_establecimiento', config['establecimiento_default'])
-        .maybeSingle();
-
-    if (establecimientoData == null) {
-      print('❌ No se encontró el establecimiento');
-      return null;
-    }
-
-    print('🏢 Establecimiento cargado');
-
-    // Cargar moneda
-    final monedaData = await supabase
-        .from('monedas')
-        .select()
-        .eq('id_monedas', config['moneda_default'])
-        .maybeSingle();
-
-    if (monedaData == null) {
-      print('❌ No se encontró la moneda');
-      return null;
-    }
-
-    // Cargar modo pago
-    final modoPagoData = await supabase
-        .from('modo_pago')
-        .select()
-        .eq('id_modo_pago', config['modo_pago_default'])
-        .maybeSingle();
-
-    if (modoPagoData == null) {
-      print('❌ No se encontró el modo de pago');
-      return null;
-    }
-
-    // Cargar tipo factura
-    final tipoFacturaData = await supabase
-        .from('tipo_factura')
-        .select()
-        .eq('id_tipo_factura', config['tipo_factura_default'])
-        .maybeSingle();
-
-    if (tipoFacturaData == null) {
-      print('❌ No se encontró el tipo de factura');
-      return null;
-    }
-
-    print('✅ Configuración cargada exitosamente');
-
-    return ConfiguracionSistema(
-      id_config: config['id_config'] as int,
-      establecimiento_default: Establecimiento.fromMap(establecimientoData as Map<String, dynamic>),
-      moneda_default: Moneda.fromMap(monedaData as Map<String, dynamic>),
-      modo_pago_default: ModoPago.fromMap(modoPagoData as Map<String, dynamic>),
-      tipo_factura_default: TipoFactura.fromMap(tipoFacturaData as Map<String, dynamic>),
-      condicion_venta_default: config['condicion_venta_default'] as int,
-    );
-  } catch (e, stackTrace) {
-    print('❌ Error al leer configuración actual: $e');
-    print('📍 Stack trace: $stackTrace');
-    return null;
   }
-}
+
   // ==================== LEER CONFIGURACIÓN POR ID ====================
   Future<ConfiguracionSistema?> leerConfiguracionPorId(int idConfig) async {
     try {
+      // ✅ Corregido: usar nombres reales de columna para el join
       final Map<String, dynamic> data = await supabase
           .from('configuracion_sistema')
           .select('''
             *,
-            establecimiento_default:fk_establecimiento_default(*),
-            moneda_default:fk_moneda_default(*),
-            modo_pago_default:fk_modo_pago_default(*),
-            tipo_factura_default:fk_tipo_factura_default(*)
+            est:establecimiento_default(*),
+            mon:moneda_default(*),
+            mp:modo_pago_default(*),
+            tf:tipo_factura_default(*)
           ''')
           .eq('id_config', idConfig)
           .single();
 
       return ConfiguracionSistema(
         id_config: data['id_config'],
-        establecimiento_default: Establecimiento.fromMap(data['establecimiento_default']),
-        moneda_default: Moneda.fromMap(data['moneda_default']),
-        modo_pago_default: ModoPago.fromMap(data['modo_pago_default']),
-        tipo_factura_default: TipoFactura.fromMap(data['tipo_factura_default']),
+        establecimiento_default: Establecimiento.fromMap(data['est']),
+        moneda_default: Moneda.fromMap(data['mon']),
+        modo_pago_default: ModoPago.fromMap(data['mp']),
+        tipo_factura_default: TipoFactura.fromMap(data['tf']),
         condicion_venta_default: data['condicion_venta_default'],
       );
     } catch (e) {
@@ -148,43 +143,33 @@ Future<ConfiguracionSistema?> leerConfiguracionActual() async {
   // ==================== LEER TODAS LAS CONFIGURACIONES ====================
   Future<List<ConfiguracionSistema>> leerConfiguraciones() async {
     try {
+      // ✅ Corregido: usar nombres reales de columna para el join
       final data = await supabase
           .from('configuracion_sistema')
           .select('''
             *,
-            establecimiento_default:fk_establecimiento_default(*),
-            moneda_default:fk_moneda_default(*),
-            modo_pago_default:fk_modo_pago_default(*),
-            tipo_factura_default:fk_tipo_factura_default(*)
+            est:establecimiento_default(*),
+            mon:moneda_default(*),
+            mp:modo_pago_default(*),
+            tf:tipo_factura_default(*)
           ''')
           .order('id_config', ascending: false);
 
-      if (data == null) {
-        print('⚠️ La consulta devolvió null');
-        return [];
-      }
-
-      if (data.isEmpty) {
+      if (data == null || data.isEmpty) {
         print('ℹ️ No hay configuraciones en la base de datos');
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
-          List<Map<String, dynamic>>.from(data);
-
-      final List<ConfiguracionSistema> configuraciones = registros.map((mapa) {
+      return List<Map<String, dynamic>>.from(data).map((mapa) {
         return ConfiguracionSistema(
           id_config: mapa['id_config'],
-          establecimiento_default: Establecimiento.fromMap(mapa['establecimiento_default']),
-          moneda_default: Moneda.fromMap(mapa['moneda_default']),
-          modo_pago_default: ModoPago.fromMap(mapa['modo_pago_default']),
-          tipo_factura_default: TipoFactura.fromMap(mapa['tipo_factura_default']),
+          establecimiento_default: Establecimiento.fromMap(mapa['est']),
+          moneda_default: Moneda.fromMap(mapa['mon']),
+          modo_pago_default: ModoPago.fromMap(mapa['mp']),
+          tipo_factura_default: TipoFactura.fromMap(mapa['tf']),
           condicion_venta_default: mapa['condicion_venta_default'],
         );
       }).toList();
-
-      print('✓ Se cargaron ${configuraciones.length} configuraciones');
-      return configuraciones;
     } catch (e) {
       print('Error al leer configuraciones: $e');
       return [];
@@ -197,10 +182,10 @@ Future<ConfiguracionSistema?> leerConfiguracionActual() async {
       await supabase
           .from('configuracion_sistema')
           .update({
-            'fk_establecimiento_default': config.establecimiento_default.id_establecimiento,
-            'fk_moneda_default': config.moneda_default.id_monedas,
-            'fk_modo_pago_default': config.modo_pago_default.id_modo_pago,
-            'fk_tipo_factura_default': config.tipo_factura_default.id_tipo_factura,
+            'establecimiento_default': config.establecimiento_default.id_establecimiento,
+            'moneda_default': config.moneda_default.id_monedas,
+            'modo_pago_default': config.modo_pago_default.id_modo_pago,
+            'tipo_factura_default': config.tipo_factura_default.id_tipo_factura,
             'condicion_venta_default': config.condicion_venta_default,
           })
           .eq('id_config', config.id_config!);
@@ -234,7 +219,7 @@ Future<ConfiguracionSistema?> leerConfiguracionActual() async {
     try {
       await supabase
           .from('configuracion_sistema')
-          .update({'fk_establecimiento_default': idEstablecimiento})
+          .update({'establecimiento_default': idEstablecimiento})
           .eq('id_config', idConfig);
 
       print('Establecimiento default actualizado exitosamente');
@@ -248,9 +233,10 @@ Future<ConfiguracionSistema?> leerConfiguracionActual() async {
   // ==================== ACTUALIZAR MONEDA DEFAULT ====================
   Future<bool> actualizarMonedaDefault(int idConfig, int idMoneda) async {
     try {
+      // ✅ Corregido: era 'fk_moneda_default'
       await supabase
           .from('configuracion_sistema')
-          .update({'fk_moneda_default': idMoneda})
+          .update({'moneda_default': idMoneda})
           .eq('id_config', idConfig);
 
       print('Moneda default actualizada exitosamente');
@@ -264,9 +250,10 @@ Future<ConfiguracionSistema?> leerConfiguracionActual() async {
   // ==================== ACTUALIZAR MODO PAGO DEFAULT ====================
   Future<bool> actualizarModoPagoDefault(int idConfig, int idModoPago) async {
     try {
+      // ✅ Corregido: era 'fk_modo_pago_default'
       await supabase
           .from('configuracion_sistema')
-          .update({'fk_modo_pago_default': idModoPago})
+          .update({'modo_pago_default': idModoPago})
           .eq('id_config', idConfig);
 
       print('Modo de pago default actualizado exitosamente');
@@ -280,9 +267,10 @@ Future<ConfiguracionSistema?> leerConfiguracionActual() async {
   // ==================== ACTUALIZAR TIPO FACTURA DEFAULT ====================
   Future<bool> actualizarTipoFacturaDefault(int idConfig, int idTipoFactura) async {
     try {
+      // ✅ Corregido: era 'fk_tipo_factura_default'
       await supabase
           .from('configuracion_sistema')
-          .update({'fk_tipo_factura_default': idTipoFactura})
+          .update({'tipo_factura_default': idTipoFactura})
           .eq('id_config', idConfig);
 
       print('Tipo de factura default actualizado exitosamente');

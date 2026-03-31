@@ -17,6 +17,8 @@ import 'package:myapp/vista/facturacionvista/pagos_page.dart';
 import 'package:myapp/vista/inmueblepage.dart';
 import 'package:myapp/vista/loginpage.dart';
 import 'package:myapp/vista/medidor_page.dart';
+import 'package:myapp/vista/opciones_page.dart';
+import 'package:myapp/vista/registro_usuariopage.dart';
 import 'package:myapp/vista/tarifa_page.dart';
 import 'package:provider/provider.dart';
 
@@ -121,16 +123,10 @@ class _DashboardWidgetState extends State<DashboardWidget>
           }
         }
         return const ReporteScreen();
-      case 8: // Opciones
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: const Center(
-            child: Text(
-              'Opciones',
-              style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
-            ),
-          ),
-        );
+      case 8: // Usuarios
+        return const RegistroUsuarioPage();
+      case 9: // Opciones
+        return const OpcionesPage();
       default:
         return Container(
           padding: const EdgeInsets.all(24),
@@ -172,10 +168,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
       title: 'Dashboard',
       isSelected: true,
     ),
-    SidebarItem(
-      icon: Icons.account_circle,
-      title: 'Clientes',
-    ),
+    SidebarItem(icon: Icons.account_circle, title: 'Clientes'),
     SidebarItem(
       icon: Icons.home,
       title: 'Inmuebles',
@@ -186,18 +179,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
         SidebarSubItem(icon: Icons.calculate, title: 'Tarifa de Servicio'),
       ],
     ),
-    SidebarItem(
-      icon: Icons.receipt_long,
-      title: 'Deudas',
-      subItems: [
-        SidebarSubItem(icon: Icons.home, title: 'Casas'),
-        SidebarSubItem(icon: Icons.water_drop, title: 'Cuentas Consumo'),
-        SidebarSubItem(
-          icon: Icons.electrical_services,
-          title: 'Cuentas Conexión',
-        ),
-      ],
-    ),
+    SidebarItem(icon: Icons.money, title: 'Pagos'),
     SidebarItem(
       icon: Icons.account_balance_outlined,
       title: 'Datos de Empresa',
@@ -206,8 +188,9 @@ class _DashboardWidgetState extends State<DashboardWidget>
         SidebarSubItem(icon: Icons.point_of_sale_outlined, title: 'Cajas'),
         SidebarSubItem(icon: Icons.electrical_services, title: 'Timbrados'),
         SidebarSubItem(
-            icon: Icons.watch_later_outlined,
-            title: 'Apertura y Cierre de Caja'),
+          icon: Icons.watch_later_outlined,
+          title: 'Apertura y Cierre de Caja',
+        ),
       ],
     ),
     SidebarItem(
@@ -218,10 +201,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
         SidebarSubItem(icon: Icons.calendar_month, title: 'Ciclos'),
       ],
     ),
-    SidebarItem(
-      icon: Icons.trending_up,
-      title: 'Contabilidad',
-    ),
+    SidebarItem(icon: Icons.trending_up, title: 'Contabilidad'),
     SidebarItem(
       icon: Icons.graphic_eq,
       title: 'Reportes',
@@ -229,10 +209,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
         SidebarSubItem(icon: Icons.graphic_eq, title: 'Deudas Clientes'),
       ],
     ),
-    SidebarItem(
-      icon: Icons.settings,
-      title: 'Opciones',
-    ),
+    SidebarItem(icon: Icons.manage_accounts_outlined, title: 'Usuarios'),
+    SidebarItem(icon: Icons.settings, title: 'Opciones'),
   ];
 
   @override
@@ -307,8 +285,9 @@ class _DashboardWidgetState extends State<DashboardWidget>
                             // Sidebar Items
                             Expanded(
                               child: ListView.builder(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
                                 itemCount: _getTotalItemCount(),
                                 itemBuilder: (context, index) {
                                   return _buildSidebarItem(index);
@@ -405,7 +384,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                   child: Text(
                                     authProvider.usuarioNombre.isNotEmpty
                                         ? authProvider.usuarioNombre[0]
-                                            .toUpperCase()
+                                              .toUpperCase()
                                         : 'U',
                                     style: const TextStyle(
                                       color: Colors.white,
@@ -417,17 +396,20 @@ class _DashboardWidgetState extends State<DashboardWidget>
                               ),
                               const SizedBox(width: 12),
                               PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert,
-                                    size: 20, color: Color(0xFF6B7280)),
+                                icon: const Icon(
+                                  Icons.more_vert,
+                                  size: 20,
+                                  color: Color(0xFF6B7280),
+                                ),
                                 onSelected: (value) async {
                                   if (value == 'logout') {
                                     final confirm = await showDialog<bool>(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title:
-                                            const Text('Cerrar Sesión'),
+                                        title: const Text('Cerrar Sesión'),
                                         content: const Text(
-                                            '¿Estás seguro de que deseas cerrar sesión?'),
+                                          '¿Estás seguro de que deseas cerrar sesión?',
+                                        ),
                                         actions: [
                                           TextButton(
                                             onPressed: () =>
@@ -438,7 +420,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                             onPressed: () =>
                                                 Navigator.pop(context, true),
                                             style: TextButton.styleFrom(
-                                                foregroundColor: Colors.red),
+                                              foregroundColor: Colors.red,
+                                            ),
                                             child: const Text('Cerrar Sesión'),
                                           ),
                                         ],
@@ -450,7 +433,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (_) => const LoginPage()),
+                                          builder: (_) => const LoginPage(),
+                                        ),
                                       );
                                     }
                                   }
@@ -460,8 +444,11 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                     value: 'logout',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.logout,
-                                            size: 18, color: Colors.red),
+                                        Icon(
+                                          Icons.logout,
+                                          size: 18,
+                                          color: Colors.red,
+                                        ),
                                         SizedBox(width: 12),
                                         Text('Cerrar Sesión'),
                                       ],
@@ -482,8 +469,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                 Container(
                   height: 32,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration:
-                      const BoxDecoration(color: Color(0xFF374151)),
+                  decoration: const BoxDecoration(color: Color(0xFF374151)),
                   child: Row(
                     children: [
                       Container(
@@ -497,8 +483,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                       const SizedBox(width: 8),
                       const Text(
                         'Sistema Activo',
-                        style:
-                            TextStyle(color: Colors.white, fontSize: 12),
+                        style: TextStyle(color: Colors.white, fontSize: 12),
                       ),
                       const Spacer(),
                       Text(
@@ -575,18 +560,14 @@ class _DashboardWidgetState extends State<DashboardWidget>
             });
           },
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFF3A4553)
-                  : Colors.transparent,
+              color: isSelected ? const Color(0xFF3A4553) : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
-                Icon(item.icon,
-                    color: Colors.white.withOpacity(0.9), size: 18),
+                Icon(item.icon, color: Colors.white.withOpacity(0.9), size: 18),
                 if (_sidebarAnimation.value > 120) ...[
                   const SizedBox(width: 12),
                   Expanded(
@@ -613,7 +594,9 @@ class _DashboardWidgetState extends State<DashboardWidget>
                   if (item.badge != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0085FF),
                         borderRadius: BorderRadius.circular(3),
@@ -639,8 +622,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
   Widget _buildSubItem(int parentIndex, int subIndex) {
     final parentItem = sidebarItems[parentIndex];
     final subItem = parentItem.subItems![subIndex];
-    final isSelected =
-        parentItem.isSelected && selectedSubIndex == subIndex;
+    final isSelected = parentItem.isSelected && selectedSubIndex == subIndex;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
@@ -668,9 +650,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
               bottom: 8,
             ),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFF3A4553)
-                  : Colors.transparent,
+              color: isSelected ? const Color(0xFF3A4553) : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
