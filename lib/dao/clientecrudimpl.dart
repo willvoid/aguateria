@@ -430,4 +430,18 @@ Future<Cliente?> buscarClientePorDocumento(String documento) async {
     return null;
   }
 }
+
+  Future<bool> actualizarEmailCliente(int idCliente, String email) async {
+    try {
+      await supabase
+          .from('clientes')
+          .update({'email': email})
+          .eq('id_cliente', idCliente);
+      return true;
+    } catch (e) {
+      print('Error al actualizar email: $e');
+      return false;
+    }
+  }
+
 }
