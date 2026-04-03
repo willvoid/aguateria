@@ -21,6 +21,42 @@ class CicloCrudImpl {
     return DateTime.now();
   }
 
+  // Retorna los ciclos con deuda pendiente (saldo > 0) para un inmueble
+Future<List<Map<String, dynamic>>> leerCiclosConDeudaPorInmueble(int idInmueble) async {
+  try {
+    final data = await supabase
+        .from('cuentas_cobrar')
+        .select('''
+          id_deuda,
+          monto,
+          saldo,
+          fk_ciclos,
+          fk_consumos,
+          descripcion,
+          ciclos(
+            id_ciclos,
+            descripcion,
+            ciclo,
+            anio,
+            inicio,
+            fin,
+            vencimiento,
+            estado
+          )
+        ''')
+        .eq('fk_inmueble', idInmueble)
+        .gt('saldo', 0)  // solo deudas con saldo pendiente
+        .not('fk_ciclos', 'is', null); // solo las que tienen ciclo asociado
+
+    if (data == null || data.isEmpty) return [];
+
+    return List<Map<String, dynamic>>.from(data);
+  } catch (e) {
+    print('Error al leer ciclos con deuda: $e');
+    return [];
+  }
+}
+
   // ==================== CREAR CICLO ====================
 
   Future<bool> crearCiclo(Ciclo ciclo) async {

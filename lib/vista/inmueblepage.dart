@@ -6,6 +6,7 @@ import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/vista/deuda_page.dart';
+import 'package:myapp/widget/autocomplete_cliente.dart';
 
 class InmueblesPage extends StatefulWidget {
   const InmueblesPage({Key? key}) : super(key: key);
@@ -522,7 +523,11 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                         onChanged: (value) => setState(() => _clienteSeleccionado = value!),
                         itemLabel: (item) => '${item.razonSocial} - ${item.documento}',
                       ),*/
-                      _buildAutocompleteCliente(),
+                      ClienteAutocomplete(
+                        clientes: widget.clientes,
+                        clienteInicial: widget.inmueble != null ? _clienteSeleccionado : null,
+                        onSeleccionado: (c) => setState(() => _clienteSeleccionado = c),
+                      ),
                       const SizedBox(height: 16),
                       _buildDropdown<CategoriaServicio>(
                         label: 'Categoría de Servicio *',

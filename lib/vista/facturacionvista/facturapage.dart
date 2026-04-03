@@ -20,6 +20,7 @@ import 'package:myapp/modelo/facturacionmodelo/tipo_factura.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
 import 'package:myapp/service/factura_rpc_service.dart';
 import 'package:myapp/vista/facturacionvista/detallefacturawidget.dart';
+import 'package:myapp/widget/autocomplete_cliente.dart';
 import 'package:myapp/widget/dialogo_exito_factura.dart';
 import 'package:provider/provider.dart';
 
@@ -41,6 +42,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   final ModoPagoCrudImpl _modoPagoCrud = ModoPagoCrudImpl();
   final MonedaCrudImpl _monedaCrud = MonedaCrudImpl();
   final TipoFacturaCrudImpl _tipoFacturaCrud = TipoFacturaCrudImpl();
+  
 
   final _formKey = GlobalKey<FormState>();
 
@@ -522,27 +524,12 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                   const SizedBox(height: 16),
 
                                   // Cliente
-                                  DropdownButtonFormField<Cliente>(
-                                    value: _clienteSeleccionado,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Cliente *',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.person),
-                                    ),
-                                    items: _clientes.map((cliente) {
-                                      return DropdownMenuItem(
-                                        value: cliente,
-                                        child: Text(cliente.razonSocial),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setState(() => _clienteSeleccionado = value);
-                                      if (value != null) {
-                                        _cargarInmueblesPorCliente(value);
-                                      }
+                                  ClienteAutocomplete(
+                                    clientes: _clientes,
+                                    onSeleccionado: (c) {
+                                      setState(() => _clienteSeleccionado = c);
+                                      _cargarInmueblesPorCliente(c);
                                     },
-                                    validator: (value) =>
-                                        value == null ? 'Seleccione un cliente' : null,
                                   ),
                                   const SizedBox(height: 12),
 
@@ -797,6 +784,8 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       ),
     );
   }
+
+  
 
   @override
   void dispose() {
