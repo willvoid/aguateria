@@ -1,4 +1,5 @@
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart'; // [NUEVO] para kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myapp/dao/clientecrudimpl.dart';
@@ -21,11 +22,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   final ClienteCrudImpl _clienteCrud = ClienteCrudImpl();
   final InmuebleCrudImpl _inmuebleCrud = InmuebleCrudImpl();
 
-  // [NUEVO] Instancia de AppLinks para capturar el deep link de Google
   late final AppLinks _appLinks;
 
   bool _isLoading = false;
-  bool _googleAutenticado = false;
+  bool _autenticado = false; // [RENOMBRADO] era _googleAutenticado, ahora cubre Google y Facebook
   String? _emailGoogle;
   String? _nombreGoogle;
   String? _fotoGoogle;
@@ -38,20 +38,23 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   @override
   void initState() {
     super.initState();
-
-    // [NUEVO] Inicializa deep links para capturar el redirect de Google
     _initDeepLinks();
 
-    // Escucha cambios de sesión (se dispara cuando getSessionFromUrl tiene éxito)
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final session = data.session;
       if (session != null && mounted) {
         final user = session.user;
         setState(() {
-          _googleAutenticado = true;
-          _emailGoogle = user.email;
-          _nombreGoogle = user.userMetadata?['full_name'] ?? user.email;
-          _fotoGoogle = user.userMetadata?['avatar_url'];
+          _autenticado = true;
+          // Facebook a veces no devuelve email, se maneja con fallback
+          _emailGoogle = user.email ?? 'Sin email';
+          _nombreGoogle =
+              user.userMetadata?['full_name'] ??
+              user.userMetadata?['name'] ?? // [NUEVO] Facebook usa 'name'
+              user.email;
+          _fotoGoogle =
+              user.userMetadata?['avatar_url'] ??
+              user.userMetadata?['picture']; // [NUEVO] Facebook usa 'picture'
           _isLoading = false;
           _errorMessage = null;
         });
@@ -59,17 +62,11 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     });
   }
 
-  // [NUEVO] Captura el deep link com.example.myapp://login-callback
-  // que Google devuelve tras autenticar, y se lo pasa a Supabase
   Future<void> _initDeepLinks() async {
     _appLinks = AppLinks();
-
-    // Caso 1: app ya estaba abierta cuando llegó el redirect
     _appLinks.uriLinkStream.listen((uri) {
       Supabase.instance.client.auth.getSessionFromUrl(uri);
     });
-
-    // Caso 2: el redirect abrió la app desde cero
     final initialUri = await _appLinks.getInitialLink();
     if (initialUri != null) {
       await Supabase.instance.client.auth.getSessionFromUrl(initialUri);
@@ -82,26 +79,49 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     super.dispose();
   }
 
+  // [NUEVO] redirectTo dinámico: Netlify en web, deep link en móvil
+  String get _redirectTo => kIsWeb
+      ? 'https://tu-app.netlify.app' // ← reemplazá con tu URL de Netlify
+      : 'com.example.myapp://login-callback';
+
   Future<void> _autenticarConGoogle() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        // [NUEVO] redirectTo apunta al scheme real de la app
-        redirectTo: 'com.example.myapp://login-callback',
+        redirectTo: _redirectTo, // [CAMBIADO] usa el getter dinámico
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
-      // La sesión llega por onAuthStateChange vía _initDeepLinks
     } catch (e) {
       setState(() {
         _errorMessage = 'Error al autenticar con Google. Intente nuevamente.';
         _isLoading = false;
       });
       print('Error Google OAuth: $e');
+    }
+  }
+
+  // [NUEVO] Autenticación con Facebook, idéntica a Google salvo el provider
+  Future<void> _autenticarConFacebook() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.facebook,
+        redirectTo: _redirectTo,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error al autenticar con Facebook. Intente nuevamente.';
+        _isLoading = false;
+      });
+      print('Error Facebook OAuth: $e');
     }
   }
 
@@ -125,7 +145,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       final cliente = await _clienteCrud.buscarClientePorDocumento(documento);
 
       if (cliente == null) {
-        // CI no encontrado → no se guarda nada en clientes
         setState(() {
           _errorMessage =
               'Tu CI no está registrado en el sistema. '
@@ -135,8 +154,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         return;
       }
 
-      // CI encontrado → recién ahí se guarda el email de Google en clientes
-      if (_emailGoogle != null) {
+      // CI encontrado → guarda el email solo si existe
+      if (_emailGoogle != null && _emailGoogle != 'Sin email') {
         await _clienteCrud.actualizarEmailCliente(
           cliente.idCliente!,
           _emailGoogle!,
@@ -164,7 +183,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   void _seleccionarInmueble(Inmuebles? inmueble) {
     setState(() => _inmuebleSeleccionado = inmueble);
-
     if (inmueble != null) {
       Navigator.push(
         context,
@@ -181,7 +199,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   Future<void> _cerrarSesion() async {
     await Supabase.instance.client.auth.signOut();
     setState(() {
-      _googleAutenticado = false;
+      _autenticado = false;
       _emailGoogle = null;
       _nombreGoogle = null;
       _fotoGoogle = null;
@@ -233,9 +251,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                               ),
                             ],
                           ),
-                          child: _googleAutenticado
+                          // [CAMBIADO] usa _autenticado en lugar de _googleAutenticado
+                          child: _autenticado
                               ? _buildPaso2CiForm()
-                              : _buildPaso1GoogleLogin(),
+                              : _buildPaso1Login(),
                         ),
                       ],
                     ),
@@ -250,7 +269,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
-  Widget _buildPaso1GoogleLogin() {
+  // [RENOMBRADO + MODIFICADO] era _buildPaso1GoogleLogin, ahora incluye Facebook
+  Widget _buildPaso1Login() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -265,7 +285,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Iniciá sesión con tu cuenta de Google para continuar',
+          'Iniciá sesión para continuar',
           style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
@@ -290,6 +310,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
           _buildErrorBox(_errorMessage!),
           const SizedBox(height: 16),
         ],
+
+        // Botón Google (sin cambios)
         OutlinedButton(
           onPressed: _isLoading ? null : _autenticarConGoogle,
           style: OutlinedButton.styleFrom(
@@ -321,6 +343,46 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                   ],
                 ),
         ),
+
+        const SizedBox(height: 12),
+
+        // [NUEVO] Botón Facebook
+        OutlinedButton(
+          onPressed: _isLoading ? null : _autenticarConFacebook,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            side: const BorderSide(color: Color(0xFF1877F2)),
+            backgroundColor: const Color(0xFF1877F2),
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildFacebookLogo(),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Continuar con Facebook',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+
         const SizedBox(height: 20),
         Text(
           'Tu sesión es segura y solo vos podés ver tu información.',
@@ -428,7 +490,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         TextButton.icon(
           onPressed: _cerrarSesion,
           icon: const Icon(Icons.logout, size: 18),
-          label: const Text('Cerrar sesión de Google'),
+          label: const Text('Cerrar sesión'),
           style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
         ),
       ],
@@ -460,7 +522,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _nombreGoogle ?? 'Usuario Google',
+                  _nombreGoogle ?? 'Usuario',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: Colors.green[800],
@@ -522,23 +584,16 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 'CI: ${_clienteEncontrado!.documento}',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
-              if (_emailGoogle != null) ...[
+              if (_emailGoogle != null && _emailGoogle != 'Sin email') ...[
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(
-                      Icons.email_outlined,
-                      size: 12,
-                      color: Colors.grey[500],
-                    ),
+                    Icon(Icons.email_outlined, size: 12, color: Colors.grey[500]),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         _emailGoogle!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -636,6 +691,28 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
+  // [NUEVO] Logo de Facebook con su ícono "f"
+  Widget _buildFacebookLogo() {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      child: const Center(
+        child: Text(
+          'f',
+          style: TextStyle(
+            color: Color(0xFF1877F2),
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     return Container(
       decoration: const BoxDecoration(
@@ -724,34 +801,26 @@ class _GoogleLogoPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    canvas.drawArc(
-      rect, -0.5, 1.6, false,
-      Paint()
-        ..color = const Color(0xFFEA4335)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.18,
-    );
-    canvas.drawArc(
-      rect, 1.1, 1.35, false,
-      Paint()
-        ..color = const Color(0xFFFBBC05)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.18,
-    );
-    canvas.drawArc(
-      rect, 2.45, 0.9, false,
-      Paint()
-        ..color = const Color(0xFF34A853)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.18,
-    );
-    canvas.drawArc(
-      rect, 3.35, 1.1, false,
-      Paint()
-        ..color = const Color(0xFF4285F4)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.18,
-    );
+    canvas.drawArc(rect, -0.5, 1.6, false,
+        Paint()
+          ..color = const Color(0xFFEA4335)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = size.width * 0.18);
+    canvas.drawArc(rect, 1.1, 1.35, false,
+        Paint()
+          ..color = const Color(0xFFFBBC05)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = size.width * 0.18);
+    canvas.drawArc(rect, 2.45, 0.9, false,
+        Paint()
+          ..color = const Color(0xFF34A853)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = size.width * 0.18);
+    canvas.drawArc(rect, 3.35, 1.1, false,
+        Paint()
+          ..color = const Color(0xFF4285F4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = size.width * 0.18);
     canvas.drawLine(
       Offset(center.dx, center.dy),
       Offset(center.dx + radius, center.dy),
