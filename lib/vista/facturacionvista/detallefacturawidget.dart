@@ -5,6 +5,8 @@ import 'package:myapp/modelo/facturacionmodelo/detalle_factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/inmuebles.dart';
+import 'package:myapp/widget/autocomplete_ciclos.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DetalleFacturaWidget extends StatefulWidget {
   final Function(DetalleFactura) onDetalleAgregado;
@@ -31,11 +33,11 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
   List<Ciclo> _ciclos = [];
   Concepto? _conceptoSeleccionado;
   Ciclo? _cicloSeleccionado;
-  
+
   final TextEditingController _cantidadController = TextEditingController(text: '1');
   final TextEditingController _montoController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
-  
+
   bool _isLoading = false;
   int _ivaAplicado = 10;
   double _subtotal = 0;
@@ -49,20 +51,21 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     _montoController.addListener(_calcularSubtotal);
   }
 
+  @override
+  void didUpdateWidget(DetalleFacturaWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.inmuebleSeleccionado?.id != widget.inmuebleSeleccionado?.id && _esConsumo) {
+      _cicloSeleccionado = null;
+      _cargarCiclosFiltrados();
+    }
+  }
+
   Future<void> _cargarDatos() async {
     setState(() => _isLoading = true);
     try {
-      final resultados = await Future.wait([
-        _conceptoCrud.leerConceptos(),
-        _cicloCrud.leerCiclos(),
-      ]);
-
-      final conceptos = resultados[0] as List<Concepto>;
-      final ciclos = resultados[1] as List<Ciclo>;
-
+      final conceptos = await _conceptoCrud.leerConceptos();
       setState(() {
         _conceptos = conceptos;
-        _ciclos = ciclos.where((c) => c.estado == 'ACTIVO').toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -71,58 +74,91 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     }
   }
 
+  Future<void> _cargarCiclosFiltrados() async {
+    final idInmueble = widget.inmuebleSeleccionado?.id;
+
+    if (idInmueble == null) {
+      final ciclos = await _cicloCrud.leerCiclos();
+      setState(() => _ciclos = ciclos);
+      return;
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      final ciclosResponse = await supabase
+          .from('ciclos')
+          .select('*')
+          .order('inicio', ascending: true);
+
+      final List<Ciclo> ciclos = (ciclosResponse as List)
+          .map((c) => Ciclo.fromMap(c))
+          .toList();
+
+      final detallesResponse = await supabase
+          .from('detalle_factura')
+          .select('fk_ciclo, factura:fk_factura!inner(fk_inmueble)')
+          .eq('factura.fk_inmueble', idInmueble)
+          .eq('fk_concepto', 1)
+          .not('fk_ciclo', 'is', null);
+
+      if ((detallesResponse as List).isEmpty) {
+        setState(() => _ciclos = ciclos);
+        return;
+      }
+
+      final Set<int> ciclosPagados = detallesResponse
+          .map((d) => d['fk_ciclo'] as int)
+          .toSet();
+
+      setState(() {
+        _ciclos = ciclos.where((c) => !ciclosPagados.contains(c.id)).toList();
+      });
+    } catch (e) {
+      _mostrarError('Error al cargar ciclos: $e');
+    }
+  }
+
   void _calcularSubtotal() {
-  final cantidad = double.tryParse(_cantidadController.text) ?? 0;
-  final monto = double.tryParse(_montoController.text) ?? 0;
-  
-  // El monto ingresado YA incluye IVA
-  final subtotalConIva = cantidad * monto;
-  
-  setState(() {
-    _subtotal = subtotalConIva;
-  });
-}
-
-// Método _agregarDetalle modificado - SIN asignar factura aún
-
-void _agregarDetalle() {
-  if (!_formKey.currentState!.validate()) return;
-  
-  if (_conceptoSeleccionado == null) {
-    _mostrarError('Debe seleccionar un concepto');
-    return;
+    final cantidad = double.tryParse(_cantidadController.text) ?? 0;
+    final monto = double.tryParse(_montoController.text) ?? 0;
+    setState(() {
+      _subtotal = cantidad * monto;
+    });
   }
 
-  if (_esConsumo && _cicloSeleccionado == null) {
-    _mostrarError('Debe seleccionar un ciclo para el consumo');
-    return;
+  void _agregarDetalle() {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_conceptoSeleccionado == null) {
+      _mostrarError('Debe seleccionar un concepto');
+      return;
+    }
+
+    if (_esConsumo && _cicloSeleccionado == null) {
+      _mostrarError('Debe seleccionar un ciclo para el consumo');
+      return;
+    }
+
+    final cantidad = double.parse(_cantidadController.text);
+    final precioUnitario = double.parse(_montoController.text);
+
+    final detalle = DetalleFactura(
+      fk_concepto: _conceptoSeleccionado!,
+      monto: precioUnitario,
+      descripcion: _descripcionController.text.isEmpty
+          ? _conceptoSeleccionado!.nombre
+          : _descripcionController.text,
+      iva_aplicado: _ivaAplicado,
+      subtotal: cantidad * precioUnitario,
+      estado: 'ACTIVO',
+      cantidad: cantidad,
+      fk_ciclo: _esConsumo ? _cicloSeleccionado : null,
+    );
+
+    widget.onDetalleAgregado(detalle);
+    _limpiarFormulario();
   }
-
-  final cantidad = double.parse(_cantidadController.text);
-  final precioUnitario = double.parse(_montoController.text);
-  
-  // El precio unitario YA incluye IVA
-  final subtotalConIva = cantidad * precioUnitario;
-
-  // Crear detalle temporal (sin factura asignada aún)
-  final detalle = DetalleFactura(
-    // NO asignar fk_factura aquí - dejarlo como el valor por defecto del constructor
-    fk_concepto: _conceptoSeleccionado!,
-    monto: precioUnitario, // Precio unitario CON IVA incluido
-    descripcion: _descripcionController.text.isEmpty 
-        ? _conceptoSeleccionado!.nombre 
-        : _descripcionController.text,
-    iva_aplicado: _ivaAplicado,
-    subtotal: subtotalConIva,
-    estado: 'ACTIVO',
-    cantidad: cantidad,
-    fk_ciclo: _esConsumo ? _cicloSeleccionado : null,
-  );
-
-  widget.onDetalleAgregado(detalle);
-  _limpiarFormulario();
-}
-
 
   void _limpiarFormulario() {
     _cantidadController.text = '1';
@@ -139,10 +175,7 @@ void _agregarDetalle() {
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
     );
   }
 
@@ -159,10 +192,7 @@ void _agregarDetalle() {
             children: [
               const Text(
                 'Agregar Item',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
 
@@ -187,42 +217,31 @@ void _agregarDetalle() {
                       _montoController.text = concepto.arancel.toStringAsFixed(0);
                       _ivaAplicado = concepto.fk_iva.valor;
                       _descripcionController.text = concepto.nombre;
-                      // Verificar si es consumo (id = 1)
                       _esConsumo = concepto.id == 1;
                       if (!_esConsumo) {
                         _cicloSeleccionado = null;
+                        _ciclos = [];
+                      } else {
+                        _cargarCiclosFiltrados();
                       }
                     }
                   });
                 },
-                validator: (value) => value == null ? 'Seleccione un concepto' : null,
+                validator: (value) =>
+                    value == null ? 'Seleccione un concepto' : null,
               ),
               const SizedBox(height: 12),
 
               // Ciclo (solo visible si es consumo)
               if (_esConsumo) ...[
-                DropdownButtonFormField<Ciclo>(
-                  value: _cicloSeleccionado,
-                  decoration: const InputDecoration(
-                    labelText: 'Ciclo *',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
-                  ),
-                  items: _ciclos.map((ciclo) {
-                    return DropdownMenuItem(
-                      value: ciclo,
-                      child: Text('${ciclo.ciclo} - ${ciclo.descripcion}'),
-                    );
-                  }).toList(),
-                  onChanged: (ciclo) {
+                CicloAutocomplete(
+                  ciclos: _ciclos,
+                  onSeleccionado: (ciclo) {
                     setState(() => _cicloSeleccionado = ciclo);
                   },
-                  validator: (value) {
-                    if (_esConsumo && value == null) {
-                      return 'Seleccione un ciclo';
-                    }
-                    return null;
-                  },
+                  validator: (_) => _esConsumo && _cicloSeleccionado == null
+                      ? 'Debe seleccionar un ciclo'
+                      : null,
                 ),
                 const SizedBox(height: 12),
               ],
@@ -309,10 +328,7 @@ void _agregarDetalle() {
                     children: [
                       const Text(
                         'Subtotal:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                       Text(
                         '${_subtotal.toStringAsFixed(0)} Gs.',
@@ -347,10 +363,7 @@ void _agregarDetalle() {
                 const SizedBox(height: 16),
                 const Text(
                   'Items agregados',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 ...widget.detallesActuales.asMap().entries.map((entry) {
@@ -380,18 +393,12 @@ void _agregarDetalle() {
                             ),
                         ],
                       ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${detalle.subtotal.toStringAsFixed(0)} Gs.',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
+                      trailing: Text(
+                        '${detalle.subtotal.toStringAsFixed(0)} Gs.',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   );

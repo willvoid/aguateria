@@ -20,43 +20,45 @@ class PagoDeudaService {
 
   /// Carga los ciclos disponibles para deudas de consumo
   /// Retorna los ciclos que NO han sido facturados aún para este inmueble
-  Future<List<Ciclo>> cargarCiclosDisponiblesConsumo(int idInmueble) async {
-    try {
-      // Obtener todos los ciclos activos
-      final ciclosResponse = await supabase
-          .from('ciclos')
-          .select('*')
-          .eq('estado', 'ACTIVO')
-          .order('inicio', ascending: true);
+Future<List<Ciclo>> cargarCiclosDisponiblesConsumo(int idInmueble) async {
+  try {
+    // 1. Obtener TODOS los ciclos (activos y no activos)
+    final ciclosResponse = await supabase
+        .from('ciclos')
+        .select('*')
+        .order('inicio', ascending: true);
 
-      if (ciclosResponse.isEmpty) return [];
+    if (ciclosResponse.isEmpty) return [];
 
-      final List<Ciclo> ciclos = ciclosResponse
-          .map((c) => Ciclo.fromMap(c))
-          .toList();
+    final List<Ciclo> ciclos = ciclosResponse
+        .map((c) => Ciclo.fromMap(c))
+        .toList();
 
-      // Obtener ciclos que ya tienen deuda pagada o facturada para este inmueble
-      final detallesResponse = await supabase
-          .from('detalle_factura')
-          .select('''
-            fk_ciclo,
-            factura:fk_factura!inner(fk_inmueble)
-          ''')
-          .eq('factura.fk_inmueble', idInmueble)
-          .eq('fk_concepto', 1) // Solo consumo
-          .not('fk_ciclo', 'is', null);
+    // 2. Obtener ciclos que YA fueron facturados para este inmueble
+    final detallesResponse = await supabase
+        .from('detalle_factura')
+        .select('''
+          fk_ciclo,
+          factura:fk_factura!inner(fk_inmueble)
+        ''')
+        .eq('factura.fk_inmueble', idInmueble)
+        .eq('fk_concepto', 1)
+        .not('fk_ciclo', 'is', null);
 
-      final Set<int> ciclosPagados = detallesResponse
-          .map((d) => d['fk_ciclo'] as int)
-          .toSet();
+    // 3. Si no hay detalles, devolver todos los ciclos (ninguno fue pagado aún)
+    if (detallesResponse.isEmpty) return ciclos;
 
-      // Filtrar ciclos que NO están pagados
-      return ciclos.where((c) => !ciclosPagados.contains(c.id)).toList();
-    } catch (e) {
-      print('Error al cargar ciclos disponibles: $e');
-      return [];
-    }
+    final Set<int> ciclosPagados = detallesResponse
+        .map((d) => d['fk_ciclo'] as int)
+        .toSet();
+
+    // 4. Devolver solo los ciclos que NO fueron pagados
+    return ciclos.where((c) => !ciclosPagados.contains(c.id)).toList();
+  } catch (e) {
+    print('Error al cargar ciclos disponibles: $e');
+    return [];
   }
+}
 
   /// Calcula los totales basados en el monto y tasa de IVA
   Map<String, double> calcularTotales(double montoTotal, int tasaIva) {
