@@ -358,9 +358,6 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           builder: (context) => FacturaSuccessDialog(
             facturaCreada: facturaCreada,
             clienteNombre: widget.cliente.razonSocial,
-            onImprimir: () {
-              print('📄 Imprimir factura de pago de deuda');
-            },
           ),
         );
 

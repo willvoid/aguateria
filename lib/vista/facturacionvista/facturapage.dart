@@ -42,7 +42,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   final ModoPagoCrudImpl _modoPagoCrud = ModoPagoCrudImpl();
   final MonedaCrudImpl _monedaCrud = MonedaCrudImpl();
   final TipoFacturaCrudImpl _tipoFacturaCrud = TipoFacturaCrudImpl();
-  
+
+  // Key para forzar el rebuild del DetalleFacturaWidget al limpiar
+  Key _detalleWidgetKey = UniqueKey();
 
   final _formKey = GlobalKey<FormState>();
 
@@ -81,6 +83,27 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   double _totalIVA = 0;
   double _vuelto = 0;
 
+  void _limpiarFormulario() {
+    _efectivoController.clear();
+    _observacionController.clear();
+    setState(() {
+      _clienteSeleccionado = null;
+      _inmuebleSeleccionado = null;
+      _establecimientoSeleccionado = null;
+      _detalles = [];
+      _totalGeneral = 0;
+      _totalGravado10 = 0;
+      _totalGravado5 = 0;
+      _totalExenta = 0;
+      _totalIVA = 0;
+      _vuelto = 0;
+      _condicionVenta = 1;
+      if (_monedas.isNotEmpty) _monedaSeleccionada = _monedas.first;
+      if (_modosPago.isNotEmpty) _modoPagoSeleccionado = _modosPago.first;
+      if (_tiposFactura.isNotEmpty) _tipoFacturaSeleccionado = _tiposFactura.first;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -94,7 +117,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       _errorCarga = false;
       _mensajeError = '';
     });
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final usuario = authProvider.usuarioActual;
@@ -109,7 +132,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       }
 
       final cajaAbierta = await _aperturaCrud.verificarCajaAbiertaUsuario(usuario.id_usuario!);
-      
+
       if (!cajaAbierta) {
         setState(() {
           _isLoading = false;
@@ -170,6 +193,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       });
     }
   }
+  
 
   void _cargarInmueblesPorCliente(Cliente cliente) async {
     try {
@@ -193,46 +217,39 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     });
   }
 
- void _calcularTotales() {
-  double totalGravado10 = 0;
-  double totalGravado5 = 0;
-  double totalExenta = 0;
-  double totalIVA = 0;
+  void _calcularTotales() {
+    double totalGravado10 = 0;
+    double totalGravado5 = 0;
+    double totalExenta = 0;
+    double totalIVA = 0;
 
-  for (var detalle in _detalles) {
-    // detalle.monto es el precio unitario CON IVA incluido
-    // detalle.subtotal es el total con IVA incluido (monto × cantidad)
-    final montoTotalConIva = detalle.monto * detalle.cantidad;
-    final tasaIva = detalle.iva_aplicado;
-    
-    if (tasaIva == 10) {
-      // Fórmula Paraguay: IVA = montoTotal × (tasa/100) / (1 + tasa/100)
-      final iva = montoTotalConIva * (tasaIva / 100) / (1 + tasaIva / 100);
-      final montoBase = montoTotalConIva - iva;
-      
-      totalGravado10 += montoBase;
-      totalIVA += iva;
-    } else if (tasaIva == 5) {
-      // Fórmula Paraguay: IVA = montoTotal × (tasa/100) / (1 + tasa/100)
-      final iva = montoTotalConIva * (tasaIva / 100) / (1 + tasaIva / 100);
-      final montoBase = montoTotalConIva - iva;
-      
-      totalGravado5 += montoBase;
-      totalIVA += iva;
-    } else {
-      // Exenta (0% IVA)
-      totalExenta += montoTotalConIva;
+    for (var detalle in _detalles) {
+      final montoTotalConIva = detalle.monto * detalle.cantidad;
+      final tasaIva = detalle.iva_aplicado;
+
+      if (tasaIva == 10) {
+        final iva = montoTotalConIva * (tasaIva / 100) / (1 + tasaIva / 100);
+        final montoBase = montoTotalConIva - iva;
+        totalGravado10 += montoBase;
+        totalIVA += iva;
+      } else if (tasaIva == 5) {
+        final iva = montoTotalConIva * (tasaIva / 100) / (1 + tasaIva / 100);
+        final montoBase = montoTotalConIva - iva;
+        totalGravado5 += montoBase;
+        totalIVA += iva;
+      } else {
+        totalExenta += montoTotalConIva;
+      }
     }
-  }
 
-  setState(() {
-    _totalGravado10 = totalGravado10;
-    _totalGravado5 = totalGravado5;
-    _totalExenta = totalExenta;
-    _totalIVA = totalIVA;
-    _totalGeneral = totalGravado10 + totalGravado5 + totalExenta + totalIVA;
-  });
-}
+    setState(() {
+      _totalGravado10 = totalGravado10;
+      _totalGravado5 = totalGravado5;
+      _totalExenta = totalExenta;
+      _totalIVA = totalIVA;
+      _totalGeneral = totalGravado10 + totalGravado5 + totalExenta + totalIVA;
+    });
+  }
 
   void _calcularVuelto() {
     final efectivo = double.tryParse(_efectivoController.text) ?? 0;
@@ -241,199 +258,195 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     });
   }
 
- Future<void> _guardarFactura() async {
-  if (!_formKey.currentState!.validate()) return;
-  
-  if (_clienteSeleccionado == null) {
-    _mostrarError('Debe seleccionar un cliente');
-    return;
-  }
+  Future<void> _guardarFactura() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  if (_inmuebleSeleccionado == null) {
-    _mostrarError('Debe seleccionar un inmueble');
-    return;
-  }
-
-  if (_detalles.isEmpty) {
-    _mostrarError('Debe agregar al menos un item');
-    return;
-  }
-
-  if (_establecimientoSeleccionado == null) {
-    _mostrarError('Debe seleccionar un establecimiento');
-    return;
-  }
-
-  final efectivo = double.tryParse(_efectivoController.text) ?? 0;
-  if (efectivo < _totalGeneral) {
-    _mostrarError('El efectivo debe ser mayor o igual al total');
-    return;
-  }
-
-  // Mostrar diálogo de carga
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const Center(
-      child: Card(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Guardando factura...'),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-
-  try {
-    // 1. Obtener el número secuencial
-    final nroSecuencial = await _facturaCrud.obtenerProximoSecuencial(
-      _establecimientoSeleccionado!.id_establecimiento!,
-      _tipoFacturaSeleccionado!.id_tipo_factura!,
-    );
-
-    // 2. Construir el payload
-    final payload = _facturaRpcService.construirPayload(
-      cliente: _clienteSeleccionado!,
-      inmueble: _inmuebleSeleccionado!,
-      establecimiento: _establecimientoSeleccionado!,
-      modoPago: _modoPagoSeleccionado!,
-      moneda: _monedaSeleccionada!,
-      tipoFactura: _tipoFacturaSeleccionado!,
-      cajaAbierta: _cajaAbierta!,
-      condicionVenta: _condicionVenta,
-      totalGravado10: _totalGravado10,
-      totalGravado5: _totalGravado5,
-      totalExenta: _totalExenta,
-      totalIva: _totalIVA,
-      totalGeneral: _totalGeneral,
-      observacion: _observacionController.text,
-      nroSecuencial: nroSecuencial,
-      efectivo: efectivo,
-      vuelto: _vuelto,
-      descuentoGlobal: 0,
-      detalles: _detalles,
-    );
-
-    // 3. Log del payload (opcional, para debugging)
-    print('📦 Payload JSON a enviar:');
-    print(payload.toJson());
-
-    // 4. Llamar a la función RPC
-    final facturaCreada = await _facturaRpcService.guardarFacturaRpc(payload);
-
-    // 5. Extraer datos de la respuesta
-    final idFactura = _facturaRpcService.extraerIdFactura(facturaCreada);
-    final numeroFactura = _facturaRpcService.formatearNumeroFactura(facturaCreada);
-
-    // Cerrar diálogo de carga
-    if (mounted) Navigator.pop(context);
-
-    if (idFactura != null) {
-      // Éxito: mostrar diálogo de confirmación
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => FacturaSuccessDialog(
-            facturaCreada: facturaCreada,
-            clienteNombre: _clienteSeleccionado!.razonSocial,
-            onImprimir: () {
-              // TODO: Implementar lógica de impresión
-              print('📄 Imprimir factura #$idFactura');
-              // Aquí puedes navegar a una pantalla de impresión
-              // o generar un PDF con los datos de facturaCreada
-            },
-          ),
-        );
-        
-        // Volver a la pantalla anterior con los datos de la factura
-        Navigator.pop(context, facturaCreada);
-      }
-    } else {
-      throw Exception('No se pudo extraer el ID de la factura');
+    if (_clienteSeleccionado == null) {
+      _mostrarError('Debe seleccionar un cliente');
+      return;
     }
-  } catch (e) {
-    // Cerrar diálogo de carga si está abierto
-    if (mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
+
+    if (_inmuebleSeleccionado == null) {
+      _mostrarError('Debe seleccionar un inmueble');
+      return;
     }
-    
-    // Mostrar diálogo de error
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.error_outline,
-                  color: Colors.red.shade600,
-                  size: 64,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Error al Guardar',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
+
+    if (_detalles.isEmpty) {
+      _mostrarError('Debe agregar al menos un item');
+      return;
+    }
+
+    if (_establecimientoSeleccionado == null) {
+      _mostrarError('Debe seleccionar un establecimiento');
+      return;
+    }
+
+    final efectivo = double.tryParse(_efectivoController.text) ?? 0;
+    if (efectivo < _totalGeneral) {
+      _mostrarError('El efectivo debe ser mayor o igual al total');
+      return;
+    }
+
+    // Mostrar diálogo de carga
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  e.toString().replaceAll('Exception: ', ''),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14),
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Guardando factura...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // 1. Obtener el número secuencial
+      final nroSecuencial = await _facturaCrud.obtenerProximoSecuencial(
+        _establecimientoSeleccionado!.id_establecimiento!,
+        _tipoFacturaSeleccionado!.id_tipo_factura!,
+      );
+
+      // 2. Construir el payload
+      final payload = _facturaRpcService.construirPayload(
+        cliente: _clienteSeleccionado!,
+        inmueble: _inmuebleSeleccionado!,
+        establecimiento: _establecimientoSeleccionado!,
+        modoPago: _modoPagoSeleccionado!,
+        moneda: _monedaSeleccionada!,
+        tipoFactura: _tipoFacturaSeleccionado!,
+        cajaAbierta: _cajaAbierta!,
+        condicionVenta: _condicionVenta,
+        totalGravado10: _totalGravado10,
+        totalGravado5: _totalGravado5,
+        totalExenta: _totalExenta,
+        totalIva: _totalIVA,
+        totalGeneral: _totalGeneral,
+        observacion: _observacionController.text,
+        nroSecuencial: nroSecuencial,
+        efectivo: efectivo,
+        vuelto: _vuelto,
+        descuentoGlobal: 0,
+        detalles: _detalles,
+      );
+
+      print('📦 Payload JSON a enviar:');
+      print(payload.toJson());
+
+      // 3. Llamar a la función RPC
+      final facturaCreada = await _facturaRpcService.guardarFacturaRpc(payload);
+
+      // 4. Extraer datos de la respuesta
+      final idFactura = _facturaRpcService.extraerIdFactura(facturaCreada);
+
+      // Cerrar diálogo de carga
+      if (mounted) Navigator.pop(context);
+
+      if (idFactura != null) {
+        // Éxito: mostrar diálogo de confirmación
+        if (mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => FacturaSuccessDialog(
+              facturaCreada: facturaCreada,
+              clienteNombre: _clienteSeleccionado!.razonSocial,
+            ),
+          ).then((_) {
+            // Al cerrar el diálogo (botón Entendido), limpiar el formulario
+            if (mounted) _limpiarFormulario();
+          });
+
+          // Al cerrar el diálogo, limpiar el formulario para una nueva factura
+          _limpiarFormulario();
+        }
+      } else {
+        throw Exception('No se pudo extraer el ID de la factura');
+      }
+    } catch (e) {
+      // Cerrar diálogo de carga si está abierto
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      // Mostrar diálogo de error
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.error_outline,
+                    color: Colors.red.shade600,
+                    size: 64,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Por favor, verifique los datos e intente nuevamente.',
-                  textAlign: TextAlign.center,
+                  'Error al Guardar',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
                   ),
                 ),
               ],
             ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    e.toString().replaceAll('Exception: ', ''),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Por favor, verifique los datos e intente nuevamente.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
               ),
-              child: const Text('Cerrar'),
             ),
-          ],
-        ),
-      );
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
-}
+
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -678,7 +691,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                           ),
                           const SizedBox(height: 24),
 
+                          // Key para forzar rebuild al limpiar
                           DetalleFacturaWidget(
+                            key: _detalleWidgetKey,
                             onDetalleAgregado: _agregarDetalle,
                             detallesActuales: _detalles,
                           ),
@@ -759,7 +774,8 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     );
   }
 
-  Widget _buildResumenItem(String label, double valor, {bool isTotal = false, Color? color}) {
+  Widget _buildResumenItem(String label, double valor,
+      {bool isTotal = false, Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -784,8 +800,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       ),
     );
   }
-
-  
 
   @override
   void dispose() {

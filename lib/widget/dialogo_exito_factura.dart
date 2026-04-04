@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 class FacturaSuccessDialog extends StatelessWidget {
   final Map<String, dynamic> facturaCreada;
   final String clienteNombre;
-  final VoidCallback? onImprimir;
 
   const FacturaSuccessDialog({
     Key? key,
     required this.facturaCreada,
     required this.clienteNombre,
-    this.onImprimir,
   }) : super(key: key);
 
   String _formatearNumeroFactura() {
@@ -149,41 +147,20 @@ class FacturaSuccessDialog extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Botones
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close, size: 18),
-                        label: const Text('Cerrar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey.shade700,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
+                // Botón único
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('Entendido'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0085FF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 2,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (onImprimir != null) {
-                            onImprimir!();
-                          }
-                          Navigator.pop(context);
-                        },
-                        icon: const Icon(Icons.print, size: 18),
-                        label: const Text('Imprimir'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0085FF),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 2,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
