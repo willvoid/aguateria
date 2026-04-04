@@ -310,14 +310,18 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
               ),
               const SizedBox(width: 16),
               ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
+                onPressed: empresas.isNotEmpty
+                    ? null  // ← Deshabilitado si ya existe una empresa
+                    : () {
+                        _mostrarDialogoEdicion(null);
+                      },
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Agregar Empresa'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0085FF),
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,  // ← Color cuando está deshabilitado
+                  disabledForegroundColor: Colors.grey.shade500,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
