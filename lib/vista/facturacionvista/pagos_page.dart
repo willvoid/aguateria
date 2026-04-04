@@ -1469,8 +1469,8 @@ class _DialogoDetallesPago extends StatelessWidget {
                     if (pago.usuario != null)
                       _buildInfoRow('Usuario', pago.usuario!.nombre),
                     if (pago.factura != null)
-                      _buildInfoRow(
-                          'Factura', '#${pago.factura!.id_factura}'),
+                      _buildInfoRow('Factura', '#${pago.factura!.id_factura}'),
+                      _buildInfoRow('Cliente', pago.fk_cliente.razonSocial),
                     if (pago.motivoRechazo != null) ...[
                       const Divider(height: 24),
                       const Text('Motivo de Rechazo:',
