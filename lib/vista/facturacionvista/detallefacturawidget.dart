@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myapp/dao/facturaciondao/conceptocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/ciclocrudimpl.dart';
 import 'package:myapp/modelo/facturacionmodelo/detalle_factura.dart';
@@ -6,6 +7,7 @@ import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/widget/autocomplete_ciclos.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DetalleFacturaWidget extends StatefulWidget {
@@ -34,7 +36,8 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
   Concepto? _conceptoSeleccionado;
   Ciclo? _cicloSeleccionado;
 
-  final TextEditingController _cantidadController = TextEditingController(text: '1');
+  final TextEditingController _cantidadController =
+      TextEditingController(text: '1');
   final TextEditingController _montoController = TextEditingController();
   final TextEditingController _descripcionController = TextEditingController();
 
@@ -42,6 +45,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
   int _ivaAplicado = 10;
   double _subtotal = 0;
   bool _esConsumo = false;
+  bool _esConexion = false; // ← NUEVO: detecta concepto id=2
 
   @override
   void initState() {
@@ -54,7 +58,8 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
   @override
   void didUpdateWidget(DetalleFacturaWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.inmuebleSeleccionado?.id != widget.inmuebleSeleccionado?.id && _esConsumo) {
+    if (oldWidget.inmuebleSeleccionado?.id != widget.inmuebleSeleccionado?.id &&
+        _esConsumo) {
       _cicloSeleccionado = null;
       _cargarCiclosFiltrados();
     }
@@ -91,9 +96,8 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
           .select('*')
           .order('inicio', ascending: true);
 
-      final List<Ciclo> ciclos = (ciclosResponse as List)
-          .map((c) => Ciclo.fromMap(c))
-          .toList();
+      final List<Ciclo> ciclos =
+          (ciclosResponse as List).map((c) => Ciclo.fromMap(c)).toList();
 
       final detallesResponse = await supabase
           .from('detalle_factura')
@@ -107,15 +111,41 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
         return;
       }
 
-      final Set<int> ciclosPagados = detallesResponse
-          .map((d) => d['fk_ciclo'] as int)
-          .toSet();
+      final Set<int> ciclosPagados =
+          detallesResponse.map((d) => d['fk_ciclo'] as int).toSet();
 
       setState(() {
         _ciclos = ciclos.where((c) => !ciclosPagados.contains(c.id)).toList();
       });
     } catch (e) {
       _mostrarError('Error al cargar ciclos: $e');
+    }
+  }
+
+  // ── NUEVO: consulta el saldo pendiente de conexión del inmueble ──────────────
+  Future<double?> _obtenerSaldoConexion() async {
+    final idInmueble = widget.inmuebleSeleccionado?.id;
+    if (idInmueble == null) return null;
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Busca la deuda de conexión (fk_concepto = 2) del inmueble con saldo > 0
+      final response = await supabase
+          .from('cuentas_cobrar')
+          .select('saldo')
+          .eq('fk_inmueble', idInmueble)
+          .eq('fk_concepto', 2)
+          .gt('saldo', 0)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      return (response['saldo'] as num).toDouble();
+    } catch (e) {
+      return null;
     }
   }
 
@@ -127,7 +157,125 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     });
   }
 
-  void _agregarDetalle() {
+  // ── NUEVO: dialog cuando el monto supera el saldo de conexión ───────────────
+  Future<void> _mostrarDialogoSaldoExcedido(
+      double montoIngresado, double saldoPendiente) async {
+    final formato = NumberFormat.currency(symbol: '₲', decimalDigits: 0);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.warning_amber_rounded,
+                  color: Colors.orange.shade600, size: 48),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Monto Excedido',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'El monto ingresado para Conexión supera el saldo pendiente del inmueble.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                children: [
+                  _buildFilaDialog(
+                    label: 'Monto ingresado',
+                    valor: formato.format(montoIngresado),
+                    color: Colors.red.shade700,
+                  ),
+                  const Divider(height: 20),
+                  _buildFilaDialog(
+                    label: 'Saldo pendiente',
+                    valor: formato.format(saldoPendiente),
+                    color: Colors.green.shade700,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'El monto máximo permitido es ${formato.format(saldoPendiente)}',
+                      style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Entendido'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilaDialog(
+      {required String label, required String valor, required Color color}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+        Text(valor,
+            style: TextStyle(
+                fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+
+  // ── Ahora es async para poder await la verificación de conexión ─────────────
+  Future<void> _agregarDetalle() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_conceptoSeleccionado == null) {
@@ -138,6 +286,37 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     if (_esConsumo && _cicloSeleccionado == null) {
       _mostrarError('Debe seleccionar un ciclo para el consumo');
       return;
+    }
+
+    // Validación: ciclo duplicado
+    if (_esConsumo && _cicloSeleccionado != null) {
+      final cicloYaExiste = widget.detallesActuales.any(
+        (d) => d.fk_ciclo?.id == _cicloSeleccionado!.id,
+      );
+      if (cicloYaExiste) {
+        _mostrarError('El ciclo "${_cicloSeleccionado!.ciclo}" ya fue agregado');
+        return;
+      }
+    }
+
+    // ── NUEVO: validación de saldo para concepto Conexión (id=2) ────────────
+    if (_esConexion) {
+      final montoIngresado =
+          (double.tryParse(_cantidadController.text) ?? 1) *
+              (double.tryParse(_montoController.text) ?? 0);
+
+      final saldoPendiente = await _obtenerSaldoConexion();
+
+      if (saldoPendiente == null) {
+        _mostrarError(
+            'No se encontró una deuda de conexión pendiente para este inmueble');
+        return;
+      }
+
+      if (montoIngresado > saldoPendiente) {
+        await _mostrarDialogoSaldoExcedido(montoIngresado, saldoPendiente);
+        return; // No agrega el detalle; el usuario corrige el monto
+      }
     }
 
     final cantidad = double.parse(_cantidadController.text);
@@ -170,6 +349,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
       _ivaAplicado = 10;
       _subtotal = 0;
       _esConsumo = false;
+      _esConexion = false; // ← NUEVO
     });
   }
 
@@ -214,10 +394,12 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                   setState(() {
                     _conceptoSeleccionado = concepto;
                     if (concepto != null) {
-                      _montoController.text = concepto.arancel.toStringAsFixed(0);
+                      _montoController.text =
+                          concepto.arancel.toStringAsFixed(0);
                       _ivaAplicado = concepto.fk_iva.valor;
                       _descripcionController.text = concepto.nombre;
                       _esConsumo = concepto.id == 1;
+                      _esConexion = concepto.id == 2; // ← NUEVO
                       if (!_esConsumo) {
                         _cicloSeleccionado = null;
                         _ciclos = [];
@@ -252,7 +434,12 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                   Expanded(
                     child: TextFormField(
                       controller: _cantidadController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
                       decoration: const InputDecoration(
                         labelText: 'Cantidad *',
                         border: OutlineInputBorder(),
@@ -260,7 +447,10 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                       ),
                       validator: (value) {
                         if (value?.isEmpty ?? true) return 'Campo requerido';
-                        if (double.tryParse(value!) == null) return 'Número inválido';
+                        final cantidad = double.tryParse(value!);
+                        if (cantidad == null) return 'Solo se permiten números';
+                        if (cantidad <= 0)
+                          return 'La cantidad debe ser mayor a 0';
                         return null;
                       },
                     ),
@@ -269,7 +459,12 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                   Expanded(
                     child: TextFormField(
                       controller: _montoController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
                       decoration: const InputDecoration(
                         labelText: 'Monto Unit. *',
                         border: OutlineInputBorder(),
@@ -278,7 +473,9 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                       ),
                       validator: (value) {
                         if (value?.isEmpty ?? true) return 'Campo requerido';
-                        if (double.tryParse(value!) == null) return 'Número inválido';
+                        final monto = double.tryParse(value!);
+                        if (monto == null) return 'Solo se permiten números';
+                        if (monto <= 0) return 'El monto debe ser mayor a 0';
                         return null;
                       },
                     ),
@@ -341,7 +538,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                     ],
                   ),
                   ElevatedButton.icon(
-                    onPressed: _agregarDetalle,
+                    onPressed: _agregarDetalle, // async, Flutter lo maneja bien
                     icon: const Icon(Icons.add),
                     label: const Text('Agregar'),
                     style: ElevatedButton.styleFrom(
