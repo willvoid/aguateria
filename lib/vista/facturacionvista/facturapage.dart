@@ -8,7 +8,6 @@ import 'package:myapp/dao/facturaciondao/modo_pagocrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/monedascrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/tipo_facturacrudimpl.dart';
 import 'package:myapp/dao/inmueblescrudimpl.dart';
-import 'package:myapp/modelo/facturacionmodelo/factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/detalle_factura.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
@@ -43,9 +42,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   final MonedaCrudImpl _monedaCrud = MonedaCrudImpl();
   final TipoFacturaCrudImpl _tipoFacturaCrud = TipoFacturaCrudImpl();
 
-  // Key para forzar el rebuild del DetalleFacturaWidget al limpiar
   Key _detalleWidgetKey = UniqueKey();
-
   final _formKey = GlobalKey<FormState>();
 
   // Datos de catálogos
@@ -82,27 +79,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   double _totalExenta = 0;
   double _totalIVA = 0;
   double _vuelto = 0;
-
-  void _limpiarFormulario() {
-    _efectivoController.clear();
-    _observacionController.clear();
-    setState(() {
-      _clienteSeleccionado = null;
-      _inmuebleSeleccionado = null;
-      _establecimientoSeleccionado = null;
-      _detalles = [];
-      _totalGeneral = 0;
-      _totalGravado10 = 0;
-      _totalGravado5 = 0;
-      _totalExenta = 0;
-      _totalIVA = 0;
-      _vuelto = 0;
-      _condicionVenta = 1;
-      if (_monedas.isNotEmpty) _monedaSeleccionada = _monedas.first;
-      if (_modosPago.isNotEmpty) _modoPagoSeleccionado = _modosPago.first;
-      if (_tiposFactura.isNotEmpty) _tipoFacturaSeleccionado = _tiposFactura.first;
-    });
-  }
 
   @override
   void initState() {
@@ -175,15 +151,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         _cajaAbierta = cajaActiva;
         _isLoading = false;
 
-        if (_monedas.isNotEmpty) {
-          _monedaSeleccionada = _monedas.first;
-        }
-        if (_modosPago.isNotEmpty) {
-          _modoPagoSeleccionado = _modosPago.first;
-        }
-        if (_tiposFactura.isNotEmpty) {
-          _tipoFacturaSeleccionado = _tiposFactura.first;
-        }
+        if (_monedas.isNotEmpty) _monedaSeleccionada = _monedas.first;
+        if (_modosPago.isNotEmpty) _modoPagoSeleccionado = _modosPago.first;
+        if (_tiposFactura.isNotEmpty) _tipoFacturaSeleccionado = _tiposFactura.first;
       });
     } catch (e) {
       setState(() {
@@ -193,7 +163,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       });
     }
   }
-  
 
   void _cargarInmueblesPorCliente(Cliente cliente) async {
     try {
@@ -229,13 +198,11 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
       if (tasaIva == 10) {
         final iva = montoTotalConIva * (tasaIva / 100) / (1 + tasaIva / 100);
-        final montoBase = montoTotalConIva - iva;
-        totalGravado10 += montoBase;
+        totalGravado10 += montoTotalConIva - iva;
         totalIVA += iva;
       } else if (tasaIva == 5) {
         final iva = montoTotalConIva * (tasaIva / 100) / (1 + tasaIva / 100);
-        final montoBase = montoTotalConIva - iva;
-        totalGravado5 += montoBase;
+        totalGravado5 += montoTotalConIva - iva;
         totalIVA += iva;
       } else {
         totalExenta += montoTotalConIva;
@@ -255,6 +222,28 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     final efectivo = double.tryParse(_efectivoController.text) ?? 0;
     setState(() {
       _vuelto = efectivo - _totalGeneral;
+    });
+  }
+
+  void _limpiarFormulario() {
+    _efectivoController.clear();
+    _observacionController.clear();
+    setState(() {
+      _clienteSeleccionado = null;
+      _inmuebleSeleccionado = null;
+      _establecimientoSeleccionado = null;
+      _detalles = [];
+      _totalGeneral = 0;
+      _totalGravado10 = 0;
+      _totalGravado5 = 0;
+      _totalExenta = 0;
+      _totalIVA = 0;
+      _vuelto = 0;
+      _condicionVenta = 1;
+      _detalleWidgetKey = UniqueKey(); // fuerza rebuild del DetalleFacturaWidget
+      if (_monedas.isNotEmpty) _monedaSeleccionada = _monedas.first;
+      if (_modosPago.isNotEmpty) _modoPagoSeleccionado = _modosPago.first;
+      if (_tiposFactura.isNotEmpty) _tipoFacturaSeleccionado = _tiposFactura.first;
     });
   }
 
@@ -287,7 +276,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       return;
     }
 
-    // Mostrar diálogo de carga
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -309,13 +297,11 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     );
 
     try {
-      // 1. Obtener el número secuencial
       final nroSecuencial = await _facturaCrud.obtenerProximoSecuencial(
         _establecimientoSeleccionado!.id_establecimiento!,
         _tipoFacturaSeleccionado!.id_tipo_factura!,
       );
 
-      // 2. Construir el payload
       final payload = _facturaRpcService.construirPayload(
         cliente: _clienteSeleccionado!,
         inmueble: _inmuebleSeleccionado!,
@@ -341,17 +327,12 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       print('📦 Payload JSON a enviar:');
       print(payload.toJson());
 
-      // 3. Llamar a la función RPC
       final facturaCreada = await _facturaRpcService.guardarFacturaRpc(payload);
-
-      // 4. Extraer datos de la respuesta
       final idFactura = _facturaRpcService.extraerIdFactura(facturaCreada);
 
-      // Cerrar diálogo de carga
       if (mounted) Navigator.pop(context);
 
       if (idFactura != null) {
-        // Éxito: mostrar diálogo de confirmación
         if (mounted) {
           await showDialog(
             context: context,
@@ -361,30 +342,20 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
               clienteNombre: _clienteSeleccionado!.razonSocial,
             ),
           ).then((_) {
-            // Al cerrar el diálogo (botón Entendido), limpiar el formulario
             if (mounted) _limpiarFormulario();
           });
-
-          // Al cerrar el diálogo, limpiar el formulario para una nueva factura
-          _limpiarFormulario();
         }
       } else {
         throw Exception('No se pudo extraer el ID de la factura');
       }
     } catch (e) {
-      // Cerrar diálogo de carga si está abierto
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
 
-      // Mostrar diálogo de error
       if (mounted) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Column(
               children: [
                 Container(
@@ -393,11 +364,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                     color: Colors.red.shade50,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.error_outline,
-                    color: Colors.red.shade600,
-                    size: 64,
-                  ),
+                  child: Icon(Icons.error_outline, color: Colors.red.shade600, size: 64),
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -423,10 +390,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                   const Text(
                     'Por favor, verifique los datos e intente nuevamente.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -457,16 +421,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     );
   }
 
-  void _mostrarExito(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -482,18 +436,11 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.red.shade400,
-                      ),
+                      Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
                       const SizedBox(height: 16),
                       Text(
                         _mensajeError,
-                        style: const TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontSize: 16,
-                        ),
+                        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 16),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
@@ -504,10 +451,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0085FF),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         ),
                       ),
                     ],
@@ -529,14 +473,10 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                 children: [
                                   const Text(
                                     'Datos de la Factura',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 16),
 
-                                  // Cliente
                                   ClienteAutocomplete(
                                     clientes: _clientes,
                                     onSeleccionado: (c) {
@@ -546,7 +486,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                   ),
                                   const SizedBox(height: 12),
 
-                                  // Inmueble
                                   DropdownButtonFormField<Inmuebles>(
                                     value: _inmuebleSeleccionado,
                                     decoration: const InputDecoration(
@@ -570,7 +509,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                   ),
                                   const SizedBox(height: 12),
 
-                                  // Establecimiento
                                   DropdownButtonFormField<Establecimiento>(
                                     value: _establecimientoSeleccionado,
                                     decoration: const InputDecoration(
@@ -691,11 +629,11 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Key para forzar rebuild al limpiar
                           DetalleFacturaWidget(
                             key: _detalleWidgetKey,
                             onDetalleAgregado: _agregarDetalle,
                             detallesActuales: _detalles,
+                            inmuebleSeleccionado: _inmuebleSeleccionado, // ← FIX
                           ),
                           const SizedBox(height: 24),
 
@@ -707,13 +645,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                 children: [
                                   const Text(
                                     'Resumen',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 16),
-
                                   _buildResumenItem('Gravado 10%', _totalGravado10),
                                   _buildResumenItem('Gravado 5%', _totalGravado5),
                                   _buildResumenItem('Exenta', _totalExenta),
@@ -721,7 +655,6 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                   const Divider(thickness: 2),
                                   _buildResumenItem('TOTAL', _totalGeneral, isTotal: true),
                                   const SizedBox(height: 16),
-
                                   TextFormField(
                                     controller: _efectivoController,
                                     keyboardType: TextInputType.number,
@@ -735,14 +668,11 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                       if (value?.isEmpty ?? true) return 'Campo requerido';
                                       final monto = double.tryParse(value!);
                                       if (monto == null) return 'Monto inválido';
-                                      if (monto < _totalGeneral) {
-                                        return 'Insuficiente';
-                                      }
+                                      if (monto < _totalGeneral) return 'Insuficiente';
                                       return null;
                                     },
                                   ),
                                   const SizedBox(height: 12),
-
                                   _buildResumenItem('Vuelto', _vuelto, color: Colors.green),
                                 ],
                               ),
