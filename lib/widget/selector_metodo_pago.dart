@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:myapp/dao/empresadao/datos_transferenciacrudimpl.dart';
 import 'package:myapp/dao/facturaciondao/modo_pagocrudimpl.dart';
@@ -16,7 +17,7 @@ final supabase = Supabase.instance.client;
 class SelectorMetodoPagoDialog extends StatefulWidget {
   final double totalAPagar;
   final int idUsuario;
-  final Cliente cliente; // AÑADIDO
+  final Cliente cliente;
   final Map<String, dynamic> Function(ModoPago modoPago) payloadFactura;
   final Function(ModoPago modoPago, Pago? pagoCreado) onMetodoSeleccionado;
 
@@ -24,7 +25,7 @@ class SelectorMetodoPagoDialog extends StatefulWidget {
     Key? key,
     required this.totalAPagar,
     required this.idUsuario,
-    required this.cliente, // AÑADIDO
+    required this.cliente,
     required this.payloadFactura,
     required this.onMetodoSeleccionado,
   }) : super(key: key);
@@ -53,7 +54,10 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
     try {
       final modos = await _modoPagoService.leerModosPago();
       setState(() {
-        _modosPago = modos;
+        // Solo muestra Transferencia (id=5) y Giro (id=6)
+        _modosPago = modos
+            .where((m) => m.id_modo_pago == 5 || m.id_modo_pago == 6)
+            .toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -65,7 +69,7 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
   Future<void> _seleccionarMetodo(ModoPago modo) async {
     setState(() => _modoPagoSeleccionado = modo);
 
-    // Si es Transferencia (id=5) o Giro (id=6), abrir diálogo de comprobante
+    // Transferencia (id=5) o Giro (id=6): abrir diálogo de comprobante
     if (modo.id_modo_pago == 5 || modo.id_modo_pago == 6) {
       final pagoCreado = await showDialog<Pago>(
         context: context,
@@ -75,9 +79,7 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
           totalAPagar: widget.totalAPagar,
           idUsuario: widget.idUsuario,
           cliente: widget.cliente,
-          payloadFactura: widget.payloadFactura(
-            modo,
-          ), // ✅ Llamar a la función aquí
+          payloadFactura: widget.payloadFactura(modo),
         ),
       );
 
@@ -86,7 +88,6 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
         Navigator.pop(context);
       }
     } else {
-      // Para otros métodos (Efectivo, Tarjeta, etc.), solo devolver el método
       widget.onMetodoSeleccionado(modo, null);
       Navigator.pop(context);
     }
@@ -111,16 +112,13 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             _buildHeader(),
-
-            // Contenido
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _modosPago.isEmpty
-                  ? _buildEmptyState()
-                  : _buildModosPagoList(),
+                      ? _buildEmptyState()
+                      : _buildModosPagoList(),
             ),
           ],
         ),
@@ -219,27 +217,10 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
   Widget _buildModoPagoCard(ModoPago modo) {
     final isSelected = _modoPagoSeleccionado?.id_modo_pago == modo.id_modo_pago;
 
-    // Iconos según el método
     IconData icono;
     Color color;
 
     switch (modo.id_modo_pago) {
-      case 1: // Efectivo
-        icono = Icons.money;
-        color = Colors.green;
-        break;
-      case 2: // Tarjeta
-        icono = Icons.credit_card;
-        color = Colors.blue;
-        break;
-      case 3: // Cheque
-        icono = Icons.description;
-        color = Colors.orange;
-        break;
-      case 4: // Crédito
-        icono = Icons.account_balance_wallet;
-        color = Colors.purple;
-        break;
       case 5: // Transferencia
         icono = Icons.compare_arrows;
         color = Colors.teal;
@@ -296,26 +277,24 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
                       color: isSelected ? color : Colors.black87,
                     ),
                   ),
-                  if (modo.id_modo_pago == 5 || modo.id_modo_pago == 6) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.upload_file,
-                          size: 14,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.upload_file,
+                        size: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Requiere comprobante',
+                        style: TextStyle(
+                          fontSize: 12,
                           color: Colors.grey.shade600,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Requiere comprobante',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -342,7 +321,7 @@ class SubirComprobanteDialog extends StatefulWidget {
   final ModoPago modoPago;
   final double totalAPagar;
   final int idUsuario;
-  final Cliente cliente; // AÑADIDO
+  final Cliente cliente;
   final Map<String, dynamic> payloadFactura;
 
   const SubirComprobanteDialog({
@@ -350,7 +329,7 @@ class SubirComprobanteDialog extends StatefulWidget {
     required this.modoPago,
     required this.totalAPagar,
     required this.idUsuario,
-    required this.cliente, // AÑADIDO
+    required this.cliente,
     required this.payloadFactura,
   }) : super(key: key);
 
@@ -360,23 +339,23 @@ class SubirComprobanteDialog extends StatefulWidget {
 
 class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
   final PagoCrudImpl _pagoService = PagoCrudImpl();
-  final DatosTransferenciaCrudImpl _transferenciaCrud = DatosTransferenciaCrudImpl(); // ← NUEVO
+  final DatosTransferenciaCrudImpl _transferenciaCrud =
+      DatosTransferenciaCrudImpl();
   final ImagePicker _picker = ImagePicker();
 
   XFile? _imagenSeleccionada;
   Uint8List? _imagenBytes;
   bool _isUploading = false;
 
-  List<DatosTransferencia> _cuentas = []; // ← NUEVO
-  bool _loadingCuentas = true;            // ← NUEVO
+  List<DatosTransferencia> _cuentas = [];
+  bool _loadingCuentas = true;
 
   @override
   void initState() {
     super.initState();
-    _cargarCuentas(); // ← NUEVO
+    _cargarCuentas();
   }
 
-  // ── NUEVO: carga las cuentas de la sucursal 1 ──────────────────
   Future<void> _cargarCuentas() async {
     try {
       final resultado =
@@ -390,7 +369,6 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
     }
   }
 
-  // ── NUEVO: bloque de tarjetas de cuenta ───────────────────────
   Widget _buildDatosCuentas(Color color) {
     if (_loadingCuentas) {
       return const Padding(
@@ -446,85 +424,87 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
   }
 
   Widget _buildTarjetaCuenta(DatosTransferencia cuenta, Color color) {
-  final esTransferencia = widget.modoPago.id_modo_pago == 5;
-  final esGiro = widget.modoPago.id_modo_pago == 6;
+    final esTransferencia = widget.modoPago.id_modo_pago == 5;
+    final esGiro = widget.modoPago.id_modo_pago == 6;
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 10),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.05),
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: color.withOpacity(0.3)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Transferencia: todos los datos menos nro_giro ──────
-        if (esTransferencia) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                cuenta.banco,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (esTransferencia) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
                   cuenta.banco,
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
                     color: color,
                   ),
                 ),
-              ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    cuenta.banco,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            if (cuenta.alias != null && cuenta.alias!.isNotEmpty) ...[
+              _buildFilaDato(Icons.label_outline, 'Alias', cuenta.alias!, copiable: true),
+              const SizedBox(height: 6),
             ],
-          ),
-          const Divider(height: 16),
-          if (cuenta.alias != null && cuenta.alias!.isNotEmpty) ...[
-            _buildFilaDato(Icons.label_outline, 'Alias', cuenta.alias!),
+            _buildFilaDato(
+                Icons.person_outline, 'Titular', cuenta.titular_cuenta),
             const SizedBox(height: 6),
+            _buildFilaDato(Icons.badge_outlined, 'CI', cuenta.ci),
+            const SizedBox(height: 6),
+            _buildFilaDato(Icons.numbers, 'Nro. Cuenta', cuenta.num_cuenta, copiable: true),
           ],
-          _buildFilaDato(Icons.person_outline, 'Titular', cuenta.titular_cuenta),
-          const SizedBox(height: 6),
-          _buildFilaDato(Icons.badge_outlined, 'CI', cuenta.ci),
-          const SizedBox(height: 6),
-          _buildFilaDato(Icons.numbers, 'Nro. Cuenta', cuenta.num_cuenta),
+          if (esGiro &&
+              cuenta.nro_giro != null &&
+              cuenta.nro_giro!.isNotEmpty) ...[
+            _buildFilaDato(Icons.sync_alt, 'Número Giro', cuenta.nro_giro!),
+          ],
+          if (esGiro && (cuenta.nro_giro == null || cuenta.nro_giro!.isEmpty))
+            Row(
+              children: [
+                Icon(Icons.warning_amber_outlined,
+                    size: 15, color: Colors.orange.shade400),
+                const SizedBox(width: 6),
+                Text(
+                  'Sin número receptor registrado',
+                  style:
+                      TextStyle(fontSize: 12, color: Colors.orange.shade600),
+                ),
+              ],
+            ),
         ],
+      ),
+    );
+  }
 
-        // ── Giro: solo nro_giro ────────────────────────────────
-        if (esGiro && cuenta.nro_giro != null && cuenta.nro_giro!.isNotEmpty) ...[
-          _buildFilaDato(Icons.sync_alt, 'Número Giro', cuenta.nro_giro!),
-        ],
-
-        if (esGiro && (cuenta.nro_giro == null || cuenta.nro_giro!.isEmpty))
-          Row(
-            children: [
-              Icon(Icons.warning_amber_outlined,
-                  size: 15, color: Colors.orange.shade400),
-              const SizedBox(width: 6),
-              Text(
-                'Sin número receptor registrado',
-                style: TextStyle(fontSize: 12, color: Colors.orange.shade600),
-              ),
-            ],
-          ),
-      ],
-    ),
-  );
-}
-
-  Widget _buildFilaDato(IconData icono, String label, String valor) {
+  Widget _buildFilaDato(IconData icono, String label, String valor,
+      {bool copiable = false}) {
     return Row(
       children: [
         Icon(icono, size: 15, color: Colors.grey.shade500),
@@ -544,11 +524,55 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        if (copiable) ...[
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () async {
+              await Clipboard.setData(ClipboardData(text: valor));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.check_circle,
+                            color: Colors.white, size: 16),
+                        const SizedBox(width: 8),
+                        Text('$label copiado'),
+                      ],
+                    ),
+                    backgroundColor: Colors.green.shade600,
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.copy, size: 12, color: Colors.grey.shade600),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Copiar',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
-
-  // ── Sin cambios desde aquí ─────────────────────────────────────
 
   Future<void> _seleccionarImagen() async {
     try {
@@ -654,8 +678,8 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Row(
               children: [
                 Icon(Icons.check_circle,
@@ -740,11 +764,11 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700), // ← altura aumentada
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header (sin cambios)
+            // Header
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -807,7 +831,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Monto (sin cambios)
+                    // Monto
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -821,10 +845,11 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                       ),
                       child: Column(
                         children: [
-                          Text('Monto a Pagar',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade700)),
+                          Text(
+                            'Monto a Pagar',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey.shade700),
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             '${widget.totalAPagar.toStringAsFixed(0)} Gs.',
@@ -839,12 +864,11 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ── NUEVO: datos de transferencia ──────────────
+                    // Datos de transferencia/giro
                     _buildDatosCuentas(color),
                     const SizedBox(height: 20),
-                    // ──────────────────────────────────────────────
 
-                    // Instrucciones (sin cambios)
+                    // Instrucciones
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -862,8 +886,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                             child: Text(
                               'Por favor, suba una foto o captura de pantalla del comprobante de pago. El pago quedará en estado PENDIENTE hasta su aprobación.',
                               style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey.shade700),
+                                  fontSize: 13, color: Colors.grey.shade700),
                             ),
                           ),
                         ],
@@ -871,7 +894,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Previsualización (sin cambios)
+                    // Previsualización
                     if (_imagenSeleccionada != null) ...[
                       Container(
                         height: 200,
@@ -881,14 +904,14 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.memory(_imagenBytes!,
-                              fit: BoxFit.cover),
+                          child:
+                              Image.memory(_imagenBytes!, fit: BoxFit.cover),
                         ),
                       ),
                       const SizedBox(height: 16),
                     ],
 
-                    // Botones galería/cámara (sin cambios)
+                    // Botones galería/cámara
                     Row(
                       children: [
                         Expanded(
@@ -919,7 +942,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Botón confirmar (sin cambios)
+                    // Botón confirmar
                     ElevatedButton.icon(
                       onPressed:
                           _isUploading || _imagenSeleccionada == null
@@ -936,14 +959,12 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                               ),
                             )
                           : const Icon(Icons.check),
-                      label: Text(_isUploading
-                          ? 'Procesando...'
-                          : 'Confirmar Pago'),
+                      label: Text(
+                          _isUploading ? 'Procesando...' : 'Confirmar Pago'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: color,
                         foregroundColor: Colors.white,
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         disabledBackgroundColor: Colors.grey.shade300,
                       ),
                     ),

@@ -1,5 +1,5 @@
 import 'package:app_links/app_links.dart';
-import 'package:flutter/foundation.dart'; // [NUEVO] para kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myapp/dao/clientecrudimpl.dart';
@@ -25,7 +25,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   late final AppLinks _appLinks;
 
   bool _isLoading = false;
-  bool _autenticado = false; // [RENOMBRADO] era _googleAutenticado, ahora cubre Google y Facebook
+  bool _autenticado = false;
   String? _emailGoogle;
   String? _nombreGoogle;
   String? _fotoGoogle;
@@ -46,15 +46,14 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         final user = session.user;
         setState(() {
           _autenticado = true;
-          // Facebook a veces no devuelve email, se maneja con fallback
           _emailGoogle = user.email ?? 'Sin email';
           _nombreGoogle =
               user.userMetadata?['full_name'] ??
-              user.userMetadata?['name'] ?? // [NUEVO] Facebook usa 'name'
+              user.userMetadata?['name'] ??
               user.email;
           _fotoGoogle =
               user.userMetadata?['avatar_url'] ??
-              user.userMetadata?['picture']; // [NUEVO] Facebook usa 'picture'
+              user.userMetadata?['picture'];
           _isLoading = false;
           _errorMessage = null;
         });
@@ -79,9 +78,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     super.dispose();
   }
 
-  // [NUEVO] redirectTo dinámico: Netlify en web, deep link en móvil
   String get _redirectTo => kIsWeb
-      ? 'https://tu-app.netlify.app' // ← reemplazá con tu URL de Netlify
+      ? 'https://aguateria-prueba1.netlify.app'
       : 'com.example.myapp://login-callback';
 
   Future<void> _autenticarConGoogle() async {
@@ -92,7 +90,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: _redirectTo, // [CAMBIADO] usa el getter dinámico
+        redirectTo: _redirectTo,
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
     } catch (e) {
@@ -100,11 +98,9 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         _errorMessage = 'Error al autenticar con Google. Intente nuevamente.';
         _isLoading = false;
       });
-      print('Error Google OAuth: $e');
     }
   }
 
-  // [NUEVO] Autenticación con Facebook, idéntica a Google salvo el provider
   Future<void> _autenticarConFacebook() async {
     setState(() {
       _isLoading = true;
@@ -121,65 +117,85 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         _errorMessage = 'Error al autenticar con Facebook. Intente nuevamente.';
         _isLoading = false;
       });
-      print('Error Facebook OAuth: $e');
     }
   }
 
   Future<void> _buscarCliente() async {
-    final documento = _documentoController.text.trim();
+  final documento = _documentoController.text.trim();
 
-    if (documento.isEmpty) {
-      setState(() => _errorMessage = 'Por favor, ingrese su número de CI');
+  if (documento.isEmpty) {
+    setState(() => _errorMessage = 'Por favor, ingrese su número de CI');
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+    _clienteEncontrado = null;
+    _inmuebles = [];
+    _inmuebleSeleccionado = null;
+  });
+
+  try {
+    final cliente = await _clienteCrud.buscarClientePorDocumento(documento);
+
+    if (cliente == null) {
+      setState(() {
+        _errorMessage =
+            'Tu CI no está registrado en el sistema. '
+            'Contactá a la oficina para registrarte.';
+        _isLoading = false;
+      });
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _clienteEncontrado = null;
-      _inmuebles = [];
-      _inmuebleSeleccionado = null;
-    });
+    // ── Verificación / registro de email ────────────────────────────────
+    final emailSesion = (_emailGoogle != null && _emailGoogle != 'Sin email')
+        ? _emailGoogle!
+        : null;
+    final emailBD = (cliente.email != null && cliente.email!.trim().isNotEmpty)
+        ? cliente.email!.trim()
+        : null;
 
-    try {
-      final cliente = await _clienteCrud.buscarClientePorDocumento(documento);
-
-      if (cliente == null) {
+    if (emailBD == null && emailSesion != null) {
+      // Sin email en BD → guardar el de la sesión
+      await _clienteCrud.actualizarEmailCliente(cliente.idCliente!, emailSesion);
+    } else if (emailBD != null && emailSesion != null) {
+      // Ambos tienen email → verificar que coincidan
+      if (emailBD.toLowerCase() != emailSesion.toLowerCase()) {
         setState(() {
           _errorMessage =
-              'Tu CI no está registrado en el sistema. '
-              'Contactá a la oficina para registrarte.';
+              'El correo de tu cuenta (${emailSesion}) no coincide con el '
+              'registrado en el sistema. '
+              'Iniciá sesión con el correo correcto o contactá a la oficina.';
           _isLoading = false;
         });
         return;
       }
-
-      // CI encontrado → guarda el email solo si existe
-      if (_emailGoogle != null && _emailGoogle != 'Sin email') {
-        await _clienteCrud.actualizarEmailCliente(
-          cliente.idCliente!,
-          _emailGoogle!,
-        );
-      }
-
-      final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
-        cliente.idCliente!,
-      );
-
-      setState(() {
-        _clienteEncontrado = cliente;
-        _inmuebles = inmuebles;
-        _isLoading = false;
-        if (inmuebles.isEmpty) _errorMessage = 'No tiene inmuebles registrados';
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Error al buscar. Intente nuevamente.';
-        _isLoading = false;
-      });
-      print('Error en búsqueda: $e');
     }
+    // ────────────────────────────────────────────────────────────────────
+
+    final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
+      cliente.idCliente!,
+    );
+
+    setState(() {
+      _clienteEncontrado = cliente;
+      _inmuebles = inmuebles;
+      _isLoading = false;
+      if (inmuebles.isEmpty) _errorMessage = 'No tiene inmuebles registrados';
+    });
+
+    if (inmuebles.length == 1) {
+      _seleccionarInmueble(inmuebles.first);
+    }
+  } catch (e) {
+    setState(() {
+      _errorMessage = 'Error al buscar. Intente nuevamente.';
+      _isLoading = false;
+    });
   }
+}
 
   void _seleccionarInmueble(Inmuebles? inmueble) {
     setState(() => _inmuebleSeleccionado = inmueble);
@@ -251,10 +267,11 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                               ),
                             ],
                           ),
-                          // [CAMBIADO] usa _autenticado en lugar de _googleAutenticado
-                          child: _autenticado
-                              ? _buildPaso2CiForm()
-                              : _buildPaso1Login(),
+                          child: !_autenticado
+                              ? _buildPaso1Login()
+                              : (_clienteEncontrado != null && _inmuebles.length > 1)
+                                  ? _buildPaso3SelectorInmuebles()
+                                  : _buildPaso2CiForm(),
                         ),
                       ],
                     ),
@@ -269,7 +286,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
-  // [RENOMBRADO + MODIFICADO] era _buildPaso1GoogleLogin, ahora incluye Facebook
   Widget _buildPaso1Login() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -310,8 +326,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
           _buildErrorBox(_errorMessage!),
           const SizedBox(height: 16),
         ],
-
-        // Botón Google (sin cambios)
         OutlinedButton(
           onPressed: _isLoading ? null : _autenticarConGoogle,
           style: OutlinedButton.styleFrom(
@@ -343,10 +357,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                   ],
                 ),
         ),
-
         const SizedBox(height: 12),
-
-        // [NUEVO] Botón Facebook
         OutlinedButton(
           onPressed: _isLoading ? null : _autenticarConFacebook,
           style: OutlinedButton.styleFrom(
@@ -382,7 +393,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                   ],
                 ),
         ),
-
         const SizedBox(height: 20),
         Text(
           'Tu sesión es segura y solo vos podés ver tu información.',
@@ -465,28 +475,188 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
         ),
-        if (_clienteEncontrado != null) ...[
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          _buildClienteInfo(),
-          if (_inmuebles.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            _buildSelectorInmuebles(),
-          ],
-          const SizedBox(height: 16),
-          TextButton.icon(
-            onPressed: _limpiarBusqueda,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Nueva consulta'),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF0085FF),
-            ),
-          ),
-        ],
         const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: _cerrarSesion,
+          icon: const Icon(Icons.logout, size: 18),
+          label: const Text('Cerrar sesión'),
+          style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
+        ),
+      ],
+    );
+  }
+
+  // ── Paso 3: pantalla completa de selección de inmueble ───────────────────
+  Widget _buildPaso3SelectorInmuebles() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildGoogleUserChip(),
+        const SizedBox(height: 24),
+
+        // Info del cliente
+        _buildClienteInfo(),
+        const SizedBox(height: 24),
+        const Divider(),
+        const SizedBox(height: 20),
+
+        // Título del selector
+        Row(
+          children: [
+            const Icon(Icons.home_work_outlined,
+                color: Color(0xFF0085FF), size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Seleccioná tu inmueble',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0085FF).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_inmuebles.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0085FF),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // Tarjetas de inmuebles
+        ..._inmuebles.asMap().entries.map((entry) {
+          final index = entry.key;
+          final inmueble = entry.value;
+          final isSelected =
+              _inmuebleSeleccionado?.cod_inmueble == inmueble.cod_inmueble;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: InkWell(
+              onTap: () => _seleccionarInmueble(inmueble),
+              borderRadius: BorderRadius.circular(14),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF0085FF).withOpacity(0.07)
+                      : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF0085FF)
+                        : Colors.grey[200]!,
+                    width: isSelected ? 2 : 1,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF0085FF).withOpacity(0.12),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF0085FF)
+                            : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: isSelected
+                            ? const Icon(Icons.home,
+                                color: Colors.white, size: 22)
+                            : Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Código: ${inmueble.cod_inmueble}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? const Color(0xFF0085FF)
+                                  : const Color(0xFF111827),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on_outlined,
+                                  size: 13, color: Colors.grey[500]),
+                              const SizedBox(width: 3),
+                              Expanded(
+                                child: Text(
+                                  inmueble.direccion,
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey[600]),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      isSelected ? Icons.check_circle : Icons.arrow_forward_ios,
+                      color: isSelected
+                          ? const Color(0xFF0085FF)
+                          : Colors.grey[400],
+                      size: isSelected ? 22 : 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+
+        const SizedBox(height: 20),
+        const Divider(),
+        const SizedBox(height: 8),
+
+        // Volver a buscar
+        TextButton.icon(
+          onPressed: _limpiarBusqueda,
+          icon: const Icon(Icons.arrow_back, size: 18),
+          label: const Text('Cambiar CI'),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFF0085FF)),
+        ),
         TextButton.icon(
           onPressed: _cerrarSesion,
           icon: const Icon(Icons.logout, size: 18),
@@ -588,12 +758,14 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(Icons.email_outlined, size: 12, color: Colors.grey[500]),
+                    Icon(Icons.email_outlined,
+                        size: 12, color: Colors.grey[500]),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         _emailGoogle!,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[500]),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -602,59 +774,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
               ],
             ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSelectorInmuebles() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Seleccioná tu inmueble',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF111827),
-          ),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<Inmuebles>(
-          value: _inmuebleSeleccionado,
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.home, color: Color(0xFF0085FF)),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF0085FF), width: 2),
-            ),
-          ),
-          hint: const Text('Seleccioná un inmueble'),
-          items: _inmuebles.map((inmueble) {
-            return DropdownMenuItem<Inmuebles>(
-              value: inmueble,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Código: ${inmueble.cod_inmueble}',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    inmueble.direccion,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: _seleccionarInmueble,
         ),
       ],
     );
@@ -691,7 +810,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
-  // [NUEVO] Logo de Facebook con su ícono "f"
   Widget _buildFacebookLogo() {
     return Container(
       width: 22,
@@ -714,73 +832,69 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0085FF), Color(0xFF0066CC)],
+  return Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF0085FF), Color(0xFF0066CC)],
+      ),
+    ),
+    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+    child: Row(
+      children: [
+        const CircleAvatar(
+          radius: 20,
+          backgroundColor: Colors.white,
+          child: Icon(
+            Icons.water_drop,
+            size: 22,
+            color: Color(0xFF0085FF),
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-            child: const Column(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.water_drop,
-                    size: 40,
-                    color: Color(0xFF0085FF),
-                  ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'SERVICIO DE AGUA',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
                 ),
-                SizedBox(height: 16),
-                Text(
-                  'SERVICIO DE AGUA',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'SANTA ROSA - C.F.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: IconButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
               ),
-              icon: const Icon(
-                Icons.admin_panel_settings,
-                color: Colors.white,
-                size: 28,
+              Text(
+                'SANTA ROSA - C.F.',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 1.0,
+                ),
               ),
-              tooltip: 'Acceso Administrativo',
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        IconButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          ),
+          icon: const Icon(
+            Icons.admin_panel_settings,
+            color: Colors.white,
+            size: 24,
+          ),
+          tooltip: 'Acceso Administrativo',
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildFooter() {
     return Container(
