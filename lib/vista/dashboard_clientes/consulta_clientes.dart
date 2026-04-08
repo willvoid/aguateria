@@ -232,7 +232,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     }
   }
 
-  Future<void> _autenticarConFacebook() async {
+  /*Future<void> _autenticarConFacebook() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -252,7 +252,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         _isLoading = false;
       });
     }
-  }
+  }*/
 
   Future<void> _cargarInmueblesYNavegar() async {
     if (_clienteEncontrado == null) return;
@@ -624,7 +624,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                   ],
                 ),
         ),
-        const SizedBox(height: 12),
+        /*const SizedBox(height: 12),
         OutlinedButton(
           onPressed: _isLoading ? null : _autenticarConFacebook,
           style: OutlinedButton.styleFrom(
@@ -660,7 +660,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                     ),
                   ],
                 ),
-        ),
+        ),*/
         const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 8),
@@ -966,7 +966,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
-  Widget _buildFacebookLogo() {
+  /*Widget _buildFacebookLogo() {
     return Container(
       width: 22,
       height: 22,
@@ -985,7 +985,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         ),
       ),
     );
-  }
+  }*/
 
   Widget _buildHeader() {
     return Container(
