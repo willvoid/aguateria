@@ -19,6 +19,7 @@ class DatosTransferenciaCrudImpl {
             'num_cuenta': datos.num_cuenta,
             'fk_sucursal': datos.fk_sucursal.id_establecimiento,
             'nro_giro': datos.nro_giro,
+            'ci_giro': datos.ci_giro,
           });
 
       print('DatosTransferencia creado exitosamente');
@@ -142,6 +143,7 @@ class DatosTransferenciaCrudImpl {
             'num_cuenta': datos.num_cuenta,
             'fk_sucursal': datos.fk_sucursal.id_establecimiento,
             'nro_giro': datos.nro_giro,
+            'ci_giro': datos.ci_giro,
           })
           .eq('id', datos.id);
 
@@ -206,6 +208,7 @@ class DatosTransferenciaCrudImpl {
       num_cuenta: mapa['num_cuenta'] ?? '',
       fk_sucursal: Establecimiento.fromMap(datosSucursal),
       nro_giro: mapa['nro_giro'],
+      ci_giro: mapa['ci_giro'],
     );
   }
 }

@@ -96,7 +96,6 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
       bool exito;
 
       if (item.id == 0) {
-        // Nuevo registro — id 0 indica creación
         final cuentaExiste = await _crud.verificarCuentaExistente(item.num_cuenta);
         if (cuentaExiste) {
           Navigator.pop(context);
@@ -296,6 +295,7 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
                                 DataColumn(label: Text('CI')),
                                 DataColumn(label: Text('Nro. Cuenta')),
                                 DataColumn(label: Text('Nro. Giro')),
+                                DataColumn(label: Text('CI Giro')), // ← nuevo
                                 DataColumn(label: Text('Sucursal')),
                                 DataColumn(label: Text('Acciones')),
                               ],
@@ -308,8 +308,8 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
                                   DataCell(Text(item.ci)),
                                   DataCell(Text(item.num_cuenta)),
                                   DataCell(Text(item.nro_giro ?? '-')),
-                                  DataCell(Text(item.fk_sucursal
-                                      .denominacion)),
+                                  DataCell(Text(item.ci_giro ?? '-')), // ← nuevo
+                                  DataCell(Text(item.fk_sucursal.denominacion)),
                                   DataCell(
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -380,6 +380,7 @@ class _DialogoEditarTransferenciaState
   late TextEditingController _ciController;
   late TextEditingController _numCuentaController;
   late TextEditingController _nroGiroController;
+  late TextEditingController _ciGiroController; // ← nuevo
 
   late Establecimiento _sucursalSeleccionada;
 
@@ -399,6 +400,8 @@ class _DialogoEditarTransferenciaState
         TextEditingController(text: widget.item?.num_cuenta ?? '');
     _nroGiroController =
         TextEditingController(text: widget.item?.nro_giro ?? '');
+    _ciGiroController =                                          // ← nuevo
+        TextEditingController(text: widget.item?.ci_giro ?? '');
 
     _sucursalSeleccionada = widget.item != null
         ? widget.establecimientos.firstWhere(
@@ -415,7 +418,7 @@ class _DialogoEditarTransferenciaState
     return Dialog(
       child: Container(
         width: 700,
-        constraints: const BoxConstraints(maxHeight: 620),
+        constraints: const BoxConstraints(maxHeight: 680), // ← ajustado
         child: Column(
           children: [
             // ── Header ──────────────────────────────────────────
@@ -527,13 +530,28 @@ class _DialogoEditarTransferenciaState
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildDropdown<Establecimiento>(
-                        label: 'Sucursal *',
-                        value: _sucursalSeleccionada,
-                        items: widget.establecimientos,
-                        onChanged: (v) =>
-                            setState(() => _sucursalSeleccionada = v!),
-                        itemLabel: (e) => e.denominacion,
+                      // ── Fila nueva: CI Giro + Sucursal ──────────
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: _ciGiroController,
+                              label: 'CI Giro',
+                              hint: 'CI del giro (opcional)',
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildDropdown<Establecimiento>(
+                              label: 'Sucursal *',
+                              value: _sucursalSeleccionada,
+                              items: widget.establecimientos,
+                              onChanged: (v) =>
+                                  setState(() => _sucursalSeleccionada = v!),
+                              itemLabel: (e) => e.denominacion,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -660,7 +678,7 @@ class _DialogoEditarTransferenciaState
   void _guardar() {
     if (_formKey.currentState!.validate()) {
       final item = DatosTransferencia(
-        id: widget.item?.id ?? 0, // 0 indica nuevo registro
+        id: widget.item?.id ?? 0,
         alias: _aliasController.text.isEmpty ? null : _aliasController.text,
         titular_cuenta: _titularController.text,
         banco: _bancoController.text,
@@ -669,6 +687,8 @@ class _DialogoEditarTransferenciaState
         fk_sucursal: _sucursalSeleccionada,
         nro_giro:
             _nroGiroController.text.isEmpty ? null : _nroGiroController.text,
+        ci_giro:                                                  // ← nuevo
+            _ciGiroController.text.isEmpty ? null : _ciGiroController.text,
       );
 
       widget.onGuardar(item);
@@ -683,6 +703,7 @@ class _DialogoEditarTransferenciaState
     _ciController.dispose();
     _numCuentaController.dispose();
     _nroGiroController.dispose();
+    _ciGiroController.dispose(); // ← nuevo
     super.dispose();
   }
 }
