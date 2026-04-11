@@ -659,7 +659,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
         final detalles = widget.payloadFactura['detalles'] as List<dynamic>;
         final fkInmueble = widget.payloadFactura['fk_inmueble'] as int;
         try {
-          await supabase.rpc(
+          final resultado = await supabase.rpc(
             'crear_detalle_pago_deuda',
             params: {
               'p_id_pago': pagoCreado.idPago,
@@ -667,8 +667,10 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
               'p_detalles': detalles,
             },
           );
+          print('✅ RPC exitosa: $resultado');
         } catch (e) {
-          print('Error al crear el detalle de pago: $e');
+          print('❌ Error de la RPC: $e');  //Error real
+          rethrow;
         }
       }
 

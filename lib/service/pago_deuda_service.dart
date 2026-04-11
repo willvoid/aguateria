@@ -279,7 +279,7 @@ Future<List<Ciclo>> cargarCiclosDisponiblesConsumo(int idInmueble) async {
               nro_secuencial
             )
           ''')
-          .eq('fk_deudas', idDeuda)
+          .eq('fk_deuda', idDeuda)
           .order('id_detalle', ascending: false);
 
       return List<Map<String, dynamic>>.from(response);
