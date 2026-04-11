@@ -14,8 +14,7 @@ class DashboardResumenPage extends StatefulWidget {
       _DashboardResumenPageState();
 }
 
-class _DashboardResumenPageState
-    extends State<DashboardResumenPage> {
+class _DashboardResumenPageState extends State<DashboardResumenPage> {
   final AsientosCrudImpl _asientosCrud = AsientosCrudImpl();
 
   List<Asientos> _asientosDelMes = [];
@@ -23,11 +22,57 @@ class _DashboardResumenPageState
   double _totalDebe = 0;
   double _totalHaber = 0;
 
-  // Datos para el gráfico: lista de { mes, label, debe, haber }
   List<Map<String, dynamic>> _datosMensuales = [];
 
   bool _isLoading = true;
   final DateTime _ahora = DateTime.now();
+
+  // ── Período ──────────────────────────────────────────────────────────────
+  int _periodoSeleccionado = 0; // 0=este mes, 1=mes anterior, 2=personalizado
+  DateTime? _fechaInicio;
+  DateTime? _fechaFin;
+
+  DateTime get _rangoInicio {
+    if (_periodoSeleccionado == 2 && _fechaInicio != null) {
+      return DateTime.utc(
+          _fechaInicio!.year, _fechaInicio!.month, _fechaInicio!.day);
+    }
+    if (_periodoSeleccionado == 1) {
+      final mes = _ahora.month == 1 ? 12 : _ahora.month - 1;
+      final anio =
+          _ahora.month == 1 ? _ahora.year - 1 : _ahora.year;
+      return DateTime.utc(anio, mes, 1);
+    }
+    return DateTime.utc(_ahora.year, _ahora.month, 1);
+  }
+
+  DateTime get _rangoFin {
+    if (_periodoSeleccionado == 2 && _fechaFin != null) {
+      return DateTime.utc(
+          _fechaFin!.year, _fechaFin!.month, _fechaFin!.day + 1);
+    }
+    if (_periodoSeleccionado == 1) {
+      return DateTime.utc(_ahora.year, _ahora.month, 1);
+    }
+    return DateTime.utc(_ahora.year, _ahora.month + 1, 1);
+  }
+
+  String get _labelPeriodo {
+    if (_periodoSeleccionado == 2 &&
+        _fechaInicio != null &&
+        _fechaFin != null) {
+      final d = (DateTime d) =>
+          '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+      return '${d(_fechaInicio!)} — ${d(_fechaFin!)}';
+    }
+    if (_periodoSeleccionado == 1) {
+      final mes = _ahora.month == 1 ? 12 : _ahora.month - 1;
+      final anio =
+          _ahora.month == 1 ? _ahora.year - 1 : _ahora.year;
+      return _formatMesAnio(DateTime(anio, mes));
+    }
+    return _formatMesAnio(_ahora);
+  }
 
   @override
   void initState() {
@@ -38,13 +83,12 @@ class _DashboardResumenPageState
   Future<void> _cargarDatos() async {
     setState(() => _isLoading = true);
     try {
-      final inicio = DateTime.utc(_ahora.year, _ahora.month, 1);
-      final fin = DateTime.utc(_ahora.year, _ahora.month + 1, 1);
+      final inicio = _rangoInicio;
+      final fin = _rangoFin;
 
-      // 1. Asientos del mes actual
-      final asientos = await _asientosCrud.leerPorRangoFechas(inicio, fin);
+      final asientos =
+          await _asientosCrud.leerPorRangoFechas(inicio, fin);
 
-      // 2. Detalles del mes actual para totales y resumen por cuenta
       double debe = 0;
       double haber = 0;
       final Map<String, Map<String, dynamic>> porCuenta = {};
@@ -68,7 +112,8 @@ class _DashboardResumenPageState
 
           final cuenta = d['cuentas_contables'];
           if (cuenta != null) {
-            final nombre = cuenta['nombre'] as String? ?? 'Sin nombre';
+            final nombre =
+                cuenta['nombre'] as String? ?? 'Sin nombre';
             final codigo = cuenta['codigo'] as String? ?? '';
             if (!porCuenta.containsKey(nombre)) {
               porCuenta[nombre] = {
@@ -87,14 +132,14 @@ class _DashboardResumenPageState
       }
 
       final resumen = porCuenta.values.map((c) {
-        final saldo = (c['haber'] as double) - (c['debe'] as double);
+        final saldo =
+            (c['haber'] as double) - (c['debe'] as double);
         return {...c, 'saldo': saldo};
       }).toList();
       resumen.sort((a, b) => (b['saldo'] as double)
           .abs()
           .compareTo((a['saldo'] as double).abs()));
 
-      // 3. Datos de los últimos 6 meses para el gráfico
       final datosMensuales = await _cargarUltimosSeisMeses();
 
       setState(() {
@@ -113,7 +158,8 @@ class _DashboardResumenPageState
     }
   }
 
-  Future<List<Map<String, dynamic>>> _cargarUltimosSeisMeses() async {
+  Future<List<Map<String, dynamic>>>
+      _cargarUltimosSeisMeses() async {
     const mesesLabel = [
       'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
@@ -122,7 +168,6 @@ class _DashboardResumenPageState
     final List<Map<String, dynamic>> resultado = [];
 
     for (int i = 5; i >= 0; i--) {
-      // Calcular el mes correspondiente
       int mes = _ahora.month - i;
       int anio = _ahora.year;
       while (mes <= 0) {
@@ -134,7 +179,6 @@ class _DashboardResumenPageState
       final finMes = DateTime.utc(anio, mes + 1, 1);
 
       try {
-        // Traer asientos del mes
         final asientosMes =
             await _asientosCrud.leerPorRangoFechas(inicioMes, finMes);
 
@@ -175,6 +219,39 @@ class _DashboardResumenPageState
     return resultado;
   }
 
+  Future<void> _seleccionarRangoPersonalizado() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      initialDateRange: _fechaInicio != null && _fechaFin != null
+          ? DateTimeRange(start: _fechaInicio!, end: _fechaFin!)
+          : DateTimeRange(
+              start: DateTime(_ahora.year, _ahora.month, 1),
+              end: _ahora,
+            ),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF0085FF),
+            onPrimary: Colors.white,
+            surface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _fechaInicio = picked.start;
+        _fechaFin = picked.end;
+        _periodoSeleccionado = 2;
+      });
+      _cargarDatos();
+    }
+  }
+
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -185,27 +262,26 @@ class _DashboardResumenPageState
     );
   }
 
-  // ── Cálculos derivados ──────────────────────────────────────────────────────
-
   int get _asientosAsentados =>
       _asientosDelMes.where((a) => a.estado == 'ASENTADO').length;
 
   int get _asientosPendientes =>
       _asientosDelMes.where((a) => a.estado == 'PENDIENTE').length;
 
-  // ── Helpers de formato ──────────────────────────────────────────────────────
-
   String _formatGuarani(double valor) {
     final abs = valor.abs();
-    if (abs >= 1000000) return '₲ ${(abs / 1000000).toStringAsFixed(1)}M';
-    if (abs >= 1000) return '₲ ${(abs / 1000).toStringAsFixed(0)}K';
+    if (abs >= 1000000)
+      return '₲ ${(abs / 1000000).toStringAsFixed(1)}M';
+    if (abs >= 1000)
+      return '₲ ${(abs / 1000).toStringAsFixed(0)}K';
     return '₲ ${abs.toStringAsFixed(0)}';
   }
 
   String _formatMesAnio(DateTime fecha) {
     const meses = [
       'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre',
+      'diciembre'
     ];
     return '${meses[fecha.month - 1]} ${fecha.year}';
   }
@@ -213,8 +289,6 @@ class _DashboardResumenPageState
   String _formatFechaCorta(DateTime fecha) {
     return '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}';
   }
-
-  // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -233,9 +307,11 @@ class _DashboardResumenPageState
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(flex: 3, child: _buildTablaAsientos()),
+                      Expanded(
+                          flex: 3, child: _buildTablaAsientos()),
                       const SizedBox(width: 16),
-                      Expanded(flex: 2, child: _buildResumenCuentas()),
+                      Expanded(
+                          flex: 2, child: _buildResumenCuentas()),
                     ],
                   ),
                 ],
@@ -243,8 +319,6 @@ class _DashboardResumenPageState
             ),
     );
   }
-
-  // ── Header ──────────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
     return Row(
@@ -262,13 +336,53 @@ class _DashboardResumenPageState
             ),
             const SizedBox(height: 2),
             Text(
-              'Período: ${_formatMesAnio(_ahora)}',
-              style:
-                  const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              'Período: $_labelPeriodo',
+              style: const TextStyle(
+                  fontSize: 13, color: Color(0xFF6B7280)),
             ),
           ],
         ),
         const Spacer(),
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.all(3),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PeriodoTab(
+                label: 'Este mes',
+                activo: _periodoSeleccionado == 0,
+                onTap: () {
+                  if (_periodoSeleccionado != 0) {
+                    setState(() => _periodoSeleccionado = 0);
+                    _cargarDatos();
+                  }
+                },
+              ),
+              _PeriodoTab(
+                label: 'Mes anterior',
+                activo: _periodoSeleccionado == 1,
+                onTap: () {
+                  if (_periodoSeleccionado != 1) {
+                    setState(() => _periodoSeleccionado = 1);
+                    _cargarDatos();
+                  }
+                },
+              ),
+              _PeriodoTab(
+                label: _periodoSeleccionado == 2
+                    ? 'Personalizado ✓'
+                    : 'Personalizado',
+                activo: _periodoSeleccionado == 2,
+                onTap: _seleccionarRangoPersonalizado,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
         IconButton(
           onPressed: _cargarDatos,
           icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
@@ -278,13 +392,10 @@ class _DashboardResumenPageState
     );
   }
 
-  // ── Fila superior: 3 tarjetas + gráfico ────────────────────────────────────
-
   Widget _buildTopRow() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Columna de 3 tarjetas métricas apiladas
         SizedBox(
           width: 200,
           child: Column(
@@ -306,7 +417,7 @@ class _DashboardResumenPageState
               ),
               const SizedBox(height: 10),
               _MetricCard(
-                label: 'Asientos del mes',
+                label: 'Asientos del período',
                 value: '${_asientosDelMes.length}',
                 icon: Icons.receipt_long_rounded,
                 iconColor: const Color(0xFF0085FF),
@@ -318,13 +429,10 @@ class _DashboardResumenPageState
           ),
         ),
         const SizedBox(width: 16),
-        // Gráfico de línea — ocupa el resto del ancho
         Expanded(child: _buildGraficoEvolucion()),
       ],
     );
   }
-
-  // ── Gráfico de evolución ────────────────────────────────────────────────────
 
   Widget _buildGraficoEvolucion() {
     return Container(
@@ -349,9 +457,11 @@ class _DashboardResumenPageState
                 ),
               ),
               const Spacer(),
-              _LeyendaPunto(color: const Color(0xFF10B981), label: 'Haber'),
+              _LeyendaPunto(
+                  color: const Color(0xFF10B981), label: 'Haber'),
               const SizedBox(width: 16),
-              _LeyendaPunto(color: const Color(0xFFEF4444), label: 'Debe'),
+              _LeyendaPunto(
+                  color: const Color(0xFFEF4444), label: 'Debe'),
             ],
           ),
           const SizedBox(height: 12),
@@ -360,10 +470,12 @@ class _DashboardResumenPageState
                 ? const Center(
                     child: Text('Sin datos',
                         style: TextStyle(
-                            color: Color(0xFF9CA3AF), fontSize: 13)),
+                            color: Color(0xFF9CA3AF),
+                            fontSize: 13)),
                   )
                 : CustomPaint(
-                    painter: _LineChartPainter(datos: _datosMensuales),
+                    painter:
+                        _LineChartPainter(datos: _datosMensuales),
                     size: Size.infinite,
                   ),
           ),
@@ -371,8 +483,6 @@ class _DashboardResumenPageState
       ),
     );
   }
-
-  // ── Tabla de asientos ───────────────────────────────────────────────────────
 
   Widget _buildTablaAsientos() {
     return Container(
@@ -389,7 +499,7 @@ class _DashboardResumenPageState
             child: Row(
               children: [
                 const Text(
-                  'Asientos del mes',
+                  'Asientos del período',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -415,8 +525,8 @@ class _DashboardResumenPageState
           ),
           const SizedBox(height: 8),
           _asientosDelMes.isEmpty
-              ? _buildEmptyState(
-                  Icons.receipt_long_outlined, 'Sin asientos este mes')
+              ? _buildEmptyState(Icons.receipt_long_outlined,
+                  'Sin asientos en este período')
               : SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
@@ -441,8 +551,8 @@ class _DashboardResumenPageState
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF0085FF)),
                         )),
-                        DataCell(
-                            Text(_formatFechaCorta(asiento.fecha))),
+                        DataCell(Text(
+                            _formatFechaCorta(asiento.fecha))),
                         DataCell(SizedBox(
                           width: 180,
                           child: Text(
@@ -474,8 +584,6 @@ class _DashboardResumenPageState
       ),
     );
   }
-
-  // ── Resumen por cuentas ─────────────────────────────────────────────────────
 
   Widget _buildResumenCuentas() {
     return Container(
@@ -519,7 +627,7 @@ class _DashboardResumenPageState
           Divider(color: Colors.grey.shade200, height: 1),
           _resumenCuentas.isEmpty
               ? _buildEmptyState(Icons.account_balance_outlined,
-                  'Sin movimientos este mes')
+                  'Sin movimientos en este período')
               : ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -549,7 +657,8 @@ class _DashboardResumenPageState
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                if ((c['codigo'] as String).isNotEmpty)
+                                if ((c['codigo'] as String)
+                                    .isNotEmpty)
                                   Text(
                                     c['codigo'] as String,
                                     style: const TextStyle(
@@ -561,7 +670,8 @@ class _DashboardResumenPageState
                           ),
                           const SizedBox(width: 8),
                           Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.end,
                             children: [
                               Text(
                                 '${esSuperavit ? '+' : ''}${_formatGuarani(saldo)}',
@@ -601,8 +711,6 @@ class _DashboardResumenPageState
     );
   }
 
-  // ── Helpers de UI ───────────────────────────────────────────────────────────
-
   Widget _buildEstadoBadge(String estado) {
     Color bg;
     Color fg;
@@ -624,13 +732,16 @@ class _DashboardResumenPageState
         fg = Colors.grey.shade600;
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
           color: bg, borderRadius: BorderRadius.circular(4)),
       child: Text(
         estado,
         style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w500, color: fg),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: fg),
       ),
     );
   }
@@ -653,7 +764,57 @@ class _DashboardResumenPageState
   }
 }
 
-// ── CustomPainter del gráfico de línea ─────────────────────────────────────
+// ── Selector de período ─────────────────────────────────────────────────────
+
+class _PeriodoTab extends StatelessWidget {
+  final String label;
+  final bool activo;
+  final VoidCallback onTap;
+
+  const _PeriodoTab({
+    required this.label,
+    required this.activo,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(
+            horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: activo ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: activo
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  )
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight:
+                activo ? FontWeight.w600 : FontWeight.w400,
+            color: activo
+                ? const Color(0xFF111827)
+                : const Color(0xFF6B7280),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── CustomPainter del gráfico de línea ──────────────────────────────────────
 
 class _LineChartPainter extends CustomPainter {
   final List<Map<String, dynamic>> datos;
@@ -671,26 +832,21 @@ class _LineChartPainter extends CustomPainter {
     final labels =
         datos.map((d) => d['label'] as String).toList();
 
-    final maxVal = [
-      ...haberVals,
-      ...debeVals,
-    ].fold(0.0, (prev, v) => v > prev ? v : prev);
-
-    // Si todo es 0, mostrar eje vacío
+    final maxVal = [...haberVals, ...debeVals]
+        .fold(0.0, (prev, v) => v > prev ? v : prev);
     final effectiveMax = maxVal == 0 ? 1.0 : maxVal * 1.15;
 
-    final paddingLeft = 48.0;
-    final paddingBottom = 28.0;
-    final paddingTop = 8.0;
+    const paddingLeft = 48.0;
+    const paddingBottom = 28.0;
+    const paddingTop = 8.0;
     final chartW = size.width - paddingLeft;
     final chartH = size.height - paddingBottom - paddingTop;
 
-    // ── Grilla horizontal ──
     final gridPaint = Paint()
       ..color = const Color(0xFFF3F4F6)
       ..strokeWidth = 1;
 
-    final labelStyle = const TextStyle(
+    const labelStyle = TextStyle(
       fontSize: 10,
       color: Color(0xFF9CA3AF),
     );
@@ -702,39 +858,34 @@ class _LineChartPainter extends CustomPainter {
         Offset(size.width, y),
         gridPaint,
       );
-
-      // Etiqueta eje Y
       final val = effectiveMax * i / 4;
       final label = val >= 1000000
           ? '${(val / 1000000).toStringAsFixed(1)}M'
           : val >= 1000
               ? '${(val / 1000).toStringAsFixed(0)}K'
               : val.toStringAsFixed(0);
-
       final tp = TextPainter(
         text: TextSpan(text: label, style: labelStyle),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(
-        canvas,
-        Offset(paddingLeft - tp.width - 6, y - tp.height / 2),
-      );
+      tp.paint(canvas,
+          Offset(paddingLeft - tp.width - 6, y - tp.height / 2));
     }
 
-    // ── Función auxiliar para coordenadas ──
     double xOf(int i) =>
         paddingLeft + (i / (datos.length - 1)) * chartW;
     double yOf(double val) =>
         paddingTop + chartH - (val / effectiveMax) * chartH;
 
-    // ── Área rellena haber ──
-    final haberFillPath = Path();
-    haberFillPath.moveTo(xOf(0), paddingTop + chartH);
+    // Área haber
+    final haberFillPath = Path()
+      ..moveTo(xOf(0), paddingTop + chartH);
     for (int i = 0; i < datos.length; i++) {
       haberFillPath.lineTo(xOf(i), yOf(haberVals[i]));
     }
-    haberFillPath.lineTo(xOf(datos.length - 1), paddingTop + chartH);
-    haberFillPath.close();
+    haberFillPath
+      ..lineTo(xOf(datos.length - 1), paddingTop + chartH)
+      ..close();
     canvas.drawPath(
       haberFillPath,
       Paint()
@@ -742,14 +893,15 @@ class _LineChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill,
     );
 
-    // ── Área rellena debe ──
-    final debeFillPath = Path();
-    debeFillPath.moveTo(xOf(0), paddingTop + chartH);
+    // Área debe
+    final debeFillPath = Path()
+      ..moveTo(xOf(0), paddingTop + chartH);
     for (int i = 0; i < datos.length; i++) {
       debeFillPath.lineTo(xOf(i), yOf(debeVals[i]));
     }
-    debeFillPath.lineTo(xOf(datos.length - 1), paddingTop + chartH);
-    debeFillPath.close();
+    debeFillPath
+      ..lineTo(xOf(datos.length - 1), paddingTop + chartH)
+      ..close();
     canvas.drawPath(
       debeFillPath,
       Paint()
@@ -757,77 +909,67 @@ class _LineChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill,
     );
 
-    // ── Línea haber ──
-    final haberLinePaint = Paint()
-      ..color = const Color(0xFF10B981)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
+    // Línea haber
     final haberPath = Path();
     for (int i = 0; i < datos.length; i++) {
-      final x = xOf(i);
-      final y = yOf(haberVals[i]);
-      i == 0 ? haberPath.moveTo(x, y) : haberPath.lineTo(x, y);
+      i == 0
+          ? haberPath.moveTo(xOf(i), yOf(haberVals[i]))
+          : haberPath.lineTo(xOf(i), yOf(haberVals[i]));
     }
-    canvas.drawPath(haberPath, haberLinePaint);
+    canvas.drawPath(
+      haberPath,
+      Paint()
+        ..color = const Color(0xFF10B981)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
 
-    // ── Línea debe ──
-    final debeLinePaint = Paint()
-      ..color = const Color(0xFFEF4444)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
+    // Línea debe
     final debePath = Path();
     for (int i = 0; i < datos.length; i++) {
-      final x = xOf(i);
-      final y = yOf(debeVals[i]);
-      i == 0 ? debePath.moveTo(x, y) : debePath.lineTo(x, y);
+      i == 0
+          ? debePath.moveTo(xOf(i), yOf(debeVals[i]))
+          : debePath.lineTo(xOf(i), yOf(debeVals[i]));
     }
-    canvas.drawPath(debePath, debeLinePaint);
+    canvas.drawPath(
+      debePath,
+      Paint()
+        ..color = const Color(0xFFEF4444)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
 
-    // ── Puntos haber ──
+    // Puntos haber
     for (int i = 0; i < datos.length; i++) {
-      final x = xOf(i);
-      final y = yOf(haberVals[i]);
-      canvas.drawCircle(
-          Offset(x, y),
-          3.5,
+      canvas.drawCircle(Offset(xOf(i), yOf(haberVals[i])), 3.5,
           Paint()
             ..color = Colors.white
             ..style = PaintingStyle.fill);
-      canvas.drawCircle(
-          Offset(x, y),
-          3.5,
+      canvas.drawCircle(Offset(xOf(i), yOf(haberVals[i])), 3.5,
           Paint()
             ..color = const Color(0xFF10B981)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2);
     }
 
-    // ── Puntos debe ──
+    // Puntos debe
     for (int i = 0; i < datos.length; i++) {
-      final x = xOf(i);
-      final y = yOf(debeVals[i]);
-      canvas.drawCircle(
-          Offset(x, y),
-          3.5,
+      canvas.drawCircle(Offset(xOf(i), yOf(debeVals[i])), 3.5,
           Paint()
             ..color = Colors.white
             ..style = PaintingStyle.fill);
-      canvas.drawCircle(
-          Offset(x, y),
-          3.5,
+      canvas.drawCircle(Offset(xOf(i), yOf(debeVals[i])), 3.5,
           Paint()
             ..color = const Color(0xFFEF4444)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2);
     }
 
-    // ── Etiquetas eje X ──
+    // Etiquetas eje X
     for (int i = 0; i < labels.length; i++) {
       final tp = TextPainter(
         text: TextSpan(text: labels[i], style: labelStyle),
@@ -835,14 +977,14 @@ class _LineChartPainter extends CustomPainter {
       )..layout();
       tp.paint(
         canvas,
-        Offset(xOf(i) - tp.width / 2,
-            paddingTop + chartH + 8),
+        Offset(xOf(i) - tp.width / 2, paddingTop + chartH + 8),
       );
     }
   }
 
   @override
-  bool shouldRepaint(_LineChartPainter old) => old.datos != datos;
+  bool shouldRepaint(_LineChartPainter old) =>
+      old.datos != datos;
 }
 
 // ── Widget leyenda ──────────────────────────────────────────────────────────
@@ -861,9 +1003,7 @@ class _LeyendaPunto extends StatelessWidget {
           width: 10,
           height: 10,
           decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+              color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
         Text(label,
@@ -922,20 +1062,23 @@ class _MetricCard extends StatelessWidget {
               children: [
                 Text(label,
                     style: const TextStyle(
-                        fontSize: 11, color: Color(0xFF6B7280))),
+                        fontSize: 11,
+                        color: Color(0xFF6B7280))),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: valueColor ?? const Color(0xFF111827),
+                    color: valueColor ??
+                        const Color(0xFF111827),
                   ),
                 ),
                 if (subtitle != null)
                   Text(subtitle!,
                       style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF))),
+                          fontSize: 10,
+                          color: Color(0xFF9CA3AF))),
               ],
             ),
           ),

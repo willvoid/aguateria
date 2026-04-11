@@ -9,6 +9,8 @@ import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/vista/dashboard_clientes/dashboard_clientes.dart';
 import 'package:myapp/vista/loginpage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html show window;
 
 class ClienteConsultaPage extends StatefulWidget {
   const ClienteConsultaPage({Key? key}) : super(key: key);
@@ -24,8 +26,14 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   late final AppLinks _appLinks;
 
+  // Variable estática como fallback para móvil
+  static String? _ciPendienteStatic;
+
+  // 0 = ingresa CI, 1 = login OAuth, 2 = selector inmuebles
+  int _paso = 0;
+
   bool _isLoading = false;
-  bool _autenticado = false;
+  bool _autenticado = false; // [RENOMBRADO] era _googleAutenticado, ahora cubre Google y Facebook
   String? _emailGoogle;
   String? _nombreGoogle;
   String? _fotoGoogle;
@@ -35,30 +43,113 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   Inmuebles? _inmuebleSeleccionado;
   String? _errorMessage;
 
+  // ── Persistencia del CI (web usa localStorage, móvil usa static) ─────────
+  void _guardarCI(String documento) {
+    if (kIsWeb) {
+      html.window.localStorage['ci_pendiente'] = documento;
+    } else {
+      _ciPendienteStatic = documento;
+    }
+  }
+
+  String? _recuperarCI() {
+    if (kIsWeb) {
+      return html.window.localStorage['ci_pendiente'];
+    }
+    return _ciPendienteStatic;
+  }
+
+  void _limpiarCI() {
+    if (kIsWeb) {
+      html.window.localStorage.remove('ci_pendiente');
+    } else {
+      _ciPendienteStatic = null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _initDeepLinks();
+    _restaurarSesionPendiente();
 
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final session = data.session;
       if (session != null && mounted) {
         final user = session.user;
+        final emailSesion = user.email ?? '';
+
         setState(() {
           _autenticado = true;
+          // Facebook a veces no devuelve email, se maneja con fallback
           _emailGoogle = user.email ?? 'Sin email';
           _nombreGoogle =
               user.userMetadata?['full_name'] ??
-              user.userMetadata?['name'] ??
+              user.userMetadata?['name'] ?? // [NUEVO] Facebook usa 'name'
               user.email;
           _fotoGoogle =
               user.userMetadata?['avatar_url'] ??
-              user.userMetadata?['picture'];
+              user.userMetadata?['picture']; // [NUEVO] Facebook usa 'picture'
           _isLoading = false;
           _errorMessage = null;
         });
+
+        _limpiarCI();
+        _cargarInmueblesYNavegar();
       }
     });
+  }
+
+  // Restaura el CI guardado si hay sesión activa al volver del OAuth
+  Future<void> _restaurarSesionPendiente() async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) return;
+
+    final ciGuardado = _recuperarCI();
+    if (ciGuardado == null || ciGuardado.isEmpty) return;
+
+    _documentoController.text = ciGuardado;
+    await _buscarClienteSilencioso(ciGuardado);
+  }
+
+  // Igual que _buscarCliente pero sin tocar _paso (lo maneja onAuthStateChange)
+  Future<void> _buscarClienteSilencioso(String documento) async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final cliente =
+          await _clienteCrud.buscarClientePorDocumento(documento);
+      if (!mounted) return;
+
+      if (cliente == null) {
+        await Supabase.instance.client.auth.signOut();
+        _limpiarCI();
+        setState(() {
+          _errorMessage =
+              'Tu CI no está registrado en el sistema. '
+              'Contactá a la oficina para registrarte.';
+          _isLoading = false;
+          _paso = 0;
+        });
+        return;
+      }
+
+      setState(() {
+        _clienteEncontrado = cliente;
+        _isLoading = false;
+      });
+
+      // No llamamos _cargarInmueblesYNavegar() aquí:
+      // onAuthStateChange ya lo hará, y el flag _cargandoInmuebles
+      // evitará la doble ejecución si ambos llegan al mismo tiempo.
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Error al restaurar sesión. Intente nuevamente.';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _initDeepLinks() async {
@@ -79,10 +170,17 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   }
 
   String get _redirectTo => kIsWeb
-      ? 'https://aguateria-prueba1.netlify.app'
+      ? 'https://tu-app.netlify.app' // ← reemplazá con tu URL de Netlify
       : 'com.example.myapp://login-callback';
 
-  Future<void> _autenticarConGoogle() async {
+  Future<void> _buscarCliente() async {
+    final documento = _documentoController.text.trim();
+
+    if (documento.isEmpty) {
+      setState(() => _errorMessage = 'Por favor, ingrese su número de CI');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -90,112 +188,95 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: _redirectTo,
+        redirectTo: _redirectTo, // [CAMBIADO] usa el getter dinámico
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error al autenticar con Google. Intente nuevamente.';
+        _errorMessage = 'Error al buscar. Intente nuevamente.';
         _isLoading = false;
       });
     }
   }
 
+  // [NUEVO] Autenticación con Facebook, idéntica a Google salvo el provider
   Future<void> _autenticarConFacebook() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     try {
+      _guardarCI(_documentoController.text.trim());
       await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.facebook,
+        OAuthProvider.google,
         redirectTo: _redirectTo,
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
     } catch (e) {
+      _limpiarCI();
       setState(() {
-        _errorMessage = 'Error al autenticar con Facebook. Intente nuevamente.';
+        _errorMessage =
+            'Error al autenticar con Google. Intente nuevamente.';
         _isLoading = false;
       });
     }
   }
 
   Future<void> _buscarCliente() async {
-  final documento = _documentoController.text.trim();
+    final documento = _documentoController.text.trim();
 
-  if (documento.isEmpty) {
-    setState(() => _errorMessage = 'Por favor, ingrese su número de CI');
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-    _clienteEncontrado = null;
-    _inmuebles = [];
-    _inmuebleSeleccionado = null;
-  });
-
-  try {
-    final cliente = await _clienteCrud.buscarClientePorDocumento(documento);
-
-    if (cliente == null) {
-      setState(() {
-        _errorMessage =
-            'Tu CI no está registrado en el sistema. '
-            'Contactá a la oficina para registrarte.';
-        _isLoading = false;
-      });
+    if (documento.isEmpty) {
+      setState(() => _errorMessage = 'Por favor, ingrese su número de CI');
       return;
     }
 
-    // ── Verificación / registro de email ────────────────────────────────
-    final emailSesion = (_emailGoogle != null && _emailGoogle != 'Sin email')
-        ? _emailGoogle!
-        : null;
-    final emailBD = (cliente.email != null && cliente.email!.trim().isNotEmpty)
-        ? cliente.email!.trim()
-        : null;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _clienteEncontrado = null;
+      _inmuebles = [];
+      _inmuebleSeleccionado = null;
+    });
 
-    if (emailBD == null && emailSesion != null) {
-      // Sin email en BD → guardar el de la sesión
-      await _clienteCrud.actualizarEmailCliente(cliente.idCliente!, emailSesion);
-    } else if (emailBD != null && emailSesion != null) {
-      // Ambos tienen email → verificar que coincidan
-      if (emailBD.toLowerCase() != emailSesion.toLowerCase()) {
+    try {
+      final cliente = await _clienteCrud.buscarClientePorDocumento(documento);
+
+      if (cliente == null) {
         setState(() {
           _errorMessage =
-              'El correo de tu cuenta (${emailSesion}) no coincide con el '
-              'registrado en el sistema. '
-              'Iniciá sesión con el correo correcto o contactá a la oficina.';
+              'Tu CI no está registrado en el sistema. '
+              'Contactá a la oficina para registrarte.';
           _isLoading = false;
         });
         return;
       }
+
+      // CI encontrado → guarda el email solo si existe
+      if (_emailGoogle != null && _emailGoogle != 'Sin email') {
+        await _clienteCrud.actualizarEmailCliente(
+          cliente.idCliente!,
+          _emailGoogle!,
+        );
+      }
+
+      final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
+        cliente.idCliente!,
+      );
+
+      setState(() {
+        _clienteEncontrado = cliente;
+        _inmuebles = inmuebles;
+        _isLoading = false;
+        if (inmuebles.isEmpty) _errorMessage = 'No tiene inmuebles registrados';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error al buscar. Intente nuevamente.';
+        _isLoading = false;
+      });
+      print('Error en búsqueda: $e');
     }
-    // ────────────────────────────────────────────────────────────────────
-
-    final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
-      cliente.idCliente!,
-    );
-
-    setState(() {
-      _clienteEncontrado = cliente;
-      _inmuebles = inmuebles;
-      _isLoading = false;
-      if (inmuebles.isEmpty) _errorMessage = 'No tiene inmuebles registrados';
-    });
-
-    if (inmuebles.length == 1) {
-      _seleccionarInmueble(inmuebles.first);
-    }
-  } catch (e) {
-    setState(() {
-      _errorMessage = 'Error al buscar. Intente nuevamente.';
-      _isLoading = false;
-    });
   }
-}
 
   void _seleccionarInmueble(Inmuebles? inmueble) {
     setState(() => _inmuebleSeleccionado = inmueble);
@@ -214,11 +295,13 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   Future<void> _cerrarSesion() async {
     await Supabase.instance.client.auth.signOut();
+    _limpiarCI();
     setState(() {
-      _autenticado = false;
+      _paso = 0;
       _emailGoogle = null;
       _nombreGoogle = null;
       _fotoGoogle = null;
+      _cargandoInmuebles = false; // FIX: resetear flag al cerrar sesión
       _documentoController.clear();
       _clienteEncontrado = null;
       _inmuebles = [];
@@ -227,9 +310,9 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     });
   }
 
-  void _limpiarBusqueda() {
+  void _volverAlCI() {
     setState(() {
-      _documentoController.clear();
+      _paso = 0;
       _clienteEncontrado = null;
       _inmuebles = [];
       _inmuebleSeleccionado = null;
@@ -267,11 +350,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                               ),
                             ],
                           ),
-                          child: !_autenticado
-                              ? _buildPaso1Login()
-                              : (_clienteEncontrado != null && _inmuebles.length > 1)
-                                  ? _buildPaso3SelectorInmuebles()
-                                  : _buildPaso2CiForm(),
+                          // [CAMBIADO] usa _autenticado en lugar de _googleAutenticado
+                          child: _autenticado
+                              ? _buildPaso2CiForm()
+                              : _buildPaso1Login(),
                         ),
                       ],
                     ),
@@ -286,6 +368,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
+  // [RENOMBRADO + MODIFICADO] era _buildPaso1GoogleLogin, ahora incluye Facebook
   Widget _buildPaso1Login() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -301,11 +384,11 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Iniciá sesión para continuar',
+          'Ingresá tu número de CI para comenzar',
           style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 32),
         Center(
           child: Container(
             width: 90,
@@ -315,17 +398,129 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.account_circle_outlined,
+              Icons.badge_outlined,
               size: 52,
               color: Color(0xFF0085FF),
             ),
           ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 32),
+        TextField(
+          controller: _documentoController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            labelText: 'Número de CI',
+            hintText: 'Ej: 1234567',
+            prefixIcon:
+                const Icon(Icons.badge, color: Color(0xFF0085FF)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: Color(0xFF0085FF), width: 2),
+            ),
+          ),
+          onSubmitted: (_) => _buscarCliente(),
+        ),
         if (_errorMessage != null) ...[
-          _buildErrorBox(_errorMessage!),
           const SizedBox(height: 16),
+          _buildErrorBox(_errorMessage!),
         ],
+
+        // Botón Google (sin cambios)
+        OutlinedButton(
+          onPressed: _isLoading ? null : _autenticarConGoogle,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Text(
+                  'Verificar CI',
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaso1Login() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.green[200]!),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.green[100],
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    _clienteEncontrado!.razonSocial[0].toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.green[800],
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _clienteEncontrado!.razonSocial,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green[800],
+                        fontSize: 14,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'CI: ${_clienteEncontrado!.documento}',
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.green[700]),
+                    ),
+                  ],
+                ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // [NUEVO] Botón Facebook
         OutlinedButton(
           onPressed: _isLoading ? null : _autenticarConGoogle,
           style: OutlinedButton.styleFrom(
@@ -357,42 +552,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                   ],
                 ),
         ),
-        const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: _isLoading ? null : _autenticarConFacebook,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            side: const BorderSide(color: Color(0xFF1877F2)),
-            backgroundColor: const Color(0xFF1877F2),
-          ),
-          child: _isLoading
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildFacebookLogo(),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Continuar con Facebook',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
+
         const SizedBox(height: 20),
         Text(
           'Tu sesión es segura y solo vos podés ver tu información.',
@@ -403,20 +563,47 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
-  Widget _buildPaso2CiForm() {
+  Widget _buildPaso2SelectorInmuebles() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildGoogleUserChip(),
-        const SizedBox(height: 28),
-        const Text(
-          'Ingresá tu número de CI',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF111827),
-          ),
-          textAlign: TextAlign.center,
+        const SizedBox(height: 24),
+        _buildClienteInfo(),
+        const SizedBox(height: 24),
+        const Divider(),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            const Icon(Icons.home_work_outlined,
+                color: Color(0xFF0085FF), size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Seleccioná tu inmueble',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0085FF).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_inmuebles.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0085FF),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(
@@ -475,178 +662,26 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
         ),
-        const SizedBox(height: 24),
-        const Divider(),
-        const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: _cerrarSesion,
-          icon: const Icon(Icons.logout, size: 18),
-          label: const Text('Cerrar sesión'),
-          style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
-        ),
-      ],
-    );
-  }
-
-  // ── Paso 3: pantalla completa de selección de inmueble ───────────────────
-  Widget _buildPaso3SelectorInmuebles() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildGoogleUserChip(),
-        const SizedBox(height: 24),
-
-        // Info del cliente
-        _buildClienteInfo(),
-        const SizedBox(height: 24),
-        const Divider(),
-        const SizedBox(height: 20),
-
-        // Título del selector
-        Row(
-          children: [
-            const Icon(Icons.home_work_outlined,
-                color: Color(0xFF0085FF), size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Seleccioná tu inmueble',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0085FF).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${_inmuebles.length}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0085FF),
-                ),
-              ),
-            ),
+        if (_clienteEncontrado != null) ...[
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 24),
+          _buildClienteInfo(),
+          if (_inmuebles.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            _buildSelectorInmuebles(),
           ],
-        ),
-        const SizedBox(height: 14),
-
-        // Tarjetas de inmuebles
-        ..._inmuebles.asMap().entries.map((entry) {
-          final index = entry.key;
-          final inmueble = entry.value;
-          final isSelected =
-              _inmuebleSeleccionado?.cod_inmueble == inmueble.cod_inmueble;
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: InkWell(
-              onTap: () => _seleccionarInmueble(inmueble),
-              borderRadius: BorderRadius.circular(14),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF0085FF).withOpacity(0.07)
-                      : Colors.grey[50],
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF0085FF)
-                        : Colors.grey[200]!,
-                    width: isSelected ? 2 : 1,
-                  ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFF0085FF).withOpacity(0.12),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF0085FF)
-                            : Colors.grey[200],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: isSelected
-                            ? const Icon(Icons.home,
-                                color: Colors.white, size: 22)
-                            : Text(
-                                '${index + 1}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Código: ${inmueble.cod_inmueble}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? const Color(0xFF0085FF)
-                                  : const Color(0xFF111827),
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Icon(Icons.location_on_outlined,
-                                  size: 13, color: Colors.grey[500]),
-                              const SizedBox(width: 3),
-                              Expanded(
-                                child: Text(
-                                  inmueble.direccion,
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey[600]),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      isSelected ? Icons.check_circle : Icons.arrow_forward_ios,
-                      color: isSelected
-                          ? const Color(0xFF0085FF)
-                          : Colors.grey[400],
-                      size: isSelected ? 22 : 16,
-                    ),
-                  ],
-                ),
-              ),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _limpiarBusqueda,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Nueva consulta'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF0085FF),
             ),
-          );
-        }),
-
-        const SizedBox(height: 20),
+          ),
+        ],
+        const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 8),
 
@@ -661,7 +696,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
           onPressed: _cerrarSesion,
           icon: const Icon(Icons.logout, size: 18),
           label: const Text('Cerrar sesión'),
-          style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
+          style:
+              TextButton.styleFrom(foregroundColor: Colors.grey[600]),
         ),
       ],
     );
@@ -669,7 +705,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   Widget _buildGoogleUserChip() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.green[50],
         borderRadius: BorderRadius.circular(12),
@@ -679,11 +716,13 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundImage:
-                _fotoGoogle != null ? NetworkImage(_fotoGoogle!) : null,
+            backgroundImage: _fotoGoogle != null
+                ? NetworkImage(_fotoGoogle!)
+                : null,
             backgroundColor: Colors.green[100],
             child: _fotoGoogle == null
-                ? Icon(Icons.person, color: Colors.green[700], size: 20)
+                ? Icon(Icons.person,
+                    color: Colors.green[700], size: 20)
                 : null,
           ),
           const SizedBox(width: 12),
@@ -702,7 +741,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 ),
                 Text(
                   _emailGoogle ?? '',
-                  style: TextStyle(fontSize: 12, color: Colors.green[700]),
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.green[700]),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -758,14 +798,12 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(Icons.email_outlined,
-                        size: 12, color: Colors.grey[500]),
+                    Icon(Icons.email_outlined, size: 12, color: Colors.grey[500]),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         _emailGoogle!,
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -774,6 +812,59 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
               ],
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectorInmuebles() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Seleccioná tu inmueble',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<Inmuebles>(
+          value: _inmuebleSeleccionado,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.home, color: Color(0xFF0085FF)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF0085FF), width: 2),
+            ),
+          ),
+          hint: const Text('Seleccioná un inmueble'),
+          items: _inmuebles.map((inmueble) {
+            return DropdownMenuItem<Inmuebles>(
+              value: inmueble,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Código: ${inmueble.cod_inmueble}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    inmueble.direccion,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: _seleccionarInmueble,
         ),
       ],
     );
@@ -794,7 +885,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
           Expanded(
             child: Text(
               mensaje,
-              style: TextStyle(color: Colors.red[700], fontSize: 14),
+              style:
+                  TextStyle(color: Colors.red[700], fontSize: 14),
             ),
           ),
         ],
@@ -810,6 +902,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
+  // [NUEVO] Logo de Facebook con su ícono "f"
   Widget _buildFacebookLogo() {
     return Container(
       width: 22,
@@ -832,69 +925,73 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   }
 
   Widget _buildHeader() {
-  return Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF0085FF), Color(0xFF0066CC)],
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0085FF), Color(0xFF0066CC)],
+        ),
       ),
-    ),
-    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-    child: Row(
-      children: [
-        const CircleAvatar(
-          radius: 20,
-          backgroundColor: Colors.white,
-          child: Icon(
-            Icons.water_drop,
-            size: 22,
-            color: Color(0xFF0085FF),
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'SERVICIO DE AGUA',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+      child: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            child: const Column(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    Icons.water_drop,
+                    size: 40,
+                    color: Color(0xFF0085FF),
+                  ),
                 ),
-              ),
-              Text(
-                'SANTA ROSA - C.F.',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.0,
+                SizedBox(height: 16),
+                Text(
+                  'SERVICIO DE AGUA',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
                 ),
+                SizedBox(height: 4),
+                Text(
+                  'SANTA ROSA - C.F.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IconButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
               ),
-            ],
+              icon: const Icon(
+                Icons.admin_panel_settings,
+                color: Colors.white,
+                size: 28,
+              ),
+              tooltip: 'Acceso Administrativo',
+            ),
           ),
-        ),
-        IconButton(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginPage()),
-          ),
-          icon: const Icon(
-            Icons.admin_panel_settings,
-            color: Colors.white,
-            size: 24,
-          ),
-          tooltip: 'Acceso Administrativo',
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   Widget _buildFooter() {
     return Container(
