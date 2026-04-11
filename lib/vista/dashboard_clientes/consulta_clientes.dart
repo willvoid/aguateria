@@ -33,6 +33,11 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   int _paso = 0;
 
   bool _isLoading = false;
+
+  // FIX: flag para evitar doble ejecución de _cargarInmueblesYNavegar
+  // (condición de carrera entre onAuthStateChange y _restaurarSesionPendiente en web)
+  bool _cargandoInmuebles = false;
+
   String? _emailGoogle;
   String? _nombreGoogle;
   String? _fotoGoogle;
@@ -72,7 +77,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     _initDeepLinks();
     _restaurarSesionPendiente();
 
-     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final session = data.session;
       if (session != null && mounted) {
         final user = session.user;
@@ -135,8 +140,9 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         _isLoading = false;
       });
 
-      // Dispara manualmente la carga de inmuebles si ya hay sesión
-      _cargarInmueblesYNavegar();
+      // No llamamos _cargarInmueblesYNavegar() aquí:
+      // onAuthStateChange ya lo hará, y el flag _cargandoInmuebles
+      // evitará la doble ejecución si ambos llegan al mismo tiempo.
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -232,30 +238,13 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     }
   }
 
-  /*Future<void> _autenticarConFacebook() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      _guardarCI(_documentoController.text.trim());
-      await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.facebook,
-        redirectTo: _redirectTo,
-        authScreenLaunchMode: LaunchMode.externalApplication,
-      );
-    } catch (e) {
-      _limpiarCI();
-      setState(() {
-        _errorMessage =
-            'Error al autenticar con Facebook. Intente nuevamente.';
-        _isLoading = false;
-      });
-    }
-  }*/
-
   Future<void> _cargarInmueblesYNavegar() async {
     if (_clienteEncontrado == null) return;
+
+    // FIX: evitar doble ejecución por condición de carrera entre
+    // onAuthStateChange y _buscarClienteSilencioso en web
+    if (_cargandoInmuebles) return;
+    _cargandoInmuebles = true;
 
     // ── Verificación de email ──────────────────────────────────────────────
     final session = Supabase.instance.client.auth.currentSession;
@@ -268,6 +257,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
           emailBD != emailSesion) {
         await Supabase.instance.client.auth.signOut();
         _limpiarCI();
+        _cargandoInmuebles = false; // FIX: resetear flag antes de salir
         if (mounted) {
           setState(() {
             _emailGoogle = null;
@@ -286,11 +276,11 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         return;
       }
 
-      // Si el cliente no tenía email, guardarlo ahora
+      // Si el cliente no tenía email, guardarlo ahora (en minúsculas)
       if (emailBD.isEmpty && emailSesion.isNotEmpty) {
         await _clienteCrud.actualizarEmailCliente(
           _clienteEncontrado!.idCliente!,
-          emailSesion,
+          emailSesion.toLowerCase(), // FIX: guardar siempre en minúsculas
         );
       }
     }
@@ -308,6 +298,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       setState(() {
         _inmuebles = inmuebles;
         _isLoading = false;
+        _cargandoInmuebles = false; // FIX: resetear flag al terminar
         if (inmuebles.isEmpty) {
           _errorMessage = 'No tiene inmuebles registrados';
         } else if (inmuebles.length > 1) {
@@ -320,6 +311,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       }
     } catch (e) {
       if (!mounted) return;
+      _cargandoInmuebles = false; // FIX: resetear flag en caso de error
       setState(() {
         _errorMessage = 'Error al cargar inmuebles. Intente nuevamente.';
         _isLoading = false;
@@ -350,6 +342,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       _emailGoogle = null;
       _nombreGoogle = null;
       _fotoGoogle = null;
+      _cargandoInmuebles = false; // FIX: resetear flag al cerrar sesión
       _documentoController.clear();
       _clienteEncontrado = null;
       _inmuebles = [];
@@ -624,43 +617,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                   ],
                 ),
         ),
-        /*const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: _isLoading ? null : _autenticarConFacebook,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            side: const BorderSide(color: Color(0xFF1877F2)),
-            backgroundColor: const Color(0xFF1877F2),
-          ),
-          child: _isLoading
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildFacebookLogo(),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Continuar con Facebook',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-        ),*/
         const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 8),
@@ -965,27 +921,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       child: CustomPaint(painter: _GoogleLogoPainter()),
     );
   }
-
-  /*Widget _buildFacebookLogo() {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: const Center(
-        child: Text(
-          'f',
-          style: TextStyle(
-            color: Color(0xFF1877F2),
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }*/
 
   Widget _buildHeader() {
     return Container(
