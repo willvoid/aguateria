@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/dao/facturaciondao/conceptocrudimpl.dart';
 import 'package:myapp/modelo/cliente.dart';
+import 'package:myapp/modelo/cuenta_cobrar.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/vista/dashboard_clientes/deudas_clientes_page.dart';
+import 'package:myapp/vista/dashboard_clientes/pagar_deuda_dialog.dart';
 import 'package:myapp/vista/dashboard_clientes/pagos_clientespage.dart';
 
 class ClienteDashboardPage extends StatelessWidget {
@@ -13,6 +16,95 @@ class ClienteDashboardPage extends StatelessWidget {
     required this.cliente,
     required this.inmueble,
   }) : super(key: key);
+
+  // Carga el concepto de consumo y abre PagarDeudaDialog directamente
+  Future<void> _abrirPagoAdelantado(BuildContext context) async {
+    // Spinner mientras carga el concepto
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Cargando...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final concepto = await ConceptoCrudImpl().leerConceptoPorId(1);
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // cierra el spinner
+
+      if (concepto == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo cargar el concepto de consumo.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Deuda sintética: sin id_deuda ni ciclo
+      // El diálogo calculará el total según los ciclos que elija el usuario
+      final deudaSintetica = CuentaCobrar(
+        id_deuda: null,
+        fk_concepto: concepto,
+        descripcion: 'Pago Adelantado de Consumo',
+        monto: 0,
+        estado: 'PENDIENTE',
+        fk_ciclos: null,
+        fk_inmueble: inmueble,
+        saldo: 0,
+        pagado: 0,
+        fk_consumos: null,
+      );
+
+      final resultado = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => PagarDeudaDialog(
+          deuda: deudaSintetica,
+          cliente: cliente,
+          inmueble: inmueble,
+          idUsuario: 1,
+          ciclosIniciales: const [],
+        ),
+      );
+
+      if (!context.mounted) return;
+
+      if (resultado == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Pago adelantado procesado exitosamente'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // cierra el spinner si hay error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al abrir pago adelantado: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,13 +184,13 @@ class ClienteDashboardPage extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Doc: ${cliente.documento}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 16),
                   ),
                 ],
               ),
             ),
 
-            // Información del inmueble
             Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -113,40 +205,33 @@ class ClienteDashboardPage extends StatelessWidget {
                     ),
                     _InfoRow('Estado', inmueble.estado ?? 'N/A'),
                   ]),
-                  const SizedBox(height: 16),
-
-                  /*_buildInfoCard('Información Personal', Icons.person, [
-                    if (cliente.celular != null && cliente.celular.isNotEmpty)
-                      _InfoRow('Celular', cliente.celular),
-                    if (cliente.telefono != null &&
-                        cliente.telefono!.isNotEmpty)
-                      _InfoRow('Teléfono', cliente.telefono.toString()),
-                    if (cliente.email != null && cliente.email!.isNotEmpty)
-                      _InfoRow('Email', cliente.email.toString()),
-                    _InfoRow('Barrio', cliente.barrio?.nombre_barrio ?? 'N/A'),
-                    _InfoRow('Dirección', cliente.direccion ?? 'N/A'),
-                  ]),*/
-
                   const SizedBox(height: 24),
 
-                  // Botones de acción
                   _buildActionButton(
                     context,
                     'Ver Deudas',
                     Icons.receipt_long,
                     Colors.orange,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DeudasClientesPage(
-                            cliente: cliente,
-                            inmueble: inmueble,
-                            modo: ModoDeudasClientes.deuda,
-                          ),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DeudasClientesPage(
+                          cliente: cliente,
+                          inmueble: inmueble,
+                          modo: ModoDeudasClientes.deuda,
                         ),
-                      );
-                    },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── PAGO ADELANTADO ──────────────────────────────────────
+                  _buildActionButton(
+                    context,
+                    'Pago Adelantado',
+                    Icons.payments_outlined,
+                    const Color(0xFF0085FF),
+                    () => _abrirPagoAdelantado(context),
                   ),
                   const SizedBox(height: 12),
 
@@ -155,18 +240,16 @@ class ClienteDashboardPage extends StatelessWidget {
                     'Historial de Consumo',
                     Icons.water_drop,
                     Colors.blue,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DeudasClientesPage(
-                            cliente: cliente,
-                            inmueble: inmueble,
-                            modo: ModoDeudasClientes.consumo,
-                          ),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DeudasClientesPage(
+                          cliente: cliente,
+                          inmueble: inmueble,
+                          modo: ModoDeudasClientes.consumo,
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -175,14 +258,12 @@ class ClienteDashboardPage extends StatelessWidget {
                     'Historial de Pagos',
                     Icons.payment,
                     Colors.green,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PagosClientePage(cliente: cliente),
-                        ),
-                      );
-                    },
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PagosClientePage(cliente: cliente),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -302,26 +383,14 @@ class ClienteDashboardPage extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey[400],
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Próximamente'),
-        content: Text('La función "$feature" estará disponible pronto.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Entendido'),
-          ),
-        ],
       ),
     );
   }
@@ -330,6 +399,5 @@ class ClienteDashboardPage extends StatelessWidget {
 class _InfoRow {
   final String label;
   final String value;
-
   _InfoRow(this.label, this.value);
 }
