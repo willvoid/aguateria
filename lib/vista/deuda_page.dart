@@ -8,6 +8,7 @@ import 'package:myapp/modelo/cuenta_cobrar.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/inmuebles.dart';
+import 'package:myapp/widget/autocomplete_ciclos.dart';
 
 class DeudasPage extends StatefulWidget {
   final Inmuebles inmueble;
@@ -655,15 +656,41 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildDropdownNullable<Ciclo>(
-                        label: 'Ciclo (Opcional)',
-                        value: _cicloSeleccionado,
-                        items: widget.ciclos,
-                        onChanged: (value) =>
-                            setState(() => _cicloSeleccionado = value),
-                        itemLabel: (item) =>
-                            '${item.ciclo} - ${item.descripcion}',
-                      ),
+                      Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    if (_cicloSeleccionado != null)
+      CicloAutocomplete(
+        key: ValueKey(_cicloSeleccionado!.id), // fuerza rebuild si cambia
+        ciclos: widget.ciclos,
+        cicloInicial: _cicloSeleccionado,
+        label: 'Ciclo (Opcional)',
+        hint: 'Buscar por ciclo o descripción...',
+        onSeleccionado: (ciclo) =>
+            setState(() => _cicloSeleccionado = ciclo),
+        validator: (_) => null, // opcional, sin validación obligatoria
+      )
+    else
+      CicloAutocomplete(
+        ciclos: widget.ciclos,
+        label: 'Ciclo (Opcional)',
+        hint: 'Buscar por ciclo o descripción...',
+        onSeleccionado: (ciclo) =>
+            setState(() => _cicloSeleccionado = ciclo),
+        validator: (_) => null,
+      ),
+    if (_cicloSeleccionado != null)
+      TextButton.icon(
+        onPressed: () => setState(() => _cicloSeleccionado = null),
+        icon: const Icon(Icons.clear, size: 16),
+        label: const Text('Limpiar ciclo'),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.grey.shade600,
+          padding: EdgeInsets.zero,
+        ),
+      ),
+  ],
+),
                       const SizedBox(height: 16),
                       _buildDropdownNullable<Consumo>(
                         label: 'Consumo (Opcional)',
