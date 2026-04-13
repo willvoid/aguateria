@@ -300,39 +300,35 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
                                 DataColumn(label: Text('Acciones')),
                               ],
                               rows: registrosFiltrados.map((item) {
-                                return DataRow(cells: [
-                                  DataCell(Text('${item.id}')),
-                                  DataCell(Text(item.alias ?? '-')),
-                                  DataCell(Text(item.titular_cuenta)),
-                                  DataCell(Text(item.banco)),
-                                  DataCell(Text(item.ci)),
-                                  DataCell(Text(item.num_cuenta)),
-                                  DataCell(Text(item.nro_giro ?? '-')),
-                                  DataCell(Text(item.ci_giro ?? '-')), // ← nuevo
-                                  DataCell(Text(item.fk_sucursal.denominacion)),
-                                  DataCell(
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.edit,
-                                              size: 18,
-                                              color: Color(0xFF0085FF)),
-                                          onPressed: () =>
-                                              _mostrarDialogo(item),
-                                          tooltip: 'Editar',
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete,
-                                              size: 18, color: Colors.red),
-                                          onPressed: () => _eliminar(item),
-                                          tooltip: 'Eliminar',
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ]);
-                              }).toList(),
+  return DataRow(cells: [
+    DataCell(Text('${item.id}')),
+    DataCell(Text(item.alias ?? '-')),
+    DataCell(Text(item.titular_cuenta)),
+    DataCell(Text(item.banco)),
+    DataCell(Text(item.ci)),
+    DataCell(Text(item.num_cuenta)),
+    DataCell(Text(item.nro_giro ?? '-')),
+    DataCell(Text(item.ci_giro ?? '-')),
+    DataCell(Text(item.fk_sucursal.denominacion)),
+    DataCell(
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
+            onPressed: () => _mostrarDialogo(item),
+            tooltip: 'Editar',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+            onPressed: () => _eliminar(item),
+            tooltip: 'Eliminar',
+          ),
+        ],
+      ),
+    ),
+  ]);
+}).toList(),
                             ),
                           ),
                         ),

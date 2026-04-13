@@ -484,6 +484,10 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
               cuenta.nro_giro != null &&
               cuenta.nro_giro!.isNotEmpty) ...[
             _buildFilaDato(Icons.sync_alt, 'Número Giro', cuenta.nro_giro!),
+            if (cuenta.ci_giro != null && cuenta.ci_giro!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _buildFilaDato(Icons.badge_outlined, 'CI Giro', cuenta.ci_giro!),
+            ],
           ],
           if (esGiro && (cuenta.nro_giro == null || cuenta.nro_giro!.isEmpty))
             Row(
