@@ -255,79 +255,97 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   }
 
   Future<void> _cargarInmueblesYNavegar() async {
-    if (_clienteEncontrado == null) return;
-    if (_cargandoInmuebles) return;
-    _cargandoInmuebles = true;
+  if (_clienteEncontrado == null) return;
+  if (_cargandoInmuebles) return;
+  _cargandoInmuebles = true;
 
-    // ── Verificación de email ──────────────────────────────────────────────
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session != null) {
-      final emailSesion = session.user.email?.trim().toLowerCase() ?? '';
-      final emailBD = _clienteEncontrado!.email?.trim().toLowerCase() ?? '';
+  // ── Verificación de email ──────────────────────────────────────────────
+  final session = Supabase.instance.client.auth.currentSession;
+  if (session != null) {
+    final emailSesion = session.user.email?.trim().toLowerCase() ?? '';
+    final emailBD = _clienteEncontrado!.email?.trim().toLowerCase() ?? '';
 
-      if (emailBD.isNotEmpty &&
-          emailSesion.isNotEmpty &&
-          emailBD != emailSesion) {
-        await Supabase.instance.client.auth.signOut();
-        _limpiarCI();
-        _resetearEstado();
-        if (mounted) {
-          setState(() {
-            _errorMessage =
-                'El correo de tu cuenta ($emailSesion) no coincide '
-                'con el registrado en el sistema.\n'
-                'Iniciá sesión con el correo correcto '
-                'o contactá a la oficina.';
-          });
-        }
-        return;
+    if (emailBD.isNotEmpty &&
+        emailSesion.isNotEmpty &&
+        emailBD != emailSesion) {
+      await Supabase.instance.client.auth.signOut();
+      _limpiarCI();
+      _resetearEstado();
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'El correo de tu cuenta ($emailSesion) no coincide '
+              'con el registrado en el sistema.\n'
+              'Iniciá sesión con el correo correcto '
+              'o contactá a la oficina.';
+        });
       }
-
-      // Si el cliente no tenía email, guardarlo ahora (en minúsculas)
-      if (emailBD.isEmpty && emailSesion.isNotEmpty) {
-        await _clienteCrud.actualizarEmailCliente(
-          _clienteEncontrado!.idCliente!,
-          emailSesion.toLowerCase(),
-        );
-      }
+      return;
     }
-    // ──────────────────────────────────────────────────────────────────────
 
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    try {
-      final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
+    if (emailBD.isEmpty && emailSesion.isNotEmpty) {
+      await _clienteCrud.actualizarEmailCliente(
         _clienteEncontrado!.idCliente!,
+        emailSesion.toLowerCase(),
       );
-
-      if (!mounted) return;
-
-      _cargandoInmuebles = false;
-
-      setState(() {
-        _inmuebles = inmuebles;
-        _isLoading = false;
-        if (inmuebles.isEmpty) {
-          _errorMessage = 'No tiene inmuebles registrados';
-        } else if (inmuebles.length > 1) {
-          _paso = 2;
-        }
-      });
-
-      if (inmuebles.length == 1) {
-        _seleccionarInmueble(inmuebles.first);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      _cargandoInmuebles = false;
-      setState(() {
-        _errorMessage = 'Error al cargar inmuebles. Intente nuevamente.';
-        _isLoading = false;
-      });
     }
   }
+  // ──────────────────────────────────────────────────────────────────────
 
+  if (!mounted) return;
+  setState(() => _isLoading = true);
+
+  try {
+    final todosLosInmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
+      _clienteEncontrado!.idCliente!,
+    );
+
+    // ── Filtrar solo los CONECTADOS ────────────────────────────────────
+    final inmuebles = todosLosInmuebles
+        .where((i) => i.estado == 'CONECTADO')
+        .toList();
+    // ──────────────────────────────────────────────────────────────────
+
+    if (!mounted) return;
+
+    _cargandoInmuebles = false;
+
+    if (inmuebles.isEmpty) {
+      await Supabase.instance.client.auth.signOut();
+      _limpiarCI();
+      _resetearEstado();
+      if (mounted) {
+        setState(() {
+          _errorMessage = todosLosInmuebles.isEmpty
+              ? 'No tenés inmuebles registrados en el sistema. '
+                'Contactá a la oficina.'
+              : 'Ninguno de tus inmuebles está CONECTADO al servicio. '
+                'Contactá a la oficina para más información.';
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _inmuebles = inmuebles;
+      _isLoading = false;
+      if (inmuebles.length > 1) {
+        _paso = 2;
+      }
+    });
+
+    if (inmuebles.length == 1) {
+      _seleccionarInmueble(inmuebles.first);
+    }
+  } catch (e) {
+    if (!mounted) return;
+    _cargandoInmuebles = false;
+    setState(() {
+      _errorMessage = 'Error al cargar inmuebles. Intente nuevamente.';
+      _isLoading = false;
+    });
+  }
+}
   void _seleccionarInmueble(Inmuebles? inmueble) {
     setState(() => _inmuebleSeleccionado = inmueble);
     if (inmueble != null) {
