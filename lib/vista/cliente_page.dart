@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/barriocrudimpl.dart';
 import 'package:myapp/dao/clientecrudimpl.dart';
+import 'package:myapp/dao/empresadao/tipo_contribuyentecrudimpl.dart';
 import 'package:myapp/dao/tipo_operacioncrudimpl.dart';
 import 'package:myapp/dao/tipodoc_crudimpl.dart';
 import 'package:myapp/modelo/%20tipo_documento.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/barrio.dart';
+import 'package:myapp/modelo/empresa/tipo_contribuyente.dart';
 import 'package:myapp/modelo/tipo_operacion.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -21,13 +23,15 @@ class _ClientesPageState extends State<ClientesPage> {
   final TipoDocCrudimpl _tipoDocCrud = TipoDocCrudimpl();
   final TipoOperacionCrudimpl _tipoOperacionCrud = TipoOperacionCrudimpl();
   final BarrioCrudImpl _barrioCrud = BarrioCrudImpl();
-  
+  final TipoContribuyenteCrudImpl _tipoContribuyenteCrud = TipoContribuyenteCrudImpl();
+
   List<Cliente> clientes = [];
   List<Cliente> clientesFiltrados = [];
   List<TipoDocumento> tiposDocumento = [];
   List<TipoOperacion> tiposOperacion = [];
   List<Barrio> barrios = [];
-  
+  List<TipoContribuyente> tiposContribuyente = [];
+
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
 
@@ -40,13 +44,14 @@ class _ClientesPageState extends State<ClientesPage> {
 
   Future<void> _cargarDatos() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final resultados = await Future.wait([
         _clienteCrud.leerClientes(),
         _tipoDocCrud.leerTipoDoc(),
         _tipoOperacionCrud.leerTipoOperacion(),
         _barrioCrud.leerBarrios(),
+        _tipoContribuyenteCrud.leerTiposContribuyente(),
       ]);
 
       setState(() {
@@ -54,6 +59,7 @@ class _ClientesPageState extends State<ClientesPage> {
         tiposDocumento = resultados[1] as List<TipoDocumento>;
         tiposOperacion = resultados[2] as List<TipoOperacion>;
         barrios = resultados[3] as List<Barrio>;
+        tiposContribuyente = resultados[4] as List<TipoContribuyente>;
         clientesFiltrados = clientes;
         _isLoading = false;
       });
@@ -92,6 +98,7 @@ class _ClientesPageState extends State<ClientesPage> {
         tiposDocumento: tiposDocumento,
         tiposOperacion: tiposOperacion,
         barrios: barrios,
+        tiposContribuyente: tiposContribuyente,
         onGuardar: (clienteEditado) async {
           Navigator.of(dialogContext).pop();
           await _guardarCliente(clienteEditado);
@@ -109,31 +116,27 @@ class _ClientesPageState extends State<ClientesPage> {
       );
 
       bool exito;
-      
+
       if (cliente.idCliente == null) {
-        // --- 1. CREACIÓN DE UN NUEVO CLIENTE ---
-        final documentoExiste = await _clienteCrud.verificarDocumentoExistente(cliente.documento);
-        
+        final documentoExiste =
+            await _clienteCrud.verificarDocumentoExistente(cliente.documento);
+
         if (documentoExiste) {
           Navigator.pop(context);
           _mostrarError('Ya existe un cliente con ese documento');
           return;
         }
 
-        // --- 2. CREAR USUARIO EN SUPABASE AUTH (EDGE FUNCTION) ---
         try {
           String correo = '${cliente.documento}@santarosa.local';
           print('⏳ Llamando a la Edge Function...');
-          
+
           final response = await Supabase.instance.client.functions.invoke(
             'crear_usuario_admin',
             body: {
               'email': correo,
-              'password': cliente.documento, 
-              'user_metadata': {
-                'nombre': cliente.razonSocial,
-                'rol': 'cliente'
-              }
+              'password': cliente.documento,
+              'user_metadata': {'nombre': cliente.razonSocial, 'rol': 'cliente'}
             },
           );
           print('✅ Respuesta de Supabase: ${response.data}');
@@ -143,17 +146,14 @@ class _ClientesPageState extends State<ClientesPage> {
           print('❌ Error general al crear usuario: $e');
         }
 
-        // --- 3. GUARDAR EL CLIENTE EN LA BASE DE DATOS (SOLO UNA VEZ) ---
         final clienteCreado = await _clienteCrud.crearCliente(cliente);
         exito = clienteCreado != null;
-
       } else {
-        // --- ACTUALIZACIÓN DE UN CLIENTE EXISTENTE ---
         final documentoExiste = await _clienteCrud.verificarDocumentoExistente(
           cliente.documento,
           idClienteExcluir: cliente.idCliente,
         );
-        
+
         if (documentoExiste) {
           Navigator.pop(context);
           _mostrarError('Ya existe otro cliente con ese documento');
@@ -191,7 +191,8 @@ class _ClientesPageState extends State<ClientesPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmar eliminación'),
-        content: Text('¿Está seguro de eliminar al cliente ${cliente.razonSocial}?'),
+        content: Text(
+            '¿Está seguro de eliminar al cliente ${cliente.razonSocial}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -200,14 +201,16 @@ class _ClientesPageState extends State<ClientesPage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (context) => const Center(child: CircularProgressIndicator()),
+                builder: (context) =>
+                    const Center(child: CircularProgressIndicator()),
               );
 
-              final exito = await _clienteCrud.eliminarCliente(cliente.idCliente!);
+              final exito =
+                  await _clienteCrud.eliminarCliente(cliente.idCliente!);
               Navigator.pop(context);
 
               if (exito) {
@@ -268,22 +271,23 @@ class _ClientesPageState extends State<ClientesPage> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
+                onPressed: () => _mostrarDialogoEdicion(null),
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Agregar Cliente'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0085FF),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -309,11 +313,13 @@ class _ClientesPageState extends State<ClientesPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.people_outline, size: 64, color: Colors.grey.shade400),
+                              Icon(Icons.people_outline,
+                                  size: 64, color: Colors.grey.shade400),
                               const SizedBox(height: 16),
                               const Text(
                                 'No hay clientes para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
+                                style: TextStyle(
+                                    color: Color(0xFF6B7280), fontSize: 16),
                               ),
                             ],
                           ),
@@ -322,7 +328,8 @@ class _ClientesPageState extends State<ClientesPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(
+                                  const Color(0xFFF9FAFB)),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Razón Social')),
@@ -343,15 +350,18 @@ class _ClientesPageState extends State<ClientesPage> {
                                     DataCell(Text(cliente.celular)),
                                     DataCell(Text(cliente.direccion ?? '-')),
                                     DataCell(Text('${cliente.nroCasa}')),
-                                    DataCell(Text(cliente.barrio.nombre_barrio)),
+                                    DataCell(
+                                        Text(cliente.barrio.nombre_barrio)),
                                     DataCell(
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: cliente.estado == 'ACTIVO'
                                               ? Colors.green.shade50
                                               : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           cliente.estado,
@@ -370,13 +380,18 @@ class _ClientesPageState extends State<ClientesPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(cliente),
+                                            icon: const Icon(Icons.edit,
+                                                size: 18,
+                                                color: Color(0xFF0085FF)),
+                                            onPressed: () =>
+                                                _mostrarDialogoEdicion(cliente),
                                             tooltip: 'Editar',
                                           ),
                                           IconButton(
-                                            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                            onPressed: () => _eliminarCliente(cliente),
+                                            icon: const Icon(Icons.delete,
+                                                size: 18, color: Colors.red),
+                                            onPressed: () =>
+                                                _eliminarCliente(cliente),
                                             tooltip: 'Eliminar',
                                           ),
                                         ],
@@ -402,11 +417,16 @@ class _ClientesPageState extends State<ClientesPage> {
   }
 }
 
+// ════════════════════════════════════════════════════════════════
+//  DIÁLOGO DE EDICIÓN
+// ════════════════════════════════════════════════════════════════
+
 class _DialogoEditarCliente extends StatefulWidget {
   final Cliente? cliente;
   final List<TipoDocumento> tiposDocumento;
   final List<TipoOperacion> tiposOperacion;
   final List<Barrio> barrios;
+  final List<TipoContribuyente> tiposContribuyente;
   final Function(Cliente) onGuardar;
 
   const _DialogoEditarCliente({
@@ -414,6 +434,7 @@ class _DialogoEditarCliente extends StatefulWidget {
     required this.tiposDocumento,
     required this.tiposOperacion,
     required this.barrios,
+    required this.tiposContribuyente,
     required this.onGuardar,
   });
 
@@ -423,6 +444,7 @@ class _DialogoEditarCliente extends StatefulWidget {
 
 class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
   final _formKey = GlobalKey<FormState>();
+
   late TextEditingController _razonSocialController;
   late TextEditingController _nombreFantasiaController;
   late TextEditingController _documentoController;
@@ -431,51 +453,77 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
   late TextEditingController _direccionController;
   late TextEditingController _emailController;
   late TextEditingController _nroCasaController;
-  
+
   late bool _esProveedorEstado;
   late String _estadoSeleccionado;
   late TipoDocumento _tipoDocumentoSeleccionado;
   late TipoOperacion _tipoOperacionSeleccionado;
   late Barrio _barrioSeleccionado;
+  TipoContribuyente? _tipoContribuyenteSeleccionado;
 
   final List<String> _estados = ['ACTIVO', 'INACTIVO'];
 
   @override
   void initState() {
     super.initState();
-    
-    _razonSocialController = TextEditingController(text: widget.cliente?.razonSocial ?? '');
-    _nombreFantasiaController = TextEditingController(text: widget.cliente?.nombreFantasia ?? '');
-    _documentoController = TextEditingController(text: widget.cliente?.documento ?? '');
-    _telefonoController = TextEditingController(text: widget.cliente?.telefono ?? '');
-    _celularController = TextEditingController(text: widget.cliente?.celular ?? '');
-    _direccionController = TextEditingController(text: widget.cliente?.direccion ?? '');
-    _emailController = TextEditingController(text: widget.cliente?.email ?? '');
-    _nroCasaController = TextEditingController(text: widget.cliente?.nroCasa.toString() ?? '');
+
+    _razonSocialController =
+        TextEditingController(text: widget.cliente?.razonSocial ?? '');
+    _nombreFantasiaController =
+        TextEditingController(text: widget.cliente?.nombreFantasia ?? '');
+    _documentoController =
+        TextEditingController(text: widget.cliente?.documento ?? '');
+    _telefonoController =
+        TextEditingController(text: widget.cliente?.telefono ?? '');
+    _celularController =
+        TextEditingController(text: widget.cliente?.celular ?? '');
+    _direccionController =
+        TextEditingController(text: widget.cliente?.direccion ?? '');
+    _emailController =
+        TextEditingController(text: widget.cliente?.email ?? '');
+    _nroCasaController =
+        TextEditingController(text: widget.cliente?.nroCasa.toString() ?? '');
 
     _esProveedorEstado = widget.cliente?.es_proveedor_del_estado ?? false;
     _estadoSeleccionado = widget.cliente?.estado ?? 'ACTIVO';
-    
+
     _tipoDocumentoSeleccionado = widget.cliente != null
         ? widget.tiposDocumento.firstWhere(
-            (t) => t.cod_tipo_documento == widget.cliente!.tipoDocumento.cod_tipo_documento,
+            (t) =>
+                t.cod_tipo_documento ==
+                widget.cliente!.tipoDocumento.cod_tipo_documento,
             orElse: () => widget.tiposDocumento.first,
           )
         : widget.tiposDocumento.first;
-    
+
     _tipoOperacionSeleccionado = widget.cliente != null
         ? widget.tiposOperacion.firstWhere(
-            (t) => t.id_tipo_operacion == widget.cliente!.tipoOperacion.id_tipo_operacion,
+            (t) =>
+                t.id_tipo_operacion ==
+                widget.cliente!.tipoOperacion.id_tipo_operacion,
             orElse: () => widget.tiposOperacion.first,
           )
         : widget.tiposOperacion.first;
-    
+
     _barrioSeleccionado = widget.cliente != null
         ? widget.barrios.firstWhere(
             (b) => b.cod_barrio == widget.cliente!.barrio.cod_barrio,
             orElse: () => widget.barrios.first,
           )
         : widget.barrios.first;
+
+    // ── Tipo contribuyente (nullable) ─────────────────────────
+    _tipoContribuyenteSeleccionado =
+        widget.cliente?.tipo_contribuyente != null &&
+                widget.tiposContribuyente.isNotEmpty
+            ? widget.tiposContribuyente.firstWhere(
+                (t) =>
+                    t.id_tipo_contribuyente ==
+                    widget.cliente!.tipo_contribuyente!.id_tipo_contribuyente,
+                orElse: () => widget.tiposContribuyente.first,
+              )
+            : null;
+    // ──────────────────────────────────────────────────────────
   }
 
   @override
@@ -483,22 +531,31 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
     return Dialog(
       child: Container(
         width: 800,
-        constraints: const BoxConstraints(maxHeight: 700),
+        constraints: const BoxConstraints(maxHeight: 740),
         child: Column(
           children: [
+            // ── Header ──────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
                 color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(4),
+                ),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.person_add, color: Colors.white),
                   const SizedBox(width: 12),
                   Text(
-                    widget.cliente == null ? 'Agregar Cliente' : 'Editar Cliente',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                    widget.cliente == null
+                        ? 'Agregar Cliente'
+                        : 'Editar Cliente',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
                   IconButton(
@@ -508,6 +565,8 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                 ],
               ),
             ),
+
+            // ── Formulario ──────────────────────────────────────
             Expanded(
               child: Form(
                 key: _formKey,
@@ -523,7 +582,8 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               controller: _razonSocialController,
                               label: 'Razón Social *',
                               hint: 'Ingrese razón social',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                              validator: (v) =>
+                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -544,8 +604,9 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               label: 'Tipo Documento *',
                               value: _tipoDocumentoSeleccionado,
                               items: widget.tiposDocumento,
-                              onChanged: (value) => setState(() => _tipoDocumentoSeleccionado = value!),
-                              itemLabel: (item) => item.descripcion_tipodoc,
+                              onChanged: (v) => setState(
+                                  () => _tipoDocumentoSeleccionado = v!),
+                              itemLabel: (i) => i.descripcion_tipodoc,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -554,7 +615,8 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               controller: _documentoController,
                               label: 'Documento *',
                               hint: 'Ingrese documento',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                              validator: (v) =>
+                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
                             ),
                           ),
                         ],
@@ -575,7 +637,8 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               controller: _celularController,
                               label: 'Celular *',
                               hint: 'Ingrese celular',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                              validator: (v) =>
+                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
                             ),
                           ),
                         ],
@@ -591,9 +654,10 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                         controller: _emailController,
                         label: 'Email',
                         hint: 'Ingrese email',
-                        validator: (value) {
-                          if (value != null && value.isNotEmpty) {
-                            if (!value.contains('@') || !value.contains('.')) return 'Email inválido';
+                        validator: (v) {
+                          if (v != null && v.isNotEmpty) {
+                            if (!v.contains('@') || !v.contains('.'))
+                              return 'Email inválido';
                           }
                           return null;
                         },
@@ -607,9 +671,11 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               label: 'Nro. Casa *',
                               hint: 'Ingrese número de casa',
                               keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Campo requerido';
-                                if (int.tryParse(value!) == null) return 'Debe ser un número';
+                              validator: (v) {
+                                if (v?.isEmpty ?? true)
+                                  return 'Campo requerido';
+                                if (int.tryParse(v!) == null)
+                                  return 'Debe ser un número';
                                 return null;
                               },
                             ),
@@ -620,8 +686,9 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               label: 'Barrio *',
                               value: _barrioSeleccionado,
                               items: widget.barrios,
-                              onChanged: (value) => setState(() => _barrioSeleccionado = value!),
-                              itemLabel: (item) => item.nombre_barrio,
+                              onChanged: (v) =>
+                                  setState(() => _barrioSeleccionado = v!),
+                              itemLabel: (i) => i.nombre_barrio,
                             ),
                           ),
                         ],
@@ -634,8 +701,9 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               label: 'Tipo Operación *',
                               value: _tipoOperacionSeleccionado,
                               items: widget.tiposOperacion,
-                              onChanged: (value) => setState(() => _tipoOperacionSeleccionado = value!),
-                              itemLabel: (item) => item.codigo_tipo_operacion,
+                              onChanged: (v) => setState(
+                                  () => _tipoOperacionSeleccionado = v!),
+                              itemLabel: (i) => i.codigo_tipo_operacion,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -644,17 +712,69 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               label: 'Estado *',
                               value: _estadoSeleccionado,
                               items: _estados,
-                              onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                              itemLabel: (item) => item,
+                              onChanged: (v) =>
+                                  setState(() => _estadoSeleccionado = v!),
+                              itemLabel: (i) => i,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
+
+                      // ── Tipo Contribuyente ─────────────────────
+                      if (widget.tiposContribuyente.isNotEmpty) ...[
+                        const Text(
+                          'Tipo Contribuyente',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF374151),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<TipoContribuyente?>(
+                          value: _tipoContribuyenteSeleccionado,
+                          items: [
+                            const DropdownMenuItem<TipoContribuyente?>(
+                              value: null,
+                              child: Text('— Sin tipo contribuyente —'),
+                            ),
+                            ...widget.tiposContribuyente.map(
+                              (t) => DropdownMenuItem<TipoContribuyente?>(
+                                value: t,
+                                child: Text(
+                                    '${t.codigo_contribuyente} - ${t.descripcion}'),
+                              ),
+                            ),
+                          ],
+                          onChanged: (v) => setState(
+                              () => _tipoContribuyenteSeleccionado = v),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      // ──────────────────────────────────────────
+
                       CheckboxListTile(
                         title: const Text('¿Es proveedor del estado?'),
                         value: _esProveedorEstado,
-                        onChanged: (value) => setState(() => _esProveedorEstado = value ?? false),
+                        onChanged: (v) =>
+                            setState(() => _esProveedorEstado = v ?? false),
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
                     ],
@@ -662,6 +782,8 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                 ),
               ),
             ),
+
+            // ── Footer ──────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -681,7 +803,8 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0085FF),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                     child: const Text('Guardar'),
                   ),
@@ -704,7 +827,11 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF374151))),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -722,7 +849,8 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
               borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
         ),
       ],
@@ -739,11 +867,18 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF374151))),
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
-          items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(itemLabel(item)))).toList(),
+          items: items
+              .map((item) => DropdownMenuItem<T>(
+                  value: item, child: Text(itemLabel(item))))
+              .toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
@@ -756,7 +891,8 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
               borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
         ),
       ],
@@ -768,18 +904,26 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
       final cliente = Cliente(
         idCliente: widget.cliente?.idCliente,
         razonSocial: _razonSocialController.text,
-        nombreFantasia: _nombreFantasiaController.text.isEmpty ? null : _nombreFantasiaController.text,
+        nombreFantasia: _nombreFantasiaController.text.isEmpty
+            ? null
+            : _nombreFantasiaController.text,
         documento: _documentoController.text,
-        telefono: _telefonoController.text.isEmpty ? null : _telefonoController.text,
+        telefono: _telefonoController.text.isEmpty
+            ? null
+            : _telefonoController.text,
         celular: _celularController.text,
-        direccion: _direccionController.text.isEmpty ? null : _direccionController.text,
+        direccion: _direccionController.text.isEmpty
+            ? null
+            : _direccionController.text,
         es_proveedor_del_estado: _esProveedorEstado,
-        email: _emailController.text.isEmpty ? null : _emailController.text,
+        email:
+            _emailController.text.isEmpty ? null : _emailController.text,
         nroCasa: int.parse(_nroCasaController.text),
         tipoOperacion: _tipoOperacionSeleccionado,
         estado: _estadoSeleccionado,
         tipoDocumento: _tipoDocumentoSeleccionado,
         barrio: _barrioSeleccionado,
+        tipo_contribuyente: _tipoContribuyenteSeleccionado,
       );
 
       widget.onGuardar(cliente);
