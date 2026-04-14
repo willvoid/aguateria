@@ -84,6 +84,12 @@ class _ClientesPageState extends State<ClientesPage> {
     });
   }
 
+  /// Solo se verifica duplicado si el cliente tiene tipo de documento
+  /// asignado Y el número de documento no es '0'.
+  bool _debeVerificarDocumento(Cliente cliente) {
+    return cliente.tipoDocumento != null && cliente.documento != '0';
+  }
+
   void _mostrarDialogoEdicion(Cliente? cliente) {
     if (tiposDocumento.isEmpty || tiposOperacion.isEmpty || barrios.isEmpty) {
       _mostrarError('Cargando datos necesarios, por favor espere...');
@@ -118,13 +124,16 @@ class _ClientesPageState extends State<ClientesPage> {
       bool exito;
 
       if (cliente.idCliente == null) {
-        final documentoExiste =
-            await _clienteCrud.verificarDocumentoExistente(cliente.documento);
+        // Verificar duplicado solo si corresponde según la regla de negocio
+        if (_debeVerificarDocumento(cliente)) {
+          final documentoExiste =
+              await _clienteCrud.verificarDocumentoExistente(cliente.documento);
 
-        if (documentoExiste) {
-          Navigator.pop(context);
-          _mostrarError('Ya existe un cliente con ese documento');
-          return;
+          if (documentoExiste) {
+            Navigator.pop(context);
+            _mostrarError('Ya existe un cliente con ese documento');
+            return;
+          }
         }
 
         try {
@@ -149,15 +158,18 @@ class _ClientesPageState extends State<ClientesPage> {
         final clienteCreado = await _clienteCrud.crearCliente(cliente);
         exito = clienteCreado != null;
       } else {
-        final documentoExiste = await _clienteCrud.verificarDocumentoExistente(
-          cliente.documento,
-          idClienteExcluir: cliente.idCliente,
-        );
+        // Verificar duplicado solo si corresponde según la regla de negocio
+        if (_debeVerificarDocumento(cliente)) {
+          final documentoExiste = await _clienteCrud.verificarDocumentoExistente(
+            cliente.documento,
+            idClienteExcluir: cliente.idCliente,
+          );
 
-        if (documentoExiste) {
-          Navigator.pop(context);
-          _mostrarError('Ya existe otro cliente con ese documento');
-          return;
+          if (documentoExiste) {
+            Navigator.pop(context);
+            _mostrarError('Ya existe otro cliente con ese documento');
+            return;
+          }
         }
 
         exito = await _clienteCrud.actualizarCliente(cliente);
@@ -488,15 +500,15 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
     _estadoSeleccionado = widget.cliente?.estado ?? 'ACTIVO';
 
     _tipoDocumentoSeleccionado = widget.cliente != null &&
-        widget.cliente!.tipoDocumento != null &&
-        widget.tiposDocumento.isNotEmpty
-    ? widget.tiposDocumento.firstWhere(
-        (t) =>
-            t.cod_tipo_documento ==
-            widget.cliente!.tipoDocumento!.cod_tipo_documento,
-        orElse: () => widget.tiposDocumento.first,
-      )
-    : null;
+            widget.cliente!.tipoDocumento != null &&
+            widget.tiposDocumento.isNotEmpty
+        ? widget.tiposDocumento.firstWhere(
+            (t) =>
+                t.cod_tipo_documento ==
+                widget.cliente!.tipoDocumento!.cod_tipo_documento,
+            orElse: () => widget.tiposDocumento.first,
+          )
+        : null;
 
     _tipoOperacionSeleccionado = widget.cliente != null
         ? widget.tiposOperacion.firstWhere(
@@ -514,7 +526,6 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
           )
         : widget.barrios.first;
 
-    // ── Tipo contribuyente (nullable) ─────────────────────────
     _tipoContribuyenteSeleccionado =
         widget.cliente?.tipo_contribuyente != null &&
                 widget.tiposContribuyente.isNotEmpty
@@ -525,7 +536,6 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                 orElse: () => widget.tiposContribuyente.first,
               )
             : null;
-    // ──────────────────────────────────────────────────────────
   }
 
   @override
@@ -599,67 +609,84 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                     Row(
-  children: [
-    Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Tipo Documento',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF374151),
-            ),
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<TipoDocumento?>(
-            value: _tipoDocumentoSeleccionado,
-            items: [
-              const DropdownMenuItem<TipoDocumento?>(
-                value: null,
-                child: Text('— Sin tipo documento —'),
-              ),
-              ...widget.tiposDocumento.map(
-                (t) => DropdownMenuItem<TipoDocumento?>(
-                  value: t,
-                  child: Text(t.descripcion_tipodoc),
-                ),
-              ),
-            ],
-            onChanged: (v) =>
-                setState(() => _tipoDocumentoSeleccionado = v),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 12),
-            ),
-          ),
-        ],
-      ),
-    ),
-    const SizedBox(width: 16),
-    Expanded(
-      child: _buildTextField(
-        controller: _documentoController,
-        label: 'Documento *',
-        hint: 'Ingrese documento',
-        validator: (v) =>
-            v?.isEmpty ?? true ? 'Campo requerido' : null,
-      ),
-    ),
-  ],
-),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Tipo Documento',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF374151),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                DropdownButtonFormField<TipoDocumento?>(
+                                  value: _tipoDocumentoSeleccionado,
+                                  items: [
+                                    const DropdownMenuItem<TipoDocumento?>(
+                                      value: null,
+                                      child: Text('— Sin tipo documento —'),
+                                    ),
+                                    ...widget.tiposDocumento.map(
+                                      (t) => DropdownMenuItem<TipoDocumento?>(
+                                        value: t,
+                                        child: Text(t.descripcion_tipodoc),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (v) => setState(() {
+                                    _tipoDocumentoSeleccionado = v;
+                                    // Limpiar el campo documento al cambiar
+                                    // el tipo para evitar valores residuales
+                                    _documentoController.clear();
+                                  }),
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                      borderSide: BorderSide(
+                                          color: Colors.grey.shade300),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                      borderSide: BorderSide(
+                                          color: Colors.grey.shade300),
+                                    ),
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildTextField(
+                              controller: _documentoController,
+                              label: 'Documento *',
+                              hint: 'Ingrese documento',
+                              validator: (v) {
+                                if (v?.isEmpty ?? true) {
+                                  return 'Campo requerido';
+                                }
+                                // Solo validar que no sea '0' si tiene
+                                // tipo de documento seleccionado
+                                if (_tipoDocumentoSeleccionado != null &&
+                                    v == '0') {
+                                  return 'Ingrese un documento válido';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
@@ -695,8 +722,9 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                         hint: 'Ingrese email',
                         validator: (v) {
                           if (v != null && v.isNotEmpty) {
-                            if (!v.contains('@') || !v.contains('.'))
+                            if (!v.contains('@') || !v.contains('.')) {
                               return 'Email inválido';
+                            }
                           }
                           return null;
                         },
@@ -711,10 +739,12 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               hint: 'Ingrese número de casa',
                               keyboardType: TextInputType.number,
                               validator: (v) {
-                                if (v?.isEmpty ?? true)
+                                if (v?.isEmpty ?? true) {
                                   return 'Campo requerido';
-                                if (int.tryParse(v!) == null)
+                                }
+                                if (int.tryParse(v!) == null) {
                                   return 'Debe ser un número';
+                                }
                                 return null;
                               },
                             ),
@@ -807,7 +837,6 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      // ──────────────────────────────────────────
 
                       CheckboxListTile(
                         title: const Text('¿Es proveedor del estado?'),
@@ -955,8 +984,7 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
             ? null
             : _direccionController.text,
         es_proveedor_del_estado: _esProveedorEstado,
-        email:
-            _emailController.text.isEmpty ? null : _emailController.text,
+        email: _emailController.text.isEmpty ? null : _emailController.text,
         nroCasa: int.parse(_nroCasaController.text),
         tipoOperacion: _tipoOperacionSeleccionado,
         estado: _estadoSeleccionado,

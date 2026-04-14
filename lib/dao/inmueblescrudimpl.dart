@@ -1,19 +1,26 @@
-import 'package:myapp/modelo/%20tipo_documento.dart';
-import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
-import 'package:myapp/modelo/tipo_operacion.dart';
+import 'package:myapp/dao/clientecrudimpl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
 
 class InmuebleCrudImpl {
-  
+
+  final ClienteCrudImpl _clienteCrud = ClienteCrudImpl();
+
+  // Trae todos los clientes una sola vez y los indexa por ID para no
+  // hacer N queries individuales en cada listado
+  Future<Map<int, Cliente>> _clientesPorId() async {
+    final lista = await _clienteCrud.leerClientes();
+    return { for (final c in lista) c.idCliente!: c };
+  }
+
   // ==================== CREAR INMUEBLE ====================
   Future<Inmuebles?> crearInmueble(Inmuebles inmueble) async {
     try {
-      final Map<String, dynamic> data = await supabase
+      final data = await supabase
           .from('inmuebles')
           .insert({
             'cod_inmueble': inmueble.cod_inmueble,
@@ -24,17 +31,20 @@ class InmuebleCrudImpl {
           })
           .select('''
             *,
-            fk_cliente(*,
-              tipo_documento(*),
-              barrios(*),
-              tipo_operacion(*)
-            ),
             fk_categoria_servicio(*)
           ''')
           .single();
 
+      // El cliente ya lo tenemos en el objeto original
       print('Inmueble creado exitosamente');
-      return Inmuebles.fromMap(data);
+      return Inmuebles(
+        id: data['id'],
+        cod_inmueble: data['cod_inmueble'],
+        estado: data['estado'],
+        direccion: data['direccion'],
+        cliente: inmueble.cliente,
+        categoriaServicio: CategoriaServicio.fromMap(data['fk_categoria_servicio']),
+      );
     } catch (e) {
       print('Error al crear inmueble: $e');
       return null;
@@ -44,56 +54,36 @@ class InmuebleCrudImpl {
   // ==================== LEER TODOS LOS INMUEBLES ====================
   Future<List<Inmuebles>> leerInmuebles() async {
     try {
-      final data = await supabase
-          .from('inmuebles')
-          .select('''
-            *,
-            fk_cliente(*,
-              tipo_documento(*),
-              barrios(*),
-              tipo_operacion(*)
-            ),
-            fk_categoria_servicio(*)
-          ''');
+      final results = await Future.wait(<Future<dynamic>>[
+        supabase.from('inmuebles').select('*, fk_categoria_servicio(*)'),
+        _clientesPorId(),
+      ]);
 
-      if (data == null) {
-        print('⚠️ La consulta devolvió null');
-        return [];
-      }
+      final rows = results[0] as List<dynamic>;
+      final clientesMap = results[1] as Map<int, Cliente>;
 
-      if (data.isEmpty) {
+      if (rows.isEmpty) {
         print('ℹ️ No hay inmuebles en la base de datos');
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
-          List<Map<String, dynamic>>.from(data);
-
-      final List<Inmuebles> inmuebles = registros.map((mapa) {
-        return Inmuebles(
-          id: mapa['id'],
-          cod_inmueble: mapa['cod_inmueble'],
-          estado: mapa['estado'],
-          direccion: mapa['direccion'],
-          cliente: Cliente(
-            idCliente: mapa['fk_cliente']['id_cliente'],
-            razonSocial: mapa['fk_cliente']['razon_social'],
-            nombreFantasia: mapa['fk_cliente']['nombre_fantasia'],
-            documento: mapa['fk_cliente']['documento'],
-            telefono: mapa['fk_cliente']['telefono'],
-            celular: mapa['fk_cliente']['celular'],
-            direccion: mapa['fk_cliente']['direccion'],
-            es_proveedor_del_estado: mapa['fk_cliente']['es_proveedor_del_estado'],
-            email: mapa['fk_cliente']['email'],
-            nroCasa: mapa['fk_cliente']['nro_casa'],
-            tipoOperacion: TipoOperacion.fromMap(mapa['fk_cliente']['tipo_operacion']),
-            estado: mapa['fk_cliente']['estado_cliente'],
-            tipoDocumento: TipoDocumento.fromMap(mapa['fk_cliente']['tipo_documento']),
-            barrio: Barrio.fromMap(mapa['fk_cliente']['barrios']),
-          ),
-          categoriaServicio: CategoriaServicio.fromMap(mapa['fk_categoria_servicio']),
-        );
-      }).toList();
+      final inmuebles = <Inmuebles>[];
+      for (final row in rows) {
+        final idCliente = row['fk_cliente'] as int;
+        final cliente = clientesMap[idCliente];
+        if (cliente == null) {
+          print('⚠️ Cliente $idCliente no encontrado, omitiendo inmueble ${row['id']}');
+          continue;
+        }
+        inmuebles.add(Inmuebles(
+          id: row['id'],
+          cod_inmueble: row['cod_inmueble'],
+          estado: row['estado'],
+          direccion: row['direccion'],
+          cliente: cliente,
+          categoriaServicio: CategoriaServicio.fromMap(row['fk_categoria_servicio']),
+        ));
+      }
 
       print('✓ Se cargaron ${inmuebles.length} inmuebles');
       return inmuebles;
@@ -106,41 +96,21 @@ class InmuebleCrudImpl {
   // ==================== LEER UN INMUEBLE POR ID ====================
   Future<Inmuebles?> leerInmueblePorId(int idInmueble) async {
     try {
-      final Map<String, dynamic> data = await supabase
+      final data = await supabase
           .from('inmuebles')
-          .select('''
-            *,
-            fk_cliente(*,
-              tipo_documento(*),
-              barrios(*),
-              tipo_operacion(*)
-            ),
-            fk_categoria_servicio(*)
-          ''')
+          .select('*, fk_categoria_servicio(*)')
           .eq('id', idInmueble)
           .single();
+
+      final cliente = await _clienteCrud.leerClientePorId(data['fk_cliente'] as int);
+      if (cliente == null) throw Exception('Cliente no encontrado');
 
       return Inmuebles(
         id: data['id'],
         cod_inmueble: data['cod_inmueble'],
         estado: data['estado'],
         direccion: data['direccion'],
-        cliente: Cliente(
-          idCliente: data['fk_cliente']['id_cliente'],
-          razonSocial: data['fk_cliente']['razon_social'],
-          nombreFantasia: data['fk_cliente']['nombre_fantasia'],
-          documento: data['fk_cliente']['documento'],
-          telefono: data['fk_cliente']['telefono'],
-          celular: data['fk_cliente']['celular'],
-          direccion: data['fk_cliente']['direccion'],
-          es_proveedor_del_estado: data['fk_cliente']['es_proveedor_del_estado'],
-          email: data['fk_cliente']['email'],
-          nroCasa: data['fk_cliente']['nro_casa'],
-          tipoOperacion: TipoOperacion.fromMap(data['fk_cliente']['tipo_operacion']),
-          estado: data['fk_cliente']['estado_cliente'],
-          tipoDocumento: TipoDocumento.fromMap(data['fk_cliente']['tipo_documento']),
-          barrio: Barrio.fromMap(data['fk_cliente']['barrios']),
-        ),
+        cliente: cliente,
         categoriaServicio: CategoriaServicio.fromMap(data['fk_categoria_servicio']),
       );
     } catch (e) {
@@ -152,52 +122,32 @@ class InmuebleCrudImpl {
   // ==================== BUSCAR INMUEBLES ====================
   Future<List<Inmuebles>> buscarInmuebles(String busqueda) async {
     try {
-      final data = await supabase
-          .from('inmuebles')
-          .select('''
-            *,
-            fk_cliente(*,
-              tipo_documento(*),
-              barrios(*),
-              tipo_operacion(*)
-            ),
-            fk_categoria_servicio(*)
-          ''')
-          .or('cod_inmueble.ilike.%$busqueda%,direccion.ilike.%$busqueda%');
+      final results = await Future.wait(<Future<dynamic>>[
+        supabase
+            .from('inmuebles')
+            .select('*, fk_categoria_servicio(*)')
+            .or('cod_inmueble.ilike.%$busqueda%,direccion.ilike.%$busqueda%'),
+        _clientesPorId(),
+      ]);
 
-      if (data == null || data.isEmpty) {
-        return [];
+      final rows = results[0] as List<dynamic>;
+      final clientesMap = results[1] as Map<int, Cliente>;
+
+      if (rows.isEmpty) return [];
+
+      final inmuebles = <Inmuebles>[];
+      for (final row in rows) {
+        final cliente = clientesMap[row['fk_cliente'] as int];
+        if (cliente == null) continue;
+        inmuebles.add(Inmuebles(
+          id: row['id'],
+          cod_inmueble: row['cod_inmueble'],
+          estado: row['estado'],
+          direccion: row['direccion'],
+          cliente: cliente,
+          categoriaServicio: CategoriaServicio.fromMap(row['fk_categoria_servicio']),
+        ));
       }
-
-      final List<Map<String, dynamic>> registros = 
-          List<Map<String, dynamic>>.from(data);
-
-      final List<Inmuebles> inmuebles = registros.map((mapa) {
-        return Inmuebles(
-          id: mapa['id'],
-          cod_inmueble: mapa['cod_inmueble'],
-          estado: mapa['estado'],
-          direccion: mapa['direccion'],
-          cliente: Cliente(
-            idCliente: mapa['fk_cliente']['id_cliente'],
-            razonSocial: mapa['fk_cliente']['razon_social'],
-            nombreFantasia: mapa['fk_cliente']['nombre_fantasia'],
-            documento: mapa['fk_cliente']['documento'],
-            telefono: mapa['fk_cliente']['telefono'],
-            celular: mapa['fk_cliente']['celular'],
-            direccion: mapa['fk_cliente']['direccion'],
-            es_proveedor_del_estado: mapa['fk_cliente']['es_proveedor_del_estado'],
-            email: mapa['fk_cliente']['email'],
-            nroCasa: mapa['fk_cliente']['nro_casa'],
-            tipoOperacion: TipoOperacion.fromMap(mapa['fk_cliente']['tipo_operacion']),
-            estado: mapa['fk_cliente']['estado_cliente'],
-            tipoDocumento: TipoDocumento.fromMap(mapa['fk_cliente']['tipo_documento']),
-            barrio: Barrio.fromMap(mapa['fk_cliente']['barrios']),
-          ),
-          categoriaServicio: CategoriaServicio.fromMap(mapa['fk_categoria_servicio']),
-        );
-      }).toList();
-
       return inmuebles;
     } catch (e) {
       print('Error al buscar inmuebles: $e');
@@ -230,11 +180,7 @@ class InmuebleCrudImpl {
   // ==================== ELIMINAR INMUEBLE ====================
   Future<bool> eliminarInmueble(int idInmueble) async {
     try {
-      await supabase
-          .from('inmuebles')
-          .delete()
-          .eq('id', idInmueble);
-
+      await supabase.from('inmuebles').delete().eq('id', idInmueble);
       print('Inmueble eliminado exitosamente');
       return true;
     } catch (e) {
@@ -246,53 +192,27 @@ class InmuebleCrudImpl {
   // ==================== LEER INMUEBLES POR CLIENTE ====================
   Future<List<Inmuebles>> leerInmueblesPorCliente(int idCliente) async {
     try {
-      final data = await supabase
-          .from('inmuebles')
-          .select('''
-            *,
-            fk_cliente(*,
-              tipo_documento(*),
-              barrios(*),
-              tipo_operacion(*)
-            ),
-            fk_categoria_servicio(*)
-          ''')
-          .eq('fk_cliente', idCliente);
+      final results = await Future.wait(<Future<dynamic>>[
+        supabase
+            .from('inmuebles')
+            .select('*, fk_categoria_servicio(*)')
+            .eq('fk_cliente', idCliente),
+        _clienteCrud.leerClientePorId(idCliente),
+      ]);
 
-      if (data == null || data.isEmpty) {
-        return [];
-      }
+      final rows = results[0] as List<dynamic>;
+      final cliente = results[1] as Cliente?;
 
-      final List<Map<String, dynamic>> registros = 
-          List<Map<String, dynamic>>.from(data);
+      if (rows.isEmpty || cliente == null) return [];
 
-      final List<Inmuebles> inmuebles = registros.map((mapa) {
-        return Inmuebles(
-          id: mapa['id'],
-          cod_inmueble: mapa['cod_inmueble'],
-          estado: mapa['estado'],
-          direccion: mapa['direccion'],
-          cliente: Cliente(
-            idCliente: mapa['fk_cliente']['id_cliente'],
-            razonSocial: mapa['fk_cliente']['razon_social'],
-            nombreFantasia: mapa['fk_cliente']['nombre_fantasia'],
-            documento: mapa['fk_cliente']['documento'],
-            telefono: mapa['fk_cliente']['telefono'],
-            celular: mapa['fk_cliente']['celular'],
-            direccion: mapa['fk_cliente']['direccion'],
-            es_proveedor_del_estado: mapa['fk_cliente']['es_proveedor_del_estado'],
-            email: mapa['fk_cliente']['email'],
-            nroCasa: mapa['fk_cliente']['nro_casa'],
-            tipoOperacion: TipoOperacion.fromMap(mapa['fk_cliente']['tipo_operacion']),
-            estado: mapa['fk_cliente']['estado_cliente'],
-            tipoDocumento: TipoDocumento.fromMap(mapa['fk_cliente']['tipo_documento']),
-            barrio: Barrio.fromMap(mapa['fk_cliente']['barrios']),
-          ),
-          categoriaServicio: CategoriaServicio.fromMap(mapa['fk_categoria_servicio']),
-        );
-      }).toList();
-
-      return inmuebles;
+      return rows.map((row) => Inmuebles(
+        id: row['id'],
+        cod_inmueble: row['cod_inmueble'],
+        estado: row['estado'],
+        direccion: row['direccion'],
+        cliente: cliente,
+        categoriaServicio: CategoriaServicio.fromMap(row['fk_categoria_servicio']),
+      )).toList();
     } catch (e) {
       print('Error al leer inmuebles por cliente: $e');
       return [];
@@ -302,52 +222,32 @@ class InmuebleCrudImpl {
   // ==================== LEER INMUEBLES POR CATEGORÍA ====================
   Future<List<Inmuebles>> leerInmueblesPorCategoria(int idCategoria) async {
     try {
-      final data = await supabase
-          .from('inmuebles')
-          .select('''
-            *,
-            fk_cliente(*,
-              tipo_documento(*),
-              barrios(*),
-              tipo_operacion(*)
-            ),
-            fk_categoria_servicio(*)
-          ''')
-          .eq('fk_categoria_servicio', idCategoria);
+      final results = await Future.wait(<Future<dynamic>>[
+        supabase
+            .from('inmuebles')
+            .select('*, fk_categoria_servicio(*)')
+            .eq('fk_categoria_servicio', idCategoria),
+        _clientesPorId(),
+      ]);
 
-      if (data == null || data.isEmpty) {
-        return [];
+      final rows = results[0] as List<dynamic>;
+      final clientesMap = results[1] as Map<int, Cliente>;
+
+      if (rows.isEmpty) return [];
+
+      final inmuebles = <Inmuebles>[];
+      for (final row in rows) {
+        final cliente = clientesMap[row['fk_cliente'] as int];
+        if (cliente == null) continue;
+        inmuebles.add(Inmuebles(
+          id: row['id'],
+          cod_inmueble: row['cod_inmueble'],
+          estado: row['estado'],
+          direccion: row['direccion'],
+          cliente: cliente,
+          categoriaServicio: CategoriaServicio.fromMap(row['fk_categoria_servicio']),
+        ));
       }
-
-      final List<Map<String, dynamic>> registros = 
-          List<Map<String, dynamic>>.from(data);
-
-      final List<Inmuebles> inmuebles = registros.map((mapa) {
-        return Inmuebles(
-          id: mapa['id'],
-          cod_inmueble: mapa['cod_inmueble'],
-          estado: mapa['estado'],
-          direccion: mapa['direccion'],
-          cliente: Cliente(
-            idCliente: mapa['fk_cliente']['id_cliente'],
-            razonSocial: mapa['fk_cliente']['razon_social'],
-            nombreFantasia: mapa['fk_cliente']['nombre_fantasia'],
-            documento: mapa['fk_cliente']['documento'],
-            telefono: mapa['fk_cliente']['telefono'],
-            celular: mapa['fk_cliente']['celular'],
-            direccion: mapa['fk_cliente']['direccion'],
-            es_proveedor_del_estado: mapa['fk_cliente']['es_proveedor_del_estado'],
-            email: mapa['fk_cliente']['email'],
-            nroCasa: mapa['fk_cliente']['nro_casa'],
-            tipoOperacion: TipoOperacion.fromMap(mapa['fk_cliente']['tipo_operacion']),
-            estado: mapa['fk_cliente']['estado_cliente'],
-            tipoDocumento: TipoDocumento.fromMap(mapa['fk_cliente']['tipo_documento']),
-            barrio: Barrio.fromMap(mapa['fk_cliente']['barrios']),
-          ),
-          categoriaServicio: CategoriaServicio.fromMap(mapa['fk_categoria_servicio']),
-        );
-      }).toList();
-
       return inmuebles;
     } catch (e) {
       print('Error al leer inmuebles por categoría: $e');
@@ -358,52 +258,32 @@ class InmuebleCrudImpl {
   // ==================== LEER INMUEBLES POR ESTADO ====================
   Future<List<Inmuebles>> leerInmueblesPorEstado(String estado) async {
     try {
-      final data = await supabase
-          .from('inmuebles')
-          .select('''
-            *,
-            fk_cliente(*,
-              tipo_documento(*),
-              barrios(*),
-              tipo_operacion(*)
-            ),
-            fk_categoria_servicio(*)
-          ''')
-          .eq('estado', estado);
+      final results = await Future.wait(<Future<dynamic>>[
+        supabase
+            .from('inmuebles')
+            .select('*, fk_categoria_servicio(*)')
+            .eq('estado', estado),
+        _clientesPorId(),
+      ]);
 
-      if (data == null || data.isEmpty) {
-        return [];
+      final rows = results[0] as List<dynamic>;
+      final clientesMap = results[1] as Map<int, Cliente>;
+
+      if (rows.isEmpty) return [];
+
+      final inmuebles = <Inmuebles>[];
+      for (final row in rows) {
+        final cliente = clientesMap[row['fk_cliente'] as int];
+        if (cliente == null) continue;
+        inmuebles.add(Inmuebles(
+          id: row['id'],
+          cod_inmueble: row['cod_inmueble'],
+          estado: row['estado'],
+          direccion: row['direccion'],
+          cliente: cliente,
+          categoriaServicio: CategoriaServicio.fromMap(row['fk_categoria_servicio']),
+        ));
       }
-
-      final List<Map<String, dynamic>> registros = 
-          List<Map<String, dynamic>>.from(data);
-
-      final List<Inmuebles> inmuebles = registros.map((mapa) {
-        return Inmuebles(
-          id: mapa['id'],
-          cod_inmueble: mapa['cod_inmueble'],
-          estado: mapa['estado'],
-          direccion: mapa['direccion'],
-          cliente: Cliente(
-            idCliente: mapa['fk_cliente']['id_cliente'],
-            razonSocial: mapa['fk_cliente']['razon_social'],
-            nombreFantasia: mapa['fk_cliente']['nombre_fantasia'],
-            documento: mapa['fk_cliente']['documento'],
-            telefono: mapa['fk_cliente']['telefono'],
-            celular: mapa['fk_cliente']['celular'],
-            direccion: mapa['fk_cliente']['direccion'],
-            es_proveedor_del_estado: mapa['fk_cliente']['es_proveedor_del_estado'],
-            email: mapa['fk_cliente']['email'],
-            nroCasa: mapa['fk_cliente']['nro_casa'],
-            tipoOperacion: TipoOperacion.fromMap(mapa['fk_cliente']['tipo_operacion']),
-            estado: mapa['fk_cliente']['estado_cliente'],
-            tipoDocumento: TipoDocumento.fromMap(mapa['fk_cliente']['tipo_documento']),
-            barrio: Barrio.fromMap(mapa['fk_cliente']['barrios']),
-          ),
-          categoriaServicio: CategoriaServicio.fromMap(mapa['fk_categoria_servicio']),
-        );
-      }).toList();
-
       return inmuebles;
     } catch (e) {
       print('Error al leer inmuebles por estado: $e');
@@ -418,7 +298,6 @@ class InmuebleCrudImpl {
           .from('inmuebles')
           .update({'estado': nuevoEstado})
           .eq('id', idInmueble);
-
       print('Estado del inmueble actualizado exitosamente');
       return true;
     } catch (e) {
@@ -440,7 +319,6 @@ class InmuebleCrudImpl {
       }
 
       final data = await query;
-
       return data.isNotEmpty;
     } catch (e) {
       print('Error al verificar código: $e');
@@ -455,7 +333,6 @@ class InmuebleCrudImpl {
           .from('inmuebles')
           .select('id')
           .eq('fk_cliente', idCliente);
-
       return data.length;
     } catch (e) {
       print('Error al contar inmuebles: $e');
