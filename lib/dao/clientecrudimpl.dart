@@ -24,7 +24,7 @@ class ClienteCrudImpl {
         'nro_casa': cliente.nroCasa,
         'fk_tipo_operacion': cliente.tipoOperacion.id_tipo_operacion,
         'estado_cliente': cliente.estado,
-        'fk_tipo_documento': cliente.tipoDocumento.cod_tipo_documento,
+        'fk_tipo_documento': cliente.tipoDocumento?.cod_tipo_documento,
         'fk_barrios': cliente.barrio.cod_barrio,
       };
 
@@ -80,25 +80,39 @@ class ClienteCrudImpl {
           List<Map<String, dynamic>>.from(data);
 
       final List<Cliente> clientes = registros.map((mapa) {
-        return Cliente(
-          idCliente: mapa['id_cliente'],
-          razonSocial: mapa['razon_social'],
-          nombreFantasia: mapa['nombre_fantasia'],
-          documento: mapa['documento'],
-          telefono: mapa['telefono'],
-          celular: mapa['celular'],
-          direccion: mapa['direccion'],
-          es_proveedor_del_estado: mapa['es_proveedor_del_estado'],
-          email: mapa['email'],
-          nroCasa: mapa['nro_casa'],
-          tipoOperacion: TipoOperacion.fromMap(mapa['tipo_operacion']),
-          estado: mapa['estado_cliente'],
-          tipoDocumento: TipoDocumento.fromMap(mapa['tipo_documento']),
-          barrio: Barrio.fromMap(mapa['barrios']),
-          tipo_contribuyente: mapa['tipo_contribuyente'] != null
-              ? TipoContribuyente.fromMap(mapa['tipo_contribuyente'])
-              : null,
-        );
+       try {
+    return Cliente(
+      idCliente: mapa['id_cliente'],
+      razonSocial: mapa['razon_social'] ?? '',
+      nombreFantasia: mapa['nombre_fantasia'],
+      documento: mapa['documento'] ?? '',
+      telefono: mapa['telefono'],
+      celular: mapa['celular'] ?? '',
+      direccion: mapa['direccion'],
+      es_proveedor_del_estado: mapa['es_proveedor_del_estado'] ?? false,
+      email: mapa['email'],
+      nroCasa: mapa['nro_casa'] ?? 0,
+      tipoOperacion: mapa['tipo_operacion'] != null
+          ? TipoOperacion.fromMap(mapa['tipo_operacion'])
+          : TipoOperacion.vacio(),
+      estado: mapa['estado_cliente'] ?? '',
+      tipoDocumento: mapa['tipo_documento'] != null
+          ? TipoDocumento.fromMap(mapa['tipo_documento'])
+          : null,
+      barrio: mapa['barrios'] != null
+          ? Barrio.fromMap(mapa['barrios'])
+          : Barrio.vacio(),
+      tipo_contribuyente: mapa['tipo_contribuyente'] != null
+          ? TipoContribuyente.fromMap(mapa['tipo_contribuyente'])
+          : null,
+    );
+  } catch (e) {
+    print('❌ Error en cliente id=${mapa['id_cliente']}: $e');
+    print('   tipo_operacion: ${mapa['tipo_operacion']}');
+    print('   barrios: ${mapa['barrios']}');
+    print('   tipo_documento: ${mapa['tipo_documento']}');
+    rethrow;
+  }
       }).toList();
 
       print('✓ Se cargaron ${clientes.length} clientes');
@@ -214,7 +228,7 @@ class ClienteCrudImpl {
         'nro_casa': cliente.nroCasa,
         'fk_tipo_operacion': cliente.tipoOperacion.id_tipo_operacion,
         'estado_cliente': cliente.estado,
-        'fk_tipo_documento': cliente.tipoDocumento.cod_tipo_documento,
+        'fk_tipo_documento': cliente.tipoDocumento?.cod_tipo_documento,
         'fk_barrios': cliente.barrio.cod_barrio,
       };
 

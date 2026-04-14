@@ -456,7 +456,7 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
 
   late bool _esProveedorEstado;
   late String _estadoSeleccionado;
-  late TipoDocumento _tipoDocumentoSeleccionado;
+  late TipoDocumento? _tipoDocumentoSeleccionado;
   late TipoOperacion _tipoOperacionSeleccionado;
   late Barrio _barrioSeleccionado;
   TipoContribuyente? _tipoContribuyenteSeleccionado;
@@ -487,14 +487,16 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
     _esProveedorEstado = widget.cliente?.es_proveedor_del_estado ?? false;
     _estadoSeleccionado = widget.cliente?.estado ?? 'ACTIVO';
 
-    _tipoDocumentoSeleccionado = widget.cliente != null
-        ? widget.tiposDocumento.firstWhere(
-            (t) =>
-                t.cod_tipo_documento ==
-                widget.cliente!.tipoDocumento.cod_tipo_documento,
-            orElse: () => widget.tiposDocumento.first,
-          )
-        : widget.tiposDocumento.first;
+    _tipoDocumentoSeleccionado = widget.cliente != null &&
+        widget.cliente!.tipoDocumento != null &&
+        widget.tiposDocumento.isNotEmpty
+    ? widget.tiposDocumento.firstWhere(
+        (t) =>
+            t.cod_tipo_documento ==
+            widget.cliente!.tipoDocumento!.cod_tipo_documento,
+        orElse: () => widget.tiposDocumento.first,
+      )
+    : null;
 
     _tipoOperacionSeleccionado = widget.cliente != null
         ? widget.tiposOperacion.firstWhere(
@@ -597,30 +599,67 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildDropdown<TipoDocumento>(
-                              label: 'Tipo Documento *',
-                              value: _tipoDocumentoSeleccionado,
-                              items: widget.tiposDocumento,
-                              onChanged: (v) => setState(
-                                  () => _tipoDocumentoSeleccionado = v!),
-                              itemLabel: (i) => i.descripcion_tipodoc,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _documentoController,
-                              label: 'Documento *',
-                              hint: 'Ingrese documento',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                        ],
-                      ),
+                     Row(
+  children: [
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tipo Documento',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF374151),
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<TipoDocumento?>(
+            value: _tipoDocumentoSeleccionado,
+            items: [
+              const DropdownMenuItem<TipoDocumento?>(
+                value: null,
+                child: Text('— Sin tipo documento —'),
+              ),
+              ...widget.tiposDocumento.map(
+                (t) => DropdownMenuItem<TipoDocumento?>(
+                  value: t,
+                  child: Text(t.descripcion_tipodoc),
+                ),
+              ),
+            ],
+            onChanged: (v) =>
+                setState(() => _tipoDocumentoSeleccionado = v),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    ),
+    const SizedBox(width: 16),
+    Expanded(
+      child: _buildTextField(
+        controller: _documentoController,
+        label: 'Documento *',
+        hint: 'Ingrese documento',
+        validator: (v) =>
+            v?.isEmpty ?? true ? 'Campo requerido' : null,
+      ),
+    ),
+  ],
+),
                       const SizedBox(height: 16),
                       Row(
                         children: [

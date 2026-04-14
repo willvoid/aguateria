@@ -14,6 +14,11 @@ class TipoOperacion {
     );
   }
 
+  factory TipoOperacion.vacio() => TipoOperacion(
+    id_tipo_operacion: 0,
+    codigo_tipo_operacion: '',
+  );
+
   Map<String, dynamic> toMap() {
     return {
       'id_tipo_operacion': id_tipo_operacion,
