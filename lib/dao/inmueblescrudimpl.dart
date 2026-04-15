@@ -38,7 +38,7 @@ class InmuebleCrudImpl {
       // El cliente ya lo tenemos en el objeto original
       print('Inmueble creado exitosamente');
       return Inmuebles(
-        id: data['id'],
+        id: int.tryParse(data['id'].toString()),
         cod_inmueble: data['cod_inmueble'],
         estado: data['estado'],
         direccion: data['direccion'],
@@ -59,8 +59,11 @@ class InmuebleCrudImpl {
         _clientesPorId(),
       ]);
 
-      final rows = results[0] as List<dynamic>;
-      final clientesMap = results[1] as Map<int, Cliente>;
+      // En lugar de 'as List<dynamic>', usamos una lista normal o casteamos seguro
+      final rows = List<Map<String, dynamic>>.from(results[0]);
+      
+      // En lugar de 'as Map<int, Cliente>', usamos Map.from() para asegurar los tipos
+      final clientesMap = Map<int, Cliente>.from(results[1] as Map);
 
       if (rows.isEmpty) {
         print('ℹ️ No hay inmuebles en la base de datos');
@@ -69,14 +72,18 @@ class InmuebleCrudImpl {
 
       final inmuebles = <Inmuebles>[];
       for (final row in rows) {
-        final idCliente = row['fk_cliente'] as int;
+        // 🔥 LA MAGIA: Parseo defensivo. Viene como venga (String, int, double), no fallará.
+        final idCliente = int.tryParse(row['fk_cliente'].toString()) ?? 0;
+        
         final cliente = clientesMap[idCliente];
         if (cliente == null) {
           print('⚠️ Cliente $idCliente no encontrado, omitiendo inmueble ${row['id']}');
           continue;
         }
+        
         inmuebles.add(Inmuebles(
-          id: row['id'],
+          // También es buena idea asegurar el ID del inmueble
+          id: int.tryParse(row['id'].toString()), 
           cod_inmueble: row['cod_inmueble'],
           estado: row['estado'],
           direccion: row['direccion'],
@@ -102,11 +109,14 @@ class InmuebleCrudImpl {
           .eq('id', idInmueble)
           .single();
 
-      final cliente = await _clienteCrud.leerClientePorId(data['fk_cliente'] as int);
+      // 🔥 Parseo defensivo aquí también
+      final idCliente = int.tryParse(data['fk_cliente'].toString()) ?? 0;
+      final cliente = await _clienteCrud.leerClientePorId(idCliente);
+      
       if (cliente == null) throw Exception('Cliente no encontrado');
 
       return Inmuebles(
-        id: data['id'],
+        id: int.tryParse(data['id'].toString()),
         cod_inmueble: data['cod_inmueble'],
         estado: data['estado'],
         direccion: data['direccion'],
@@ -130,17 +140,21 @@ class InmuebleCrudImpl {
         _clientesPorId(),
       ]);
 
-      final rows = results[0] as List<dynamic>;
-      final clientesMap = results[1] as Map<int, Cliente>;
+      final rows = List<Map<String, dynamic>>.from(results[0]);
+      final clientesMap = Map<int, Cliente>.from(results[1] as Map);
 
       if (rows.isEmpty) return [];
 
       final inmuebles = <Inmuebles>[];
       for (final row in rows) {
-        final cliente = clientesMap[row['fk_cliente'] as int];
+        // Parseo seguro
+        final idCliente = int.tryParse(row['fk_cliente'].toString()) ?? 0;
+        final cliente = clientesMap[idCliente];
+        
         if (cliente == null) continue;
+        
         inmuebles.add(Inmuebles(
-          id: row['id'],
+          id: int.tryParse(row['id'].toString()),
           cod_inmueble: row['cod_inmueble'],
           estado: row['estado'],
           direccion: row['direccion'],
@@ -206,7 +220,7 @@ class InmuebleCrudImpl {
       if (rows.isEmpty || cliente == null) return [];
 
       return rows.map((row) => Inmuebles(
-        id: row['id'],
+        id: int.tryParse(row['id'].toString()),
         cod_inmueble: row['cod_inmueble'],
         estado: row['estado'],
         direccion: row['direccion'],
@@ -230,17 +244,21 @@ class InmuebleCrudImpl {
         _clientesPorId(),
       ]);
 
-      final rows = results[0] as List<dynamic>;
-      final clientesMap = results[1] as Map<int, Cliente>;
+      final rows = List<Map<String, dynamic>>.from(results[0]);
+      final clientesMap = Map<int, Cliente>.from(results[1] as Map);
 
       if (rows.isEmpty) return [];
 
       final inmuebles = <Inmuebles>[];
       for (final row in rows) {
-        final cliente = clientesMap[row['fk_cliente'] as int];
+        // Parseo seguro
+        final idCliente = int.tryParse(row['fk_cliente'].toString()) ?? 0;
+        final cliente = clientesMap[idCliente];
+        
         if (cliente == null) continue;
+        
         inmuebles.add(Inmuebles(
-          id: row['id'],
+          id: int.tryParse(row['id'].toString()),
           cod_inmueble: row['cod_inmueble'],
           estado: row['estado'],
           direccion: row['direccion'],
@@ -266,17 +284,21 @@ class InmuebleCrudImpl {
         _clientesPorId(),
       ]);
 
-      final rows = results[0] as List<dynamic>;
-      final clientesMap = results[1] as Map<int, Cliente>;
+      final rows = List<Map<String, dynamic>>.from(results[0]);
+      final clientesMap = Map<int, Cliente>.from(results[1] as Map);
 
       if (rows.isEmpty) return [];
 
       final inmuebles = <Inmuebles>[];
       for (final row in rows) {
-        final cliente = clientesMap[row['fk_cliente'] as int];
+        // Parseo seguro
+        final idCliente = int.tryParse(row['fk_cliente'].toString()) ?? 0;
+        final cliente = clientesMap[idCliente];
+        
         if (cliente == null) continue;
+        
         inmuebles.add(Inmuebles(
-          id: row['id'],
+          id: int.tryParse(row['id'].toString()),
           cod_inmueble: row['cod_inmueble'],
           estado: row['estado'],
           direccion: row['direccion'],
