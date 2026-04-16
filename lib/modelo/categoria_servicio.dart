@@ -42,6 +42,17 @@ class CategoriaServicio {
     return 'CategoriaServicio{id: $id, nombre: $nombre, tarifa_fija: $tarifa_fija, m2_min: $m2_min, m2_max: $m2_max, descripcion: $descripcion}';
   }
 
+  factory CategoriaServicio.vacio() {
+  return CategoriaServicio(
+    id: null,
+    nombre: '',
+    tarifa_fija: 0,
+    m2_min: 0,
+    m2_max: 0,
+    descripcion: '',
+  );
+}
+
   CategoriaServicio copyWith({
     int? id,
     String? nombre,

@@ -203,7 +203,7 @@ class _DashboardClientesInmueblesPageState
                     children: [
                       Expanded(flex: 2, child: _buildTopDeudores()),
                       const SizedBox(width: 16),
-                      Expanded(flex: 3, child: _buildGraficoCategorias()),
+                      //Expanded(flex: 3, child: _buildGraficoCategorias()),
                     ],
                   ),
                 ],

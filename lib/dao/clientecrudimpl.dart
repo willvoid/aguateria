@@ -8,7 +8,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 final supabase = Supabase.instance.client;
 
 class ClienteCrudImpl {
-  
   // ==================== CREAR CLIENTE ====================
   Future<Cliente?> crearCliente(Cliente cliente) async {
     try {
@@ -30,19 +29,20 @@ class ClienteCrudImpl {
 
       // Solo agregar tipo_contribuyente si no es null
       if (cliente.tipo_contribuyente != null) {
-        insertData['tipo_contribuyente'] = cliente.tipo_contribuyente!.id_tipo_contribuyente;
+        insertData['tipo_contribuyente'] =
+            cliente.tipo_contribuyente!.id_tipo_contribuyente;
       }
 
       final Map<String, dynamic> data = await supabase
           .from('clientes')
           .insert(insertData)
           .select('''
-            *,
-            tipo_documento(*),
-            barrios(*),
-            tipo_operacion(*),
-            tipo_contribuyente(*)
-          ''')
+                                                                                                                                                                                                        *,
+                                                                                                                                                                                                                    tipo_documento(*),
+                                                                                                                                                                                                                                barrios(*),
+                                                                                                                                                                                                                                            tipo_operacion(*),
+                                                                                                                                                                                                                                                        tipo_contribuyente(*)
+                                                                                                                                                                                                                                                                  ''')
           .single();
 
       print('Cliente creado exitosamente');
@@ -56,15 +56,15 @@ class ClienteCrudImpl {
   // ==================== LEER TODOS LOS CLIENTES ====================
   Future<List<Cliente>> leerClientes() async {
     try {
-      final data = await supabase
-          .from('clientes')
-          .select('''
-            *,
-            tipo_documento(*),
-            barrios(*),
-            tipo_operacion(*),
-            tipo_contribuyente(*)
-          ''');
+      final data = await supabase.from('clientes').select(
+        '''
+                                                                                                                                                                                                                                                                                                                                                            *,
+                                                                                                                                                                                                                                                                                                                                                                        tipo_documento(*),
+                                                                                                                                                                                                                                                                                                                                                                                    barrios(*),
+                                                                                                                                                                                                                                                                                                                                                                                                tipo_operacion(*),
+                                                                                                                                                                                                                                                                                                                                                                                                            tipo_contribuyente(*)
+                                                                                                                                                                                                                                                                                                                                                                                                                      ''',
+      );
 
       if (data == null) {
         print('⚠️ La consulta devolvió null');
@@ -76,43 +76,43 @@ class ClienteCrudImpl {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<Cliente> clientes = registros.map((mapa) {
-       try {
-    return Cliente(
-      idCliente: mapa['id_cliente'],
-      razonSocial: mapa['razon_social'] ?? '',
-      nombreFantasia: mapa['nombre_fantasia'],
-      documento: mapa['documento'] ?? '',
-      telefono: mapa['telefono'],
-      celular: mapa['celular'] ?? '',
-      direccion: mapa['direccion'],
-      es_proveedor_del_estado: mapa['es_proveedor_del_estado'] ?? false,
-      email: mapa['email'],
-      nroCasa: mapa['nro_casa'] ?? 0,
-      tipoOperacion: mapa['tipo_operacion'] != null
-          ? TipoOperacion.fromMap(mapa['tipo_operacion'])
-          : TipoOperacion.vacio(),
-      estado: mapa['estado_cliente'] ?? '',
-      tipoDocumento: mapa['tipo_documento'] != null
-          ? TipoDocumento.fromMap(mapa['tipo_documento'])
-          : null,
-      barrio: mapa['barrios'] != null
-          ? Barrio.fromMap(mapa['barrios'])
-          : Barrio.vacio(),
-      tipo_contribuyente: mapa['tipo_contribuyente'] != null
-          ? TipoContribuyente.fromMap(mapa['tipo_contribuyente'])
-          : null,
-    );
-  } catch (e) {
-    print('❌ Error en cliente id=${mapa['id_cliente']}: $e');
-    print('   tipo_operacion: ${mapa['tipo_operacion']}');
-    print('   barrios: ${mapa['barrios']}');
-    print('   tipo_documento: ${mapa['tipo_documento']}');
-    rethrow;
-  }
+        try {
+          return Cliente(
+            idCliente: mapa['id_cliente'],
+            razonSocial: mapa['razon_social'] ?? '',
+            nombreFantasia: mapa['nombre_fantasia'],
+            documento: mapa['documento'] ?? '',
+            telefono: mapa['telefono'],
+            celular: mapa['celular'] ?? '',
+            direccion: mapa['direccion'],
+            es_proveedor_del_estado: mapa['es_proveedor_del_estado'] ?? false,
+            email: mapa['email'],
+            nroCasa: mapa['nro_casa'] ?? 0,
+            tipoOperacion: mapa['tipo_operacion'] != null
+                ? TipoOperacion.fromMap(mapa['tipo_operacion'])
+                : TipoOperacion.vacio(),
+            estado: mapa['estado_cliente'] ?? '',
+            tipoDocumento: mapa['tipo_documento'] != null
+                ? TipoDocumento.fromMap(mapa['tipo_documento'])
+                : null,
+            barrio: mapa['barrios'] != null
+                ? Barrio.fromMap(mapa['barrios'])
+                : Barrio.vacio(),
+            tipo_contribuyente: mapa['tipo_contribuyente'] != null
+                ? TipoContribuyente.fromMap(mapa['tipo_contribuyente'])
+                : null,
+          );
+        } catch (e) {
+          print('❌ Error en cliente id=${mapa['id_cliente']}: $e');
+          print('   tipo_operacion: ${mapa['tipo_operacion']}');
+          print('   barrios: ${mapa['barrios']}');
+          print('   tipo_documento: ${mapa['tipo_documento']}');
+          rethrow;
+        }
       }).toList();
 
       print('✓ Se cargaron ${clientes.length} clientes');
@@ -129,12 +129,12 @@ class ClienteCrudImpl {
       final Map<String, dynamic> data = await supabase
           .from('clientes')
           .select('''
-            *,
-            tipo_documento(*),
-            barrios(*),
-            tipo_operacion(*),
-            tipo_contribuyente(*)
-          ''')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           *,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       tipo_documento(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   barrios(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               tipo_operacion(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           tipo_contribuyente(*)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ''')
           .eq('id_cliente', idCliente)
           .single();
 
@@ -169,19 +169,21 @@ class ClienteCrudImpl {
       final data = await supabase
           .from('clientes')
           .select('''
-            *,
-            tipo_documento(*),
-            barrios(*),
-            tipo_operacion(*),
-            tipo_contribuyente(*)
-          ''')
-          .or('razon_social.ilike.%$busqueda%,documento.ilike.%$busqueda%,celular.ilike.%$busqueda%');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         *,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     tipo_documento(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 barrios(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             tipo_operacion(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         tipo_contribuyente(*)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ''')
+          .or(
+            'razon_social.ilike.%$busqueda%,documento.ilike.%$busqueda%,celular.ilike.%$busqueda%',
+          );
 
       if (data == null || data.isEmpty) {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<Cliente> clientes = registros.map((mapa) {
@@ -234,7 +236,8 @@ class ClienteCrudImpl {
 
       // Solo agregar tipo_contribuyente si no es null
       if (cliente.tipo_contribuyente != null) {
-        updateData['tipo_contribuyente'] = cliente.tipo_contribuyente!.id_tipo_contribuyente;
+        updateData['tipo_contribuyente'] =
+            cliente.tipo_contribuyente!.id_tipo_contribuyente;
       }
 
       await supabase
@@ -253,10 +256,7 @@ class ClienteCrudImpl {
   // ==================== ELIMINAR CLIENTE ====================
   Future<bool> eliminarCliente(int idCliente) async {
     try {
-      await supabase
-          .from('clientes')
-          .delete()
-          .eq('id_cliente', idCliente);
+      await supabase.from('clientes').delete().eq('id_cliente', idCliente);
 
       print('Cliente eliminado exitosamente');
       return true;
@@ -272,19 +272,19 @@ class ClienteCrudImpl {
       final data = await supabase
           .from('clientes')
           .select('''
-            *,
-            tipo_documento(*),
-            barrios(*),
-            tipo_operacion(*),
-            tipo_contribuyente(*)
-          ''')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   *,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               tipo_documento(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           barrios(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       tipo_operacion(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   tipo_contribuyente(*)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ''')
           .eq('fk_barrios', idBarrio);
 
       if (data == null || data.isEmpty) {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<Cliente> clientes = registros.map((mapa) {
@@ -322,19 +322,19 @@ class ClienteCrudImpl {
       final data = await supabase
           .from('clientes')
           .select('''
-            *,
-            tipo_documento(*),
-            barrios(*),
-            tipo_operacion(*),
-            tipo_contribuyente(*)
-          ''')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   *,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               tipo_documento(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           barrios(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       tipo_operacion(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   tipo_contribuyente(*)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ''')
           .eq('estado_cliente', estado);
 
       if (data == null || data.isEmpty) {
         return [];
       }
 
-      final List<Map<String, dynamic>> registros = 
+      final List<Map<String, dynamic>> registros =
           List<Map<String, dynamic>>.from(data);
 
       final List<Cliente> clientes = registros.map((mapa) {
@@ -383,7 +383,10 @@ class ClienteCrudImpl {
   }
 
   // ==================== VERIFICAR DOCUMENTO EXISTENTE ====================
-  Future<bool> verificarDocumentoExistente(String documento, {int? idClienteExcluir}) async {
+  Future<bool> verificarDocumentoExistente(
+    String documento, {
+    int? idClienteExcluir,
+  }) async {
     try {
       var query = supabase
           .from('clientes')
@@ -404,46 +407,46 @@ class ClienteCrudImpl {
   }
 
   // ==================== BUSCAR CLIENTE POR DOCUMENTO EXACTO ====================
-Future<Cliente?> buscarClientePorDocumento(String documento) async {
-  try {
-    final data = await supabase
-        .from('clientes')
-        .select('''
-          *,
-          tipo_documento(*),
-          barrios(*),
-          tipo_operacion(*),
-          tipo_contribuyente(*)
-        ''')
-        .eq('documento', documento)
-        .maybeSingle();
+  Future<Cliente?> buscarClientePorDocumento(String documento) async {
+    try {
+      final data = await supabase
+          .from('clientes')
+          .select('''
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       *,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 tipo_documento(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           barrios(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     tipo_operacion(*),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               tipo_contribuyente(*)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ''')
+          .eq('documento', documento)
+          .maybeSingle();
 
-    if (data == null) return null;
+      if (data == null) return null;
 
-    return Cliente(
-      idCliente: data['id_cliente'],
-      razonSocial: data['razon_social'],
-      nombreFantasia: data['nombre_fantasia'],
-      documento: data['documento'],
-      telefono: data['telefono'],
-      celular: data['celular'],
-      direccion: data['direccion'],
-      es_proveedor_del_estado: data['es_proveedor_del_estado'],
-      email: data['email'],
-      nroCasa: data['nro_casa'],
-      tipoOperacion: TipoOperacion.fromMap(data['tipo_operacion']),
-      estado: data['estado_cliente'],
-      tipoDocumento: TipoDocumento.fromMap(data['tipo_documento']),
-      barrio: Barrio.fromMap(data['barrios']),
-      tipo_contribuyente: data['tipo_contribuyente'] != null
-          ? TipoContribuyente.fromMap(data['tipo_contribuyente'])
-          : null,
-    );
-  } catch (e) {
-    print('Error al buscar cliente por documento: $e');
-    return null;
+      return Cliente(
+        idCliente: data['id_cliente'],
+        razonSocial: data['razon_social'],
+        nombreFantasia: data['nombre_fantasia'],
+        documento: data['documento'],
+        telefono: data['telefono'],
+        celular: data['celular'],
+        direccion: data['direccion'],
+        es_proveedor_del_estado: data['es_proveedor_del_estado'],
+        email: data['email'],
+        nroCasa: data['nro_casa'],
+        tipoOperacion: TipoOperacion.fromMap(data['tipo_operacion']),
+        estado: data['estado_cliente'],
+        tipoDocumento: TipoDocumento.fromMap(data['tipo_documento']),
+        barrio: Barrio.fromMap(data['barrios']),
+        tipo_contribuyente: data['tipo_contribuyente'] != null
+            ? TipoContribuyente.fromMap(data['tipo_contribuyente'])
+            : null,
+      );
+    } catch (e) {
+      print('Error al buscar cliente por documento: $e');
+      return null;
+    }
   }
-}
 
   Future<bool> actualizarEmailCliente(int idCliente, String email) async {
     try {
@@ -457,5 +460,4 @@ Future<Cliente?> buscarClientePorDocumento(String documento) async {
       return false;
     }
   }
-
 }
