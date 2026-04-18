@@ -8,9 +8,8 @@ import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/vista/dashboard_clientes/dashboard_clientes.dart';
 import 'package:myapp/vista/loginpage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show window;
 
 class ClienteConsultaPage extends StatefulWidget {
   const ClienteConsultaPage({Key? key}) : super(key: key);
@@ -26,7 +25,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   late final AppLinks _appLinks;
 
-  // Variable estática como fallback para móvil
+  // Variable estática como fallback (ya no necesaria, pero se mantiene por compatibilidad)
   static String? _ciPendienteStatic;
 
   // 0 = ingresa CI, 1 = login OAuth, 2 = selector inmuebles
@@ -35,13 +34,9 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   bool _isLoading = false;
 
   // ── Coordinación de dos tareas paralelas en web ───────────────────────────
-  // En web el redirect OAuth reconstruye el widget desde cero, por lo que
-  // onAuthStateChange y _buscarClienteSilencioso corren en paralelo sin
-  // orden garantizado. Estos dos flags actúan como punto de encuentro:
-  // el que llegue último activa la navegación a través de _verificarYCargarSiListo().
-  bool _clienteListo = false;  // true cuando _buscarClienteSilencioso terminó OK
-  bool _sesionLista  = false;  // true cuando onAuthStateChange recibió sesión
-  bool _cargandoInmuebles = false; // mutex para que solo corra una vez
+  bool _clienteListo = false;
+  bool _sesionLista  = false;
+  bool _cargandoInmuebles = false;
   // ─────────────────────────────────────────────────────────────────────────
 
   String? _emailGoogle;
@@ -54,32 +49,23 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   String? _errorMessage;
 
   // ── Persistencia del CI ───────────────────────────────────────────────────
-  void _guardarCI(String documento) {
-    if (kIsWeb) {
-      html.window.localStorage['ci_pendiente'] = documento;
-    } else {
-      _ciPendienteStatic = documento;
-    }
+  // Usa SharedPreferences en todas las plataformas (web, Android, iOS)
+  Future<void> _guardarCI(String documento) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ci_pendiente', documento);
   }
 
-  String? _recuperarCI() {
-    if (kIsWeb) {
-      return html.window.localStorage['ci_pendiente'];
-    }
-    return _ciPendienteStatic;
+  Future<String?> _recuperarCI() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('ci_pendiente');
   }
 
-  void _limpiarCI() {
-    if (kIsWeb) {
-      html.window.localStorage.remove('ci_pendiente');
-    } else {
-      _ciPendienteStatic = null;
-    }
+  Future<void> _limpiarCI() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('ci_pendiente');
   }
 
   // ── Punto de encuentro ────────────────────────────────────────────────────
-  // Solo navega cuando AMBAS condiciones están listas.
-  // El que llegue primero (sesión o cliente) espera al otro aquí.
   void _verificarYCargarSiListo() {
     if (!_clienteListo || !_sesionLista) return;
     if (_cargandoInmuebles) return;
@@ -111,7 +97,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
         _limpiarCI();
 
-        // Señalizar que la sesión llegó y verificar si el cliente ya está listo
         _sesionLista = true;
         _verificarYCargarSiListo();
       }
@@ -123,7 +108,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) return;
 
-    final ciGuardado = _recuperarCI();
+    final ciGuardado = await _recuperarCI();
     if (ciGuardado == null || ciGuardado.isEmpty) return;
 
     _documentoController.text = ciGuardado;
@@ -141,7 +126,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
       if (cliente == null) {
         await Supabase.instance.client.auth.signOut();
-        _limpiarCI();
+        await _limpiarCI();
         setState(() {
           _errorMessage =
               'Tu CI no está registrado en el sistema. '
@@ -157,8 +142,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         _isLoading = false;
       });
 
-      // Señalizar que el cliente está disponible y verificar
-      // si la sesión también llegó (puede haber llegado antes o después)
       _clienteListo = true;
       _verificarYCargarSiListo();
     } catch (e) {
@@ -239,14 +222,14 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       _errorMessage = null;
     });
     try {
-      _guardarCI(_documentoController.text.trim());
+      await _guardarCI(_documentoController.text.trim());
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: _redirectTo,
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
     } catch (e) {
-      _limpiarCI();
+      await _limpiarCI();
       setState(() {
         _errorMessage = 'Error al autenticar con Google. Intente nuevamente.';
         _isLoading = false;
@@ -255,97 +238,96 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   }
 
   Future<void> _cargarInmueblesYNavegar() async {
-  if (_clienteEncontrado == null) return;
-  if (_cargandoInmuebles) return;
-  _cargandoInmuebles = true;
+    if (_clienteEncontrado == null) return;
+    if (_cargandoInmuebles) return;
+    _cargandoInmuebles = true;
 
-  // ── Verificación de email ──────────────────────────────────────────────
-  final session = Supabase.instance.client.auth.currentSession;
-  if (session != null) {
-    final emailSesion = session.user.email?.trim().toLowerCase() ?? '';
-    final emailBD = _clienteEncontrado!.email?.trim().toLowerCase() ?? '';
+    // ── Verificación de email ──────────────────────────────────────────────
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      final emailSesion = session.user.email?.trim().toLowerCase() ?? '';
+      final emailBD = _clienteEncontrado!.email?.trim().toLowerCase() ?? '';
 
-    if (emailBD.isNotEmpty &&
-        emailSesion.isNotEmpty &&
-        emailBD != emailSesion) {
-      await Supabase.instance.client.auth.signOut();
-      _limpiarCI();
-      _resetearEstado();
-      if (mounted) {
-        setState(() {
-          _errorMessage =
-              'El correo de tu cuenta ($emailSesion) no coincide '
-              'con el registrado en el sistema.\n'
-              'Iniciá sesión con el correo correcto '
-              'o contactá a la oficina.';
-        });
+      if (emailBD.isNotEmpty &&
+          emailSesion.isNotEmpty &&
+          emailBD != emailSesion) {
+        await Supabase.instance.client.auth.signOut();
+        await _limpiarCI();
+        _resetearEstado();
+        if (mounted) {
+          setState(() {
+            _errorMessage =
+                'El correo de tu cuenta ($emailSesion) no coincide '
+                'con el registrado en el sistema.\n'
+                'Iniciá sesión con el correo correcto '
+                'o contactá a la oficina.';
+          });
+        }
+        return;
       }
-      return;
-    }
 
-    if (emailBD.isEmpty && emailSesion.isNotEmpty) {
-      await _clienteCrud.actualizarEmailCliente(
+      if (emailBD.isEmpty && emailSesion.isNotEmpty) {
+        await _clienteCrud.actualizarEmailCliente(
+          _clienteEncontrado!.idCliente!,
+          emailSesion.toLowerCase(),
+        );
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final todosLosInmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
         _clienteEncontrado!.idCliente!,
-        emailSesion.toLowerCase(),
       );
+
+      final inmuebles = todosLosInmuebles
+          .where((i) => i.estado == 'CONECTADO')
+          .toList();
+
+      if (!mounted) return;
+
+      _cargandoInmuebles = false;
+
+      if (inmuebles.isEmpty) {
+        await Supabase.instance.client.auth.signOut();
+        await _limpiarCI();
+        _resetearEstado();
+        if (mounted) {
+          setState(() {
+            _errorMessage = todosLosInmuebles.isEmpty
+                ? 'No tenés inmuebles registrados en el sistema. '
+                  'Contactá a la oficina.'
+                : 'Ninguno de tus inmuebles está CONECTADO al servicio. '
+                  'Contactá a la oficina para más información.';
+          });
+        }
+        return;
+      }
+
+      setState(() {
+        _inmuebles = inmuebles;
+        _isLoading = false;
+        if (inmuebles.length > 1) {
+          _paso = 2;
+        }
+      });
+
+      if (inmuebles.length == 1) {
+        _seleccionarInmueble(inmuebles.first);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _cargandoInmuebles = false;
+      setState(() {
+        _errorMessage = 'Error al cargar inmuebles. Intente nuevamente.';
+        _isLoading = false;
+      });
     }
   }
-  // ──────────────────────────────────────────────────────────────────────
 
-  if (!mounted) return;
-  setState(() => _isLoading = true);
-
-  try {
-    final todosLosInmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
-      _clienteEncontrado!.idCliente!,
-    );
-
-    // ── Filtrar solo los CONECTADOS ────────────────────────────────────
-    final inmuebles = todosLosInmuebles
-        .where((i) => i.estado == 'CONECTADO')
-        .toList();
-    // ──────────────────────────────────────────────────────────────────
-
-    if (!mounted) return;
-
-    _cargandoInmuebles = false;
-
-    if (inmuebles.isEmpty) {
-      await Supabase.instance.client.auth.signOut();
-      _limpiarCI();
-      _resetearEstado();
-      if (mounted) {
-        setState(() {
-          _errorMessage = todosLosInmuebles.isEmpty
-              ? 'No tenés inmuebles registrados en el sistema. '
-                'Contactá a la oficina.'
-              : 'Ninguno de tus inmuebles está CONECTADO al servicio. '
-                'Contactá a la oficina para más información.';
-        });
-      }
-      return;
-    }
-
-    setState(() {
-      _inmuebles = inmuebles;
-      _isLoading = false;
-      if (inmuebles.length > 1) {
-        _paso = 2;
-      }
-    });
-
-    if (inmuebles.length == 1) {
-      _seleccionarInmueble(inmuebles.first);
-    }
-  } catch (e) {
-    if (!mounted) return;
-    _cargandoInmuebles = false;
-    setState(() {
-      _errorMessage = 'Error al cargar inmuebles. Intente nuevamente.';
-      _isLoading = false;
-    });
-  }
-}
   void _seleccionarInmueble(Inmuebles? inmueble) {
     setState(() => _inmuebleSeleccionado = inmueble);
     if (inmueble != null) {
@@ -361,7 +343,6 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     }
   }
 
-  // Resetea todos los flags y el estado de sesión de una sola vez
   void _resetearEstado() {
     _cargandoInmuebles = false;
     _clienteListo = false;
@@ -383,7 +364,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   Future<void> _cerrarSesion() async {
     await Supabase.instance.client.auth.signOut();
-    _limpiarCI();
+    await _limpiarCI();
     _resetearEstado();
   }
 
