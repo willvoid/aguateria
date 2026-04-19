@@ -219,56 +219,6 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
     }
   }
 
-  void _eliminarEmpresa(DatoEmpresa empresa) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text('¿Está seguro de eliminar la empresa ${empresa.razon_social}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(child: CircularProgressIndicator()),
-              );
-
-              // Eliminar primero las actividades asociadas
-              await _actividadEmpresaCrud.eliminarActividadEmpresa(empresa.id_empresa!);
-              
-              final exito = await _empresaCrud.eliminarDatoEmpresa(empresa.id_empresa!);
-              Navigator.pop(context);
-
-              if (exito) {
-                await _cargarDatos();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Empresa eliminada exitosamente'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                _mostrarError('Error al eliminar la empresa');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -411,11 +361,6 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
                                             icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                                             onPressed: () => _mostrarDialogoEdicion(empresa),
                                             tooltip: 'Editar',
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                            onPressed: () => _eliminarEmpresa(empresa),
-                                            tooltip: 'Eliminar',
                                           ),
                                         ],
                                       ),

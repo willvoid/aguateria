@@ -153,53 +153,6 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
     }
   }
 
-  void _eliminarEstablecimiento(Establecimiento establecimiento) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text('¿Está seguro de eliminar el establecimiento ${establecimiento.denominacion}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(child: CircularProgressIndicator()),
-              );
-
-              final exito = await _establecimientoCrud.eliminarEstablecimiento(establecimiento.id_establecimiento!);
-              Navigator.pop(context);
-
-              if (exito) {
-                await _cargarDatos();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Establecimiento eliminado exitosamente'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                _mostrarError('Error al eliminar el establecimiento');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -298,8 +251,6 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
                                 DataColumn(label: Text('Dirección')),
                                 DataColumn(label: Text('Nro. Casa')),
                                 DataColumn(label: Text('Barrio')),
-                                DataColumn(label: Text('Teléfono')),
-                                DataColumn(label: Text('Email')),
                                 DataColumn(label: Text('Estado')),
                                 DataColumn(label: Text('Acciones')),
                               ],
@@ -329,16 +280,6 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
                                     ),
                                     DataCell(Text(est.numero_casa)),
                                     DataCell(Text(est.fk_barrio.nombre_barrio)),
-                                    DataCell(Text(est.telefono ?? '-')),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 120,
-                                        child: Text(
-                                          est.email ?? '-',
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
                                     DataCell(
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -368,11 +309,6 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
                                             icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                                             onPressed: () => _mostrarDialogoEdicion(est),
                                             tooltip: 'Editar',
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                            onPressed: () => _eliminarEstablecimiento(est),
-                                            tooltip: 'Eliminar',
                                           ),
                                         ],
                                       ),

@@ -156,53 +156,6 @@ class _CategoriaServicioPageState extends State<CategoriaServicioPage> {
     }
   }
 
-  void _eliminarCategoria(CategoriaServicio categoria) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text('¿Está seguro de eliminar la categoría ${categoria.nombre}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(child: CircularProgressIndicator()),
-              );
-
-              final exito = await _categoriaServicioCrud.eliminarCategoriaServicio(categoria.id!);
-              Navigator.pop(context);
-
-              if (exito) {
-                await _cargarDatos();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Categoría eliminada exitosamente'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                _mostrarError('Error al eliminar la categoría');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -331,11 +284,6 @@ class _CategoriaServicioPageState extends State<CategoriaServicioPage> {
                                             icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                                             onPressed: () => _mostrarDialogoEdicion(categoria),
                                             tooltip: 'Editar',
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                            onPressed: () => _eliminarCategoria(categoria),
-                                            tooltip: 'Eliminar',
                                           ),
                                         ],
                                       ),

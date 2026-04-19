@@ -198,56 +198,6 @@ class _ClientesPageState extends State<ClientesPage> {
     }
   }
 
-  void _eliminarCliente(Cliente cliente) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text(
-            '¿Está seguro de eliminar al cliente ${cliente.razonSocial}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
-
-              final exito =
-                  await _clienteCrud.eliminarCliente(cliente.idCliente!);
-              Navigator.pop(context);
-
-              if (exito) {
-                await _cargarDatos();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Cliente eliminado exitosamente'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                _mostrarError('Error al eliminar el cliente');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -398,13 +348,6 @@ class _ClientesPageState extends State<ClientesPage> {
                                             onPressed: () =>
                                                 _mostrarDialogoEdicion(cliente),
                                             tooltip: 'Editar',
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete,
-                                                size: 18, color: Colors.red),
-                                            onPressed: () =>
-                                                _eliminarCliente(cliente),
-                                            tooltip: 'Eliminar',
                                           ),
                                         ],
                                       ),

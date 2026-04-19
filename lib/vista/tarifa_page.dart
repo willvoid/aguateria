@@ -146,55 +146,6 @@ class _TarifaPageState extends State<TarifaPage> {
     }
   }
 
-  void _eliminarTarifa(Tarifa tarifa) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text(
-          '¿Está seguro de eliminar la tarifa de ${tarifa.rango_min} - ${tarifa.rango_max} m³?'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(child: CircularProgressIndicator()),
-              );
-
-              final exito = await _tarifaCrud.eliminarTarifa(tarifa.id_tarifa!);
-              Navigator.pop(context);
-
-              if (exito) {
-                await _cargarDatos();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tarifa eliminada exitosamente'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                _mostrarError('Error al eliminar la tarifa');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -356,11 +307,6 @@ class _TarifaPageState extends State<TarifaPage> {
                                             icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                                             onPressed: () => _mostrarDialogoEdicion(tarifa),
                                             tooltip: 'Editar',
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                            onPressed: () => _eliminarTarifa(tarifa),
-                                            tooltip: 'Eliminar',
                                           ),
                                         ],
                                       ),
