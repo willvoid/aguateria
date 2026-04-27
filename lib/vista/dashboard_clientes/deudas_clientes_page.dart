@@ -116,13 +116,13 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
   }
 
   int get _cantidadPendientes =>
-      _deudas.where((d) => d.estado == 'PENDIENTE').length;
+      _deudas.where((d) => d.estado == 'PENDIENTE' || d.estado == 'PAGO_PARCIAL').length;
 
   int get _cantidadPagadas => _deudas.where((d) => d.estado == 'PAGADO').length;
 
   bool _estaVencida(CuentaCobrar deuda) {
     if (deuda.fk_ciclos == null) return false;
-    return deuda.estado == 'PENDIENTE' &&
+    return (deuda.estado == 'PENDIENTE' || deuda.estado == 'PAGO_PARCIAL') &&
         deuda.fk_ciclos!.vencimiento.isBefore(DateTime.now());
   }
 

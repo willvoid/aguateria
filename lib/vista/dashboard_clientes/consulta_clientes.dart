@@ -919,10 +919,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
   }
 
   Widget _buildGoogleLogo() {
-    return SizedBox(
+    return Image.asset(
+      'assets/images/google_logo.png',
       width: 22,
       height: 22,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
     );
   }
 
@@ -994,44 +994,4 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       ),
     );
   }
-}
-
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-
-    canvas.drawArc(rect, -0.5, 1.6, false,
-        Paint()
-          ..color = const Color(0xFFEA4335)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = size.width * 0.18);
-    canvas.drawArc(rect, 1.1, 1.35, false,
-        Paint()
-          ..color = const Color(0xFFFBBC05)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = size.width * 0.18);
-    canvas.drawArc(rect, 2.45, 0.9, false,
-        Paint()
-          ..color = const Color(0xFF34A853)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = size.width * 0.18);
-    canvas.drawArc(rect, 3.35, 1.1, false,
-        Paint()
-          ..color = const Color(0xFF4285F4)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = size.width * 0.18);
-    canvas.drawLine(
-      Offset(center.dx, center.dy),
-      Offset(center.dx + radius, center.dy),
-      Paint()
-        ..color = const Color(0xFF4285F4)
-        ..strokeWidth = size.width * 0.18,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
