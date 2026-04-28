@@ -419,7 +419,10 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                 CicloAutocomplete(
                   ciclos: _ciclos,
                   onSeleccionado: (ciclo) {
-                    setState(() => _cicloSeleccionado = ciclo);
+                    setState(() {
+                      _cicloSeleccionado = ciclo;
+                      _descripcionController.text = 'Consumo ${ciclo.descripcion}';
+                    });
                   },
                   validator: (_) => _esConsumo && _cicloSeleccionado == null
                       ? 'Debe seleccionar un ciclo'
