@@ -205,8 +205,6 @@ class _DeudasPageState extends State<DeudasPage> {
     );
   }
 
-
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -524,7 +522,12 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
   Ciclo? _cicloSeleccionado;
   Consumo? _consumoSeleccionado;
 
-  final List<String> _estados = ['PENDIENTE', 'PAGADO', 'VENCIDO', 'EN REVISION'];
+  final List<String> _estados = [
+    'PENDIENTE',
+    'PAGADO',
+    'VENCIDO',
+    'EN REVISION',
+  ];
 
   @override
   void initState() {
@@ -547,7 +550,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
         ? widget.conceptos.first
         : widget.conceptos.first;
 
-        _cicloSeleccionado = widget.deuda?.fk_ciclos == null
+    _cicloSeleccionado = widget.deuda?.fk_ciclos == null
         ? null
         : widget.ciclos.firstWhere(
             (c) => c.id == widget.deuda!.fk_ciclos!.id,
@@ -616,6 +619,45 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                         itemLabel: (item) => item.nombre,
                       ),
                       const SizedBox(height: 16),
+                      if (_conceptoSeleccionado.id != 2)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CicloAutocomplete(
+                              key: ValueKey(_cicloSeleccionado?.id),
+                              ciclos: widget.ciclos,
+                              cicloInicial: _cicloSeleccionado,
+                              label: 'Ciclo *',
+                              hint: 'Buscar por ciclo o descripción...',
+                              onSeleccionado: (ciclo) {
+                                setState(() {
+                                  _cicloSeleccionado = ciclo;
+                                  _descripcionController.text =
+                                      'Consumo ${ciclo.descripcion}';
+                                });
+                              },
+                              validator: (_) {
+                                if (_conceptoSeleccionado.id == 1 &&
+                                    _cicloSeleccionado == null) {
+                                  return 'Debe seleccionar un ciclo';
+                                }
+                                return null;
+                              },
+                            ),
+                            if (_cicloSeleccionado != null)
+                              TextButton.icon(
+                                onPressed: () =>
+                                    setState(() => _cicloSeleccionado = null),
+                                icon: const Icon(Icons.clear, size: 16),
+                                label: const Text('Limpiar ciclo'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.grey.shade600,
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
                       _buildTextField(
                         controller: _descripcionController,
                         label: 'Descripción *',
@@ -654,52 +696,6 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 16),
-                      Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    if (_cicloSeleccionado != null)
-      CicloAutocomplete(
-        key: ValueKey(_cicloSeleccionado!.id), // fuerza rebuild si cambia
-        ciclos: widget.ciclos,
-        cicloInicial: _cicloSeleccionado,
-        label: 'Ciclo (Opcional)',
-        hint: 'Buscar por ciclo o descripción...',
-        onSeleccionado: (ciclo) =>
-            setState(() => _cicloSeleccionado = ciclo),
-        validator: (_) => null, // opcional, sin validación obligatoria
-      )
-    else
-      CicloAutocomplete(
-        ciclos: widget.ciclos,
-        label: 'Ciclo (Opcional)',
-        hint: 'Buscar por ciclo o descripción...',
-        onSeleccionado: (ciclo) =>
-            setState(() => _cicloSeleccionado = ciclo),
-        validator: (_) => null,
-      ),
-    if (_cicloSeleccionado != null)
-      TextButton.icon(
-        onPressed: () => setState(() => _cicloSeleccionado = null),
-        icon: const Icon(Icons.clear, size: 16),
-        label: const Text('Limpiar ciclo'),
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.grey.shade600,
-          padding: EdgeInsets.zero,
-        ),
-      ),
-  ],
-),
-                      const SizedBox(height: 16),
-                      _buildDropdownNullable<Consumo>(
-                        label: 'Consumo (Opcional)',
-                        value: _consumoSeleccionado,
-                        items: widget.consumos,
-                        onChanged: (value) =>
-                            setState(() => _consumoSeleccionado = value),
-                        itemLabel: (item) =>
-                            'Consumo ${item.id_consumos} - ${item.consumo_m3} m³',
                       ),
                     ],
                   ),
@@ -817,58 +813,6 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                 ),
               )
               .toList(),
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDropdownNullable<T>({
-    required String label,
-    required T? value,
-    required List<T> items,
-    required Function(T?) onChanged,
-    required String Function(T) itemLabel,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF374151),
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<T>(
-          value: value,
-          items: [
-            DropdownMenuItem<T>(value: null, child: const Text('Ninguno')),
-            ...items.map(
-              (item) => DropdownMenuItem<T>(
-                value: item,
-                child: Text(itemLabel(item)),
-              ),
-            ),
-          ],
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
