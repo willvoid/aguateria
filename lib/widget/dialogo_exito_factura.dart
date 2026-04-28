@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/service/ticket_printer_service.dart';
 
 class FacturaSuccessDialog extends StatelessWidget {
   final Map<String, dynamic> facturaCreada;
@@ -41,6 +42,7 @@ class FacturaSuccessDialog extends StatelessWidget {
     final total = (facturaCreada['total_general'] ?? 0.0).toStringAsFixed(0);
     final idFactura = facturaCreada['id_factura'] ?? 0;
     final vuelto = (facturaCreada['vuelto'] ?? 0.0).toStringAsFixed(0);
+    final isPrinting = ValueNotifier<bool>(false);
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -147,20 +149,62 @@ class FacturaSuccessDialog extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Botón único
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Entendido'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 2,
-                    ),
-                  ),
+                // Botones
+                ValueListenableBuilder<bool>(
+                  valueListenable: isPrinting,
+                  builder: (context, printing, child) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: printing ? null : () => Navigator.pop(context),
+                            icon: const Icon(Icons.close, size: 18),
+                            label: const Text('Cerrar'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              foregroundColor: Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: printing ? null : () async {
+                              isPrinting.value = true;
+                              try {
+                                await TicketPrinterService.imprimirTicket(int.parse(idFactura.toString()));
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error al imprimir: $e')),
+                                  );
+                                }
+                              } finally {
+                                isPrinting.value = false;
+                              }
+                            },
+                            icon: printing
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.print, size: 18),
+                            label: Text(printing ? 'Cargando...' : 'Imprimir'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0085FF),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
