@@ -155,55 +155,6 @@ class _DeudasPageState extends State<DeudasPage> {
     }
   }
 
-  void _eliminarDeuda(CuentaCobrar deuda) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text(
-          '¿Está seguro de eliminar la deuda de ${deuda.fk_concepto.nombre}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
-
-              final exito = await _deudaCrud.eliminarDeuda(deuda.id_deuda!);
-              Navigator.pop(context);
-
-              if (exito) {
-                await _cargarDatos();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Deuda eliminada exitosamente'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                _mostrarError('Error al eliminar la deuda');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -456,16 +407,6 @@ class _DeudasPageState extends State<DeudasPage> {
                                           onPressed: () =>
                                               _mostrarDialogoEdicion(deuda),
                                           tooltip: 'Editar',
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.delete,
-                                            size: 18,
-                                            color: Colors.red,
-                                          ),
-                                          onPressed: () =>
-                                              _eliminarDeuda(deuda),
-                                          tooltip: 'Eliminar',
                                         ),
                                       ],
                                     ),
