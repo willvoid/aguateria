@@ -444,7 +444,7 @@ class CuentaCobrarCrudImpl {
     final datosCiclo = mapa['fk_ciclos'];
     if (datosCiclo != null) {
       ciclo = Ciclo(
-        id: _toInt(datosCiclo['id']),
+        id: _toInt(datosCiclo['id_ciclos']),
         inicio: _toDate(datosCiclo['inicio']),
         fin: _toDate(datosCiclo['fin']),
         vencimiento: _toDate(datosCiclo['vencimiento']),
