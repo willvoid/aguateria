@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:myapp/dao/facturaciondao/pagocrudimpl.dart';
 import 'package:myapp/modelo/facturacionmodelo/pago.dart';
 import 'package:intl/intl.dart';
+import 'package:myapp/service/ticket_printer_service.dart';
 
 class PagosPage extends StatefulWidget {
   const PagosPage({Key? key}) : super(key: key);
@@ -236,6 +237,22 @@ class _PagosPageState extends State<PagosPage> {
               ],
             ),
             actions: [
+              if (facturaId != null)
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await TicketPrinterService.imprimirTicket(facturaId);
+                    } catch (e) {
+                      _mostrarError('Error al imprimir: $e');
+                    }
+                  },
+                  icon: const Icon(Icons.print),
+                  label: const Text('Imprimir Ticket'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
