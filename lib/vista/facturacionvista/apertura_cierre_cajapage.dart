@@ -216,7 +216,7 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Apertura y Cierre de Caja'),
-        backgroundColor: const Color(0xFF0085FF),
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
       body: _isLoading
@@ -233,12 +233,12 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                         padding: const EdgeInsets.all(16),
                         child: Row(
                           children: [
-                            const Icon(Icons.person, color: Color(0xFF0085FF)),
-                            const SizedBox(width: 12),
+                            Icon(Icons.person, color: Color(0xFF0085FF)),
+                            SizedBox(width: 12),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Usuario:',
                                   style: TextStyle(
                                     fontSize: 12,
@@ -247,7 +247,7 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                                 ),
                                 Text(
                                   authProvider.usuarioNombre,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -258,12 +258,12 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // Formulario
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(24),
                         child: Form(
                           key: _formKey,
                           child: Column(
@@ -271,17 +271,17 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                             children: [
                               Text(
                                 _modoApertura ? 'Apertura de Caja' : 'Cierre de Caja',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(height: 24),
+                              SizedBox(height: 24),
 
                               // Seleccionar Caja
                               DropdownButtonFormField<Caja>(
                                 value: _cajaSeleccionada,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: 'Caja *',
                                   border: OutlineInputBorder(),
                                   prefixIcon: Icon(Icons.point_of_sale),
@@ -301,14 +301,14 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                                 validator: (value) =>
                                     value == null ? 'Seleccione una caja' : null,
                               ),
-                              const SizedBox(height: 20),
+                              SizedBox(height: 20),
 
                               // Monto Inicial (solo en apertura)
                               if (_modoApertura) ...[
                                 TextFormField(
                                   controller: _montoInicialController,
                                   keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     labelText: 'Monto Inicial *',
                                     border: OutlineInputBorder(),
                                     prefixIcon: Icon(Icons.attach_money),
@@ -329,7 +329,7 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                               // Info de caja abierta y monto final (solo en cierre)
                               if (!_modoApertura && _cajaAbierta != null) ...[
                                 Container(
-                                  padding: const EdgeInsets.all(16),
+                                  padding: EdgeInsets.all(16),
                                   decoration: BoxDecoration(
                                     color: Colors.blue.shade50,
                                     borderRadius: BorderRadius.circular(8),
@@ -345,7 +345,7 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                                           color: Colors.blue.shade700,
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
+                                      SizedBox(height: 8),
                                       Text(
                                         'Fecha: ${DateFormat('dd/MM/yyyy HH:mm').format(_cajaAbierta!.apertura)}',
                                       ),
@@ -358,11 +358,11 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 20),
+                                SizedBox(height: 20),
                                 TextFormField(
                                   controller: _montoFinalController,
                                   keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     labelText: 'Monto Final *',
                                     border: OutlineInputBorder(),
                                     prefixIcon: Icon(Icons.money),
@@ -380,24 +380,24 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                                 ),
                               ],
 
-                              const SizedBox(height: 24),
+                              SizedBox(height: 24),
 
                               // Botón
                               ElevatedButton(
                                 onPressed: _modoApertura ? _abrirCaja : _cerrarCaja,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _modoApertura
-                                      ? const Color(0xFF0085FF)
+                                      ? Color(0xFF0085FF)
                                       : Colors.red,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
                                 child: Text(
                                   _modoApertura ? 'Abrir Caja' : 'Cerrar Caja',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -408,25 +408,25 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // Lista de aperturas recientes
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Aperturas Recientes',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             if (_aperturas.isEmpty)
-                              const Center(
+                              Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(32),
                                   child: Text('No hay aperturas registradas'),
@@ -435,9 +435,9 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                             else
                               ListView.separated(
                                 shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
+                                physics: NeverScrollableScrollPhysics(),
                                 itemCount: _aperturas.length > 5 ? 5 : _aperturas.length,
-                                separatorBuilder: (_, __) => const Divider(),
+                                separatorBuilder: (_, __) => Divider(),
                                 itemBuilder: (context, index) {
                                   final apertura = _aperturas[index];
                                   final estaCerrada = apertura.cierre != null;
@@ -470,9 +470,9 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
                                     trailing: Chip(
                                       label: Text(
                                         estaCerrada ? 'Cerrada' : 'Abierta',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.white,
+                                          color: Theme.of(context).cardColor,
                                         ),
                                       ),
                                       backgroundColor: estaCerrada

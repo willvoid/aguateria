@@ -176,14 +176,14 @@ class _DeudasPageState extends State<DeudasPage> {
             Text('Deudas - ${widget.inmueble.cod_inmueble}'),
             Text(
               widget.inmueble.cliente.razonSocial,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.normal,
               ),
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF0085FF),
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
       body: Container(
@@ -208,7 +208,7 @@ class _DeudasPageState extends State<DeudasPage> {
                           ),
                           Text(
                             widget.inmueble.direccion,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -217,7 +217,7 @@ class _DeudasPageState extends State<DeudasPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Total Deuda Pendiente',
                             style: TextStyle(color: Colors.grey),
                           ),
@@ -238,7 +238,7 @@ class _DeudasPageState extends State<DeudasPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
@@ -246,16 +246,16 @@ class _DeudasPageState extends State<DeudasPage> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Buscar por descripción, concepto o estado...',
-                      prefixIcon: const Icon(Icons.search, size: 20),
+                      prefixIcon: Icon(Icons.search, size: 20),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Theme.of(context).cardColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: Theme.of(context).dividerColor),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: Theme.of(context).dividerColor),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -269,10 +269,10 @@ class _DeudasPageState extends State<DeudasPage> {
                   onPressed: () {
                     _mostrarDialogoEdicion(null);
                   },
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Agregar Deuda'),
+                  icon: Icon(Icons.add, size: 18),
+                  label: Text('Agregar Deuda'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0085FF),
+                    backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -286,18 +286,18 @@ class _DeudasPageState extends State<DeudasPage> {
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: _cargarDatos,
-                  icon: const Icon(Icons.refresh),
+                  icon: Icon(Icons.refresh),
                   tooltip: 'Recargar',
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -399,7 +399,7 @@ class _DeudasPageState extends State<DeudasPage> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(
+                                          icon: Icon(
                                             Icons.edit,
                                             size: 18,
                                             color: Color(0xFF0085FF),
@@ -440,7 +440,7 @@ class _DialogoEditarDeuda extends StatefulWidget {
   final List<Consumo> consumos;
   final Function(CuentaCobrar) onGuardar;
 
-  const _DialogoEditarDeuda({
+  _DialogoEditarDeuda({
     this.deuda,
     required this.inmueble,
     required this.conceptos,
@@ -511,12 +511,12 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
     return Dialog(
       child: Container(
         width: 700,
-        constraints: const BoxConstraints(maxHeight: 650),
+        constraints: BoxConstraints(maxHeight: 650),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(4),
@@ -525,19 +525,19 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.receipt_long, color: Colors.white),
+                  Icon(Icons.receipt_long, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     widget.deuda == null ? 'Agregar Deuda' : 'Editar Deuda',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).cardColor,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -589,14 +589,14 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                               TextButton.icon(
                                 onPressed: () =>
                                     setState(() => _cicloSeleccionado = null),
-                                icon: const Icon(Icons.clear, size: 16),
-                                label: const Text('Limpiar ciclo'),
+                                icon: Icon(Icons.clear, size: 16),
+                                label: Text('Limpiar ciclo'),
                                 style: TextButton.styleFrom(
                                   foregroundColor: Colors.grey.shade600,
                                   padding: EdgeInsets.zero,
                                 ),
                               ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                           ],
                         ),
                       _buildTextField(
@@ -607,7 +607,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                         validator: (value) =>
                             value?.isEmpty ?? true ? 'Campo requerido' : null,
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
@@ -625,7 +625,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                               },
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           Expanded(
                             child: _buildDropdown<String>(
                               label: 'Estado *',
@@ -644,10 +644,10 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
               ),
             ),
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -660,7 +660,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                   ElevatedButton(
                     onPressed: _guardarDeuda,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -691,13 +691,13 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -706,14 +706,14 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
@@ -737,13 +737,13 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           items: items
@@ -757,14 +757,14 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,

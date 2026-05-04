@@ -384,10 +384,10 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                   Text(
                     e.toString().replaceAll('Exception: ', ''),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14),
+                    style: TextStyle(fontSize: 14),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
+                  SizedBox(height: 16),
+                  Text(
                     'Por favor, verifique los datos e intente nuevamente.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, color: Colors.grey),
@@ -402,7 +402,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Cerrar'),
+                child: Text('Cerrar'),
               ),
             ],
           ),
@@ -416,7 +416,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       SnackBar(
         content: Text(mensaje),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -425,8 +425,8 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nueva Factura'),
-        backgroundColor: const Color(0xFF0085FF),
+        title: Text('Nueva Factura'),
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
       body: _isLoading
@@ -440,16 +440,16 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                       const SizedBox(height: 16),
                       Text(
                         _mensajeError,
-                        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 16),
+                        style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Volver'),
+                        icon: Icon(Icons.arrow_back),
+                        label: Text('Volver'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0085FF),
+                          backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         ),
@@ -488,7 +488,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
                                   DropdownButtonFormField<Inmuebles>(
                                     value: _inmuebleSeleccionado,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       labelText: 'Inmueble *',
                                       border: OutlineInputBorder(),
                                       prefixIcon: Icon(Icons.home),
@@ -511,7 +511,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
                                   DropdownButtonFormField<Establecimiento>(
                                     value: _establecimientoSeleccionado,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       labelText: 'Establecimiento *',
                                       border: OutlineInputBorder(),
                                       prefixIcon: Icon(Icons.store),
@@ -535,7 +535,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                       Expanded(
                                         child: DropdownButtonFormField<TipoFactura>(
                                           value: _tipoFacturaSeleccionado,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             labelText: 'Tipo *',
                                             border: OutlineInputBorder(),
                                           ),
@@ -554,7 +554,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                       Expanded(
                                         child: DropdownButtonFormField<int>(
                                           value: _condicionVenta,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             labelText: 'Condición *',
                                             border: OutlineInputBorder(),
                                           ),
@@ -576,7 +576,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                       Expanded(
                                         child: DropdownButtonFormField<ModoPago>(
                                           value: _modoPagoSeleccionado,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             labelText: 'Modo Pago *',
                                             border: OutlineInputBorder(),
                                           ),
@@ -595,7 +595,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                       Expanded(
                                         child: DropdownButtonFormField<Moneda>(
                                           value: _monedaSeleccionada,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             labelText: 'Moneda *',
                                             border: OutlineInputBorder(),
                                           ),
@@ -617,7 +617,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                   TextFormField(
                                     controller: _observacionController,
                                     maxLines: 2,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       labelText: 'Observación',
                                       border: OutlineInputBorder(),
                                       prefixIcon: Icon(Icons.note),
@@ -658,7 +658,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                   TextFormField(
                                     controller: _efectivoController,
                                     keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       labelText: 'Efectivo *',
                                       border: OutlineInputBorder(),
                                       prefixIcon: Icon(Icons.payments),
@@ -684,13 +684,13 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: _guardarFactura,
-                              icon: const Icon(Icons.save),
-                              label: const Text(
+                              icon: Icon(Icons.save),
+                              label: Text(
                                 'Guardar Factura',
                                 style: TextStyle(fontSize: 16),
                               ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0085FF),
+                                backgroundColor: Theme.of(context).primaryColor,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                               ),

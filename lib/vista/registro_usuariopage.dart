@@ -173,9 +173,9 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
             width: 600,
             margin: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: Theme.of(context).dividerColor),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -196,7 +196,7 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                         // Header
                         Container(
                           padding: const EdgeInsets.all(32),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: Color(0xFF0085FF),
                             borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(12),
@@ -206,17 +206,17 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                           child: Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                                icon: Icon(Icons.arrow_back, color: Theme.of(context).cardColor),
                                 onPressed: () => Navigator.pop(context),
                               ),
                               const SizedBox(width: 12),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
+                                children: [
                                   Text(
                                     'Crear Nueva Cuenta',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(context).cardColor,
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -225,7 +225,7 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                   Text(
                                     'Complete los datos para registrarse',
                                     style: TextStyle(
-                                      color: Colors.white70,
+                                      color: Theme.of(context).cardColor.withOpacity(0.7),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -400,7 +400,7 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                               ElevatedButton(
                                 onPressed: _isLoading ? null : _registrarUsuario,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0085FF),
+                                  backgroundColor: Theme.of(context).primaryColor,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
@@ -467,7 +467,7 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: Color(0xFF374151),
@@ -489,13 +489,13 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -505,14 +505,14 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
             prefixIcon: Icon(icon, size: 20),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -536,13 +536,13 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           items: items
@@ -554,14 +554,14 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,

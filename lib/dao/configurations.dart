@@ -7,5 +7,6 @@ class Configurations {
 
   // variable server produccion
   //static String mSupabaseUrl = "https://otmekpnvsebnnnelbdtt.supabase.co";
-  //static String mSupabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90bWVrcG52c2Vibm5uZWxiZHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODUwNDQsImV4cCI6MjA5MDU2MTA0NH0.TuKJQQ5SgnPVhzMYueTxLTnscRP9ZppAz3rD4sosD40";
+  //static String mSupabaseKey =
+  //    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90bWVrcG52c2Vibm5uZWxiZHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODUwNDQsImV4cCI6MjA5MDU2MTA0NH0.TuKJQQ5SgnPVhzMYueTxLTnscRP9ZppAz3rD4sosD40";
 }

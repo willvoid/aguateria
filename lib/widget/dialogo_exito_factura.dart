@@ -158,15 +158,15 @@ class FacturaSuccessDialog extends StatelessWidget {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: printing ? null : () => Navigator.pop(context),
-                            icon: const Icon(Icons.close, size: 18),
-                            label: const Text('Cerrar'),
+                            icon: Icon(Icons.close, size: 18),
+                            label: Text('Cerrar'),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              padding: EdgeInsets.symmetric(vertical: 14),
                               foregroundColor: Colors.grey.shade700,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: printing ? null : () async {
@@ -184,18 +184,18 @@ class FacturaSuccessDialog extends StatelessWidget {
                               }
                             },
                             icon: printing
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 18,
                                     height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.white,
+                                      color: Theme.of(context).cardColor,
                                     ),
                                   )
-                                : const Icon(Icons.print, size: 18),
+                                : Icon(Icons.print, size: 18),
                             label: Text(printing ? 'Cargando...' : 'Imprimir'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0085FF),
+                              backgroundColor: Theme.of(context).primaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               elevation: 2,

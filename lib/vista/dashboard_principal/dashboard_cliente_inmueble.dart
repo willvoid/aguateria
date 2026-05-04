@@ -231,14 +231,14 @@ class _DashboardClientesInmueblesPageState
             const SizedBox(height: 2),
             Text(
               'Resumen general del padrón',
-              style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
             ),
           ],
         ),
-        const Spacer(),
+        Spacer(),
         IconButton(
           onPressed: _cargarDatos,
-          icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
+          icon: Icon(Icons.refresh, color: Color(0xFF6B7280)),
           tooltip: 'Recargar',
         ),
       ],
@@ -248,7 +248,7 @@ class _DashboardClientesInmueblesPageState
   Widget _buildSeccionLabel(String label) {
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w500,
         color: Color(0xFF9CA3AF),
@@ -269,11 +269,11 @@ class _DashboardClientesInmueblesPageState
             sub: '+$_nuevosEsteMes este mes',
             subColor: Colors.green.shade600,
             icon: Icons.people_alt_outlined,
-            iconColor: const Color(0xFF0085FF),
-            iconBg: const Color(0xFFE6F0FF),
+            iconColor: Color(0xFF0085FF),
+            iconBg: Color(0xFFE6F0FF),
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _MetricCard(
             label: 'Inmuebles conectados',
@@ -284,7 +284,7 @@ class _DashboardClientesInmueblesPageState
             iconBg: Colors.green.shade50,
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _MetricCard(
             label: 'Con deuda activa',
@@ -298,7 +298,7 @@ class _DashboardClientesInmueblesPageState
             iconBg: Colors.orange.shade50,
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _MetricCard(
             label: 'Clientes inactivos',
@@ -318,9 +318,9 @@ class _DashboardClientesInmueblesPageState
   Widget _buildTopDeudores() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,36 +366,36 @@ class _DashboardClientesInmueblesPageState
                               children: [
                                 Text(
                                   d['razon_social'] as String,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                     color: Color(0xFF111827),
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
+                                SizedBox(height: 2),
                                 Text(
                                   'CI ${d['documento']} · $inmuebles ${inmuebles == 1 ? 'inmueble' : 'inmuebles'}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 11,
                                       color: Color(0xFF9CA3AF)),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
                                 _formatGuarani(d['saldo'] as double),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF111827),
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              SizedBox(height: 4),
                               _buildBadge(
                                 esVencido ? 'vencido' : 'por vencer',
                                 esVencido
@@ -412,7 +412,7 @@ class _DashboardClientesInmueblesPageState
                     );
                   },
                 ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
         ],
       ),
     );
@@ -426,18 +426,18 @@ class _DashboardClientesInmueblesPageState
         : (_porCategoria.first['total'] as int);
 
     final colores = [
-      const Color(0xFF5DCAA5),
-      const Color(0xFF85B7EB),
-      const Color(0xFFEF9F27),
-      const Color(0xFFED93B1),
-      const Color(0xFFAFA9EC),
+      Color(0xFF5DCAA5),
+      Color(0xFF85B7EB),
+      Color(0xFFEF9F27),
+      Color(0xFFED93B1),
+      Color(0xFFAFA9EC),
     ];
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
@@ -471,7 +471,7 @@ class _DashboardClientesInmueblesPageState
                             width: 110,
                             child: Text(
                               nombre,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF6B7280),
                               ),
@@ -479,7 +479,7 @@ class _DashboardClientesInmueblesPageState
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           // Barra
                           Expanded(
                             child: Stack(
@@ -494,7 +494,7 @@ class _DashboardClientesInmueblesPageState
                                 ),
                                 // Relleno animado
                                 AnimatedContainer(
-                                  duration: const Duration(milliseconds: 600),
+                                  duration: Duration(milliseconds: 600),
                                   curve: Curves.easeOut,
                                   height: 28,
                                   width: double.infinity,
@@ -513,13 +513,13 @@ class _DashboardClientesInmueblesPageState
                               ],
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          SizedBox(width: 10),
                           // Número
                           SizedBox(
                             width: 36,
                             child: Text(
                               '$total',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF111827),
@@ -532,13 +532,13 @@ class _DashboardClientesInmueblesPageState
                   }),
                 ),
           if (_porCategoria.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Divider(color: Colors.grey.shade100),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             // Eje X con referencia numérica
             Row(
               children: [
-                const SizedBox(width: 122),
+                SizedBox(width: 122),
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -546,13 +546,13 @@ class _DashboardClientesInmueblesPageState
                       final val = (maxVal * i / 4).round();
                       return Text(
                         '$val',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 10, color: Color(0xFF9CA3AF)),
                       );
                     }),
                   ),
                 ),
-                const SizedBox(width: 46),
+                SizedBox(width: 46),
               ],
             ),
           ],
@@ -565,7 +565,7 @@ class _DashboardClientesInmueblesPageState
 
   Widget _buildBadge(String texto, Color bg, Color fg) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration:
           BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
       child: Text(
@@ -578,14 +578,14 @@ class _DashboardClientesInmueblesPageState
 
   Widget _buildEmptyState(IconData icon, String mensaje) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
+      padding: EdgeInsets.symmetric(vertical: 32),
       child: Center(
         child: Column(
           children: [
-            Icon(icon, size: 40, color: Colors.grey.shade300),
+            Icon(icon, size: 40, color: Theme.of(context).dividerColor),
             const SizedBox(height: 8),
             Text(mensaje,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 13, color: Color(0xFF9CA3AF))),
           ],
         ),
@@ -605,7 +605,7 @@ class _MetricCard extends StatelessWidget {
   final Color iconColor;
   final Color iconBg;
 
-  const _MetricCard({
+  _MetricCard({
     required this.label,
     required this.value,
     this.sub,
@@ -618,11 +618,11 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

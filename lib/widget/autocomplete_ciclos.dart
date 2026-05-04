@@ -26,13 +26,13 @@ class CicloAutocomplete extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Autocomplete<Ciclo>(
           initialValue: cicloInicial != null
               ? TextEditingValue(
@@ -59,14 +59,14 @@ class CicloAutocomplete extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: hint,
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).cardColor,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,

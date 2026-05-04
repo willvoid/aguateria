@@ -410,11 +410,11 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             children: [
               Text(
                 'Su comprobante de ${modoPago.descripcion.toLowerCase()} ha sido registrado exitosamente.',
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(fontSize: 14),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -425,24 +425,24 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                   children: [
                     _buildInfoRow(
                         'ID de Pago', '#${pago.idPago}', Icons.tag, color),
-                    const Divider(height: 16),
+                    Divider(height: 16),
                     _buildInfoRow(
                         'Método', modoPago.descripcion, Icons.payment, color),
-                    const Divider(height: 16),
+                    Divider(height: 16),
                     _buildInfoRow(
                       'Monto',
                       '${pago.monto.toStringAsFixed(0)} Gs.',
                       Icons.attach_money,
                       color,
                     ),
-                    const Divider(height: 16),
+                    Divider(height: 16),
                     _buildInfoRow(
                       'Estado',
                       pago.estado,
                       Icons.info_outline,
                       Colors.orange,
                     ),
-                    const Divider(height: 16),
+                    Divider(height: 16),
                     _buildInfoRow(
                       'Fecha',
                       _formatearFecha(pago.fechaPago!),
@@ -452,9 +452,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
@@ -465,7 +465,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                   children: [
                     Icon(Icons.info_outline,
                         color: Colors.blue.shade700, size: 20),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'El pago será procesado una vez que un administrador verifique y apruebe el comprobante.',
@@ -476,7 +476,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 'Para consultas, comuníquese con administración presentando el ID de pago #${pago.idPago}.',
                 style: TextStyle(
@@ -495,7 +495,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
               backgroundColor: color,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Entendido'),
+            child: Text('Entendido'),
           ),
         ],
       ),
@@ -507,7 +507,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     return Row(
       children: [
         Icon(icon, size: 16, color: color.withOpacity(0.7)),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,10 +515,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
               Text(label,
                   style: TextStyle(
                       fontSize: 11, color: Colors.grey.shade600)),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 13, fontWeight: FontWeight.bold),
               ),
             ],
@@ -542,7 +542,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       SnackBar(
         content: Text(mensaje),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -554,33 +554,33 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+        constraints: BoxConstraints(maxWidth: 500, maxHeight: 700),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildHeader(),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator())
                   : SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildResumenDeuda(),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
                           if (_esConsumo)
                             _buildResumenCiclosSeleccionados()
                           else if (_esConexion)
                             _buildMontoConexion()
                           else
                             _buildMontoFijo(),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
                           _buildResumenTotales(),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
                           if (!_esConsumo && !_esConexion) ...[
                             _buildInputEfectivo(),
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24),
                           ],
                           _buildBotones(),
                         ],
@@ -612,10 +612,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
         ),
@@ -623,14 +623,14 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: color.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(icono, color: color, size: 32),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -653,7 +653,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           ),
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close),
+            icon: Icon(Icons.close),
             color: Colors.grey.shade600,
           ),
         ],
@@ -663,11 +663,11 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   Widget _buildResumenDeuda() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -760,20 +760,20 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
               labelText: 'Ingrese el monto *',
-              prefixIcon: const Icon(Icons.attach_money),
+              prefixIcon: Icon(Icons.attach_money),
               suffixText: 'Gs.',
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12)),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Theme.of(context).cardColor,
               errorText: excedeLimite
                   ? 'No puede superar ${widget.deuda.saldo.toStringAsFixed(0)} Gs.'
                   : null,
             ),
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             widget.deuda.descripcion ?? widget.deuda.fk_concepto.nombre,
             style:
@@ -794,9 +794,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       children: [
         Row(
           children: [
-            const Icon(Icons.calendar_today, size: 20),
-            const SizedBox(width: 8),
-            const Expanded(
+            Icon(Icons.calendar_today, size: 20),
+            SizedBox(width: 8),
+            Expanded(
               child: Text(
                 'Meses a Pagar',
                 style:
@@ -805,12 +805,12 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
             ),
             ElevatedButton.icon(
               onPressed: _abrirSelectorCiclos,
-              icon: const Icon(Icons.edit, size: 20),   // ← ícono "editar" cuando ya hay selección
+              icon: Icon(Icons.edit, size: 20),   // ← ícono "editar" cuando ya hay selección
               label: Text(_ciclosSeleccionados.isEmpty
                   ? 'Agregar'
                   : 'Editar (${_ciclosSeleccionados.length})'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0085FF),
+                backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 8),
@@ -854,9 +854,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: Column(
               children: [
@@ -878,7 +878,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                         children: [
                           Text(
                             '${_ciclosSeleccionados.length} Meses seleccionados',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold),
                           ),
@@ -893,21 +893,21 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                     ),
                   ],
                 ),
-                const Divider(height: 24),
+                Divider(height: 24),
                 ..._ciclosSeleccionados.map((ciclo) {
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
                         Icon(Icons.water_drop,
                             size: 16, color: Colors.blue.shade400),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(ciclo.descripcion,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500)),
                               Text(
@@ -956,7 +956,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   Widget _buildMontoFijo() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.blue.shade50,
         borderRadius: BorderRadius.circular(12),
@@ -965,18 +965,18 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       child: Row(
         children: [
           Icon(Icons.attach_money, color: Colors.blue.shade700, size: 32),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Monto a Pagar',
+                Text('Monto a Pagar',
                     style: TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   '${widget.deuda.saldo.toStringAsFixed(0)} Gs.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF0085FF),
@@ -990,9 +990,9 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (widget.deuda.pagado > 0) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                         horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.green.shade100,
@@ -1018,7 +1018,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   Widget _buildResumenTotales() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.blue.shade50, Colors.blue.shade100],
@@ -1033,16 +1033,16 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           Row(
             children: [
               Icon(Icons.calculate, color: Colors.blue.shade700),
-              const SizedBox(width: 8),
-              const Text('Resumen del Pago',
+              SizedBox(width: 8),
+              Text('Resumen del Pago',
                   style: TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
-          const Divider(height: 16),
+          Divider(height: 16),
           _buildTotalRow('TOTAL', _totalAPagar, isTotal: true),
           if (_esConsumo && _ciclosSeleccionados.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               '${_ciclosSeleccionados.length} Meses seleccionados',
               style:
@@ -1065,19 +1065,19 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
             labelText: 'Efectivo Recibido *',
-            prefixIcon: const Icon(Icons.payments),
+            prefixIcon: Icon(Icons.payments),
             suffixText: 'Gs.',
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12)),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
           ),
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: esValido ? Colors.green.shade50 : Colors.red.shade50,
             borderRadius: BorderRadius.circular(8),
@@ -1095,7 +1095,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                     ? Colors.green.shade700
                     : Colors.red.shade700,
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1203,8 +1203,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           child: OutlinedButton(
             onPressed: () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(color: Colors.grey.shade300),
+              padding: EdgeInsets.symmetric(vertical: 16),
+              side: BorderSide(color: Theme.of(context).dividerColor),
             ),
             child: const Text('Cancelar'),
           ),
@@ -1214,10 +1214,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
           flex: 2,
           child: ElevatedButton.icon(
             onPressed: puedeProcedar ? _procesarPago : null,
-            icon: const Icon(Icons.payment),
-            label: const Text('Procesar Pago'),
+            icon: Icon(Icons.payment),
+            label: Text('Procesar Pago'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0085FF),
+              backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               disabledBackgroundColor: Colors.grey.shade300,

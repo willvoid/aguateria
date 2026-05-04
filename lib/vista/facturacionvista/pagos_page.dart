@@ -246,8 +246,8 @@ class _PagosPageState extends State<PagosPage> {
                       _mostrarError('Error al imprimir: $e');
                     }
                   },
-                  icon: const Icon(Icons.print),
-                  label: const Text('Imprimir Ticket'),
+                  icon: Icon(Icons.print),
+                  label: Text('Imprimir Ticket'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -259,7 +259,7 @@ class _PagosPageState extends State<PagosPage> {
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Aceptar'),
+                child: Text('Aceptar'),
               ),
             ],
           ),
@@ -269,7 +269,7 @@ class _PagosPageState extends State<PagosPage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
                 Icon(Icons.error_outline, color: Colors.red),
                 SizedBox(width: 8),
@@ -280,25 +280,25 @@ class _PagosPageState extends State<PagosPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('No se pudo aprobar el pago:',
+                Text('No se pudo aprobar el pago:',
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: Colors.red.shade200),
                   ),
                   child: SelectableText(error,
-                      style: const TextStyle(fontSize: 13)),
+                      style: TextStyle(fontSize: 13)),
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cerrar'),
+                child: Text('Cerrar'),
               ),
             ],
           ),
@@ -316,17 +316,17 @@ class _PagosPageState extends State<PagosPage> {
     final resultado = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rechazar Pago'),
+        title: Text('Rechazar Pago'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Pago #${pago.idPago} - ${_formatoMoneda(pago.monto)}'),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextField(
               controller: motivoController,
               maxLines: 3,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Motivo del rechazo *',
                 hintText: 'Ingrese el motivo del rechazo',
                 border: OutlineInputBorder(),
@@ -337,13 +337,13 @@ class _PagosPageState extends State<PagosPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () {
               if (motivoController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
+                  SnackBar(
                     content: Text('Debe ingresar un motivo de rechazo'),
                     backgroundColor: Colors.orange,
                   ),
@@ -359,7 +359,7 @@ class _PagosPageState extends State<PagosPage> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Rechazar'),
+            child: Text('Rechazar'),
           ),
         ],
       ),
@@ -375,10 +375,10 @@ class _PagosPageState extends State<PagosPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => Center(child: CircularProgressIndicator()),
     );
 
-    const idUsuarioAdmin = 1;
+    final idUsuarioAdmin = 1;
 
     final resultado = await _pagoCrud.rechazarPagoConRPC(
       idPago: pago.idPago!,
@@ -406,7 +406,7 @@ class _PagosPageState extends State<PagosPage> {
       SnackBar(
         content: Text(mensaje),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -416,7 +416,7 @@ class _PagosPageState extends State<PagosPage> {
       SnackBar(
         content: Text(mensaje),
         backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -447,7 +447,7 @@ class _PagosPageState extends State<PagosPage> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -459,16 +459,16 @@ class _PagosPageState extends State<PagosPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por ID, monto, usuario...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
@@ -483,14 +483,14 @@ class _PagosPageState extends State<PagosPage> {
                   decoration: InputDecoration(
                     labelText: 'Filtrar por Estado',
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
@@ -508,12 +508,12 @@ class _PagosPageState extends State<PagosPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 tooltip: 'Recargar',
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               _buildEstadistica(
@@ -521,13 +521,13 @@ class _PagosPageState extends State<PagosPage> {
                 pagos.where((p) => p.estado == 'PENDIENTE').length,
                 Colors.orange,
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               _buildEstadistica(
                 'Aprobados',
                 pagos.where((p) => p.estado == 'APROBADO').length,
                 Colors.green,
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               _buildEstadistica(
                 'Rechazados',
                 pagos.where((p) => p.estado == 'RECHAZADO').length,
@@ -535,13 +535,13 @@ class _PagosPageState extends State<PagosPage> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -565,8 +565,7 @@ class _PagosPageState extends State<PagosPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                  const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Fecha')),
@@ -596,7 +595,7 @@ class _PagosPageState extends State<PagosPage> {
                                     DataCell(
                                       Text(
                                         _formatoMoneda(pago.monto),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             fontWeight: FontWeight.w600),
                                       ),
                                     ),
@@ -609,7 +608,7 @@ class _PagosPageState extends State<PagosPage> {
                                     ),
                                     DataCell(
                                       Container(
-                                        padding: const EdgeInsets.symmetric(
+                                        padding: EdgeInsets.symmetric(
                                             horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: _getColorEstado(pago.estado)
@@ -640,7 +639,7 @@ class _PagosPageState extends State<PagosPage> {
                                                     BorderRadius.circular(6),
                                                 child: Container(
                                                   padding:
-                                                      const EdgeInsets.symmetric(
+                                                      EdgeInsets.symmetric(
                                                           horizontal: 10,
                                                           vertical: 6),
                                                   decoration: BoxDecoration(
@@ -662,7 +661,7 @@ class _PagosPageState extends State<PagosPage> {
                                                         color:
                                                             Colors.blue.shade700,
                                                       ),
-                                                      const SizedBox(width: 4),
+                                                      SizedBox(width: 4),
                                                       Text(
                                                         'Ver',
                                                         style: TextStyle(
@@ -692,21 +691,21 @@ class _PagosPageState extends State<PagosPage> {
                                     DataCell(
                                       pago.comprobanteUrl != null
                                           ? IconButton(
-                                              icon: const Icon(Icons.image,
+                                              icon: Icon(Icons.image,
                                                   color: Color(0xFF0085FF)),
                                               onPressed: () =>
                                                   _mostrarImagenComprobante(
                                                       pago.comprobanteUrl!),
                                               tooltip: 'Ver comprobante',
                                             )
-                                          : const Text('-'),
+                                          : Text('-'),
                                     ),
                                     DataCell(
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.visibility,
+                                            icon: Icon(Icons.visibility,
                                                 size: 18,
                                                 color: Color(0xFF0085FF)),
                                             onPressed: () =>
@@ -715,7 +714,7 @@ class _PagosPageState extends State<PagosPage> {
                                           ),
                                           if (pago.estado == 'PENDIENTE') ...[
                                             IconButton(
-                                              icon: const Icon(
+                                              icon: Icon(
                                                   Icons.check_circle,
                                                   size: 18,
                                                   color: Colors.green),
@@ -724,7 +723,7 @@ class _PagosPageState extends State<PagosPage> {
                                               tooltip: 'Aprobar',
                                             ),
                                             IconButton(
-                                              icon: const Icon(Icons.cancel,
+                                              icon: Icon(Icons.cancel,
                                                   size: 18, color: Colors.red),
                                               onPressed: () =>
                                                   _mostrarDialogoRechazo(pago),
@@ -750,11 +749,11 @@ class _PagosPageState extends State<PagosPage> {
   Widget _buildEstadistica(String label, int cantidad, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -784,7 +783,7 @@ class _PagosPageState extends State<PagosPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: Color(0xFF0085FF),
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(4),
@@ -793,18 +792,18 @@ class _PagosPageState extends State<PagosPage> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.image, color: Colors.white),
+                    Icon(Icons.image, color: Theme.of(context).cardColor),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Comprobante de Pago',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           fontSize: 18,
                           fontWeight: FontWeight.w600),
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
+                      icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -927,11 +926,11 @@ class _DialogoPayloadFactura extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Theme.of(context).cardColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.receipt_long,
-                        color: Colors.white, size: 24),
+                    child: Icon(Icons.receipt_long,
+                        color: Theme.of(context).cardColor, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -940,22 +939,22 @@ class _DialogoPayloadFactura extends StatelessWidget {
                       children: [
                         Text(
                           'Información de Factura',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).cardColor,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
                           'Pago #${pago.idPago} · ${_formatoMoneda(pago.monto)}',
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 13),
+                          style: TextStyle(
+                              color: Theme.of(context).cardColor.withOpacity(0.7), fontSize: 13),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -1048,7 +1047,7 @@ class _DialogoPayloadFactura extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0085FF).withOpacity(0.06),
+                                color: Theme.of(context).primaryColor.withOpacity(0.06),
                                 borderRadius: const BorderRadius.only(
                                   topLeft: Radius.circular(10),
                                   topRight: Radius.circular(10),
@@ -1126,17 +1125,17 @@ class _DialogoPayloadFactura extends StatelessWidget {
                                       flex: 4,
                                       child: Text(
                                         descripcion,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             fontSize: 13,
                                             color: Color(0xFF1F2937)),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     SizedBox(
                                       width: 60,
                                       child: Center(
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(
+                                          padding: EdgeInsets.symmetric(
                                               horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
                                             color: Colors.blue.shade50,
@@ -1154,13 +1153,13 @@ class _DialogoPayloadFactura extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     SizedBox(
                                       width: 110,
                                       child: Text(
                                         _formatoMoneda(monto),
                                         textAlign: TextAlign.right,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                           color: Color(0xFF1F2937),
@@ -1175,16 +1174,16 @@ class _DialogoPayloadFactura extends StatelessWidget {
                         ),
                       ),
 
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // ── Resumen de totales ───────────────────────────────────
                     _SeccionTitulo(
                       icono: Icons.calculate_outlined,
                       titulo: 'Resumen de Totales',
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -1216,7 +1215,7 @@ class _DialogoPayloadFactura extends StatelessWidget {
                             _FilaTotalSimple(
                                 label: 'IVA',
                                 valor: _formatoMoneda(totalIva)),
-                          const Padding(
+                          Padding(
                             padding: EdgeInsets.symmetric(vertical: 8),
                             child: Divider(height: 1),
                           ),
@@ -1224,7 +1223,7 @@ class _DialogoPayloadFactura extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'TOTAL GENERAL',
                                 style: TextStyle(
                                   fontSize: 15,
@@ -1234,7 +1233,7 @@ class _DialogoPayloadFactura extends StatelessWidget {
                               ),
                               Text(
                                 _formatoMoneda(totalGeneral),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF0085FF),
@@ -1252,12 +1251,12 @@ class _DialogoPayloadFactura extends StatelessWidget {
 
             // ── Footer ──────────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 border:
                     Border(top: BorderSide(color: Colors.grey.shade200)),
-                borderRadius: const BorderRadius.only(
+                borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
                 ),
@@ -1267,7 +1266,7 @@ class _DialogoPayloadFactura extends StatelessWidget {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cerrar'),
+                    child: Text('Cerrar'),
                   ),
                 ],
               ),
@@ -1286,7 +1285,7 @@ class _SeccionTitulo extends StatelessWidget {
   final String titulo;
   final String? badge;
 
-  const _SeccionTitulo({
+  _SeccionTitulo({
     required this.icono,
     required this.titulo,
     this.badge,
@@ -1296,29 +1295,29 @@ class _SeccionTitulo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icono, size: 18, color: const Color(0xFF0085FF)),
+        Icon(icono, size: 18, color: Theme.of(context).primaryColor),
         const SizedBox(width: 8),
         Text(
           titulo,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: Color(0xFF374151),
           ),
         ),
         if (badge != null) ...[
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
-              color: const Color(0xFF0085FF),
+              color: Theme.of(context).primaryColor,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               badge!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1366,7 +1365,7 @@ class _FilaInfo extends StatelessWidget {
           Expanded(
             child: Text(
               valor,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 color: Color(0xFF1F2937),
                 fontWeight: FontWeight.w600,
@@ -1390,19 +1389,19 @@ class _FilaTotalSimple extends StatelessWidget {
   final String label;
   final String valor;
 
-  const _FilaTotalSimple({required this.label, required this.valor});
+  _FilaTotalSimple({required this.label, required this.valor});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
           Text(valor,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF374151))),
@@ -1421,7 +1420,7 @@ class _DialogoDetallesPago extends StatelessWidget {
   final VoidCallback onAprobar;
   final VoidCallback onRechazar;
 
-  const _DialogoDetallesPago({
+  _DialogoDetallesPago({
     required this.pago,
     required this.onAprobar,
     required this.onRechazar,
@@ -1442,12 +1441,12 @@ class _DialogoDetallesPago extends StatelessWidget {
     return Dialog(
       child: Container(
         width: 600,
-        constraints: const BoxConstraints(maxHeight: 700),
+        constraints: BoxConstraints(maxHeight: 700),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(4),
@@ -1456,18 +1455,18 @@ class _DialogoDetallesPago extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.payment, color: Colors.white),
+                  Icon(Icons.payment, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     'Detalles del Pago #${pago.idPago}',
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: Theme.of(context).cardColor,
                         fontSize: 18,
                         fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -1553,7 +1552,7 @@ class _DialogoDetallesPago extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   border:
-                      Border(top: BorderSide(color: Colors.grey.shade300)),
+                      Border(top: BorderSide(color: Theme.of(context).dividerColor)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,

@@ -76,33 +76,33 @@ class _PagosClientePageState extends State<PagosClientePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0085FF),
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Mis Pagos'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: _cargarPagos,
             tooltip: 'Actualizar',
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 // Header con resumen
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        const Color(0xFF0085FF),
-                        const Color(0xFF0085FF).withOpacity(0.8),
+                        Color(0xFF0085FF),
+                        Color(0xFF0085FF).withOpacity(0.8),
                       ],
                     ),
                   ),
@@ -110,27 +110,27 @@ class _PagosClientePageState extends State<PagosClientePage> {
                     children: [
                       // Cliente
                       Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Theme.of(context).cardColor.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.person,
-                              color: Colors.white,
+                              color: Theme.of(context).cardColor,
                               size: 16,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '${widget.cliente.razonSocial} ',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).cardColor,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -152,7 +152,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                           Container(
                             width: 1,
                             height: 40,
-                            color: Colors.white.withOpacity(0.3),
+                            color: Theme.of(context).cardColor.withOpacity(0.3),
                           ),
                           _buildEstadistica(
                             'Total',
@@ -162,7 +162,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                           Container(
                             width: 1,
                             height: 40,
-                            color: Colors.white.withOpacity(0.3),
+                            color: Theme.of(context).cardColor.withOpacity(0.3),
                           ),
                           _buildEstadistica(
                             'Pendientes',
@@ -178,26 +178,26 @@ class _PagosClientePageState extends State<PagosClientePage> {
                 // Filtros
                 Container(
                   padding: const EdgeInsets.all(16),
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.filter_list,
                         size: 20,
                         color: Color(0xFF6B7280),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
                               _buildFiltroChip('TODOS'),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               _buildFiltroChip('PENDIENTE'),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               _buildFiltroChip('APROBADO'),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               _buildFiltroChip('RECHAZADO'),
                             ],
                           ),
@@ -219,7 +219,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                                 size: 64,
                                 color: Colors.grey[300],
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                               Text(
                                 'No hay pagos',
                                 style: TextStyle(
@@ -228,7 +228,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               Text(
                                 _filtroEstado == 'TODOS'
                                     ? 'No se encontraron pagos registrados'
@@ -245,7 +245,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                       : RefreshIndicator(
                           onRefresh: _cargarPagos,
                           child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
+                            padding: EdgeInsets.all(16),
                             itemCount: _pagosFiltrados.length,
                             itemBuilder: (context, index) {
                               final pago = _pagosFiltrados[index];
@@ -262,19 +262,19 @@ class _PagosClientePageState extends State<PagosClientePage> {
   Widget _buildEstadistica(String label, String valor, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 24),
+        Icon(icon, color: Theme.of(context).cardColor, size: 24),
         const SizedBox(height: 4),
         Text(
           valor,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).cardColor,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ],
     );
@@ -310,10 +310,10 @@ class _PagosClientePageState extends State<PagosClientePage> {
         });
       },
       backgroundColor: Colors.grey[100],
-      selectedColor: const Color(0xFF0085FF).withOpacity(0.2),
-      checkmarkColor: const Color(0xFF0085FF),
+      selectedColor: Color(0xFF0085FF).withOpacity(0.2),
+      checkmarkColor: Color(0xFF0085FF),
       labelStyle: TextStyle(
-        color: isSelected ? const Color(0xFF0085FF) : const Color(0xFF6B7280),
+        color: isSelected ? Color(0xFF0085FF) : Color(0xFF6B7280),
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
     );
@@ -344,9 +344,9 @@ class _PagosClientePageState extends State<PagosClientePage> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: pago.estado == 'RECHAZADO'
@@ -390,13 +390,13 @@ class _PagosClientePageState extends State<PagosClientePage> {
                         children: [
                           Text(
                             pago.fk_modo_pago.descripcion ?? 'Modo de pago',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF111827),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             pago.fechaPago != null
                                 ? 'Fecha: ${DateFormat('dd/MM/yyyy HH:mm').format(pago.fechaPago!)}'
@@ -407,7 +407,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                             ),
                           ),
                           if (pago.factura != null) ...[
-                            const SizedBox(height: 2),
+                            SizedBox(height: 2),
                             Text(
                               'Factura #${pago.factura!.id_factura}',
                               style: TextStyle(
@@ -422,9 +422,9 @@ class _PagosClientePageState extends State<PagosClientePage> {
                   ],
                 ),
 
-                const SizedBox(height: 12),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
+                Divider(height: 1),
+                SizedBox(height: 12),
 
                 // Monto y estado
                 Row(
@@ -440,10 +440,10 @@ class _PagosClientePageState extends State<PagosClientePage> {
                             color: Colors.grey[600],
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         Text(
                           _formatoMoneda.format(pago.monto),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF111827),
@@ -452,7 +452,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 6,
                       ),
@@ -475,7 +475,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                 // Comprobante
                 if (pago.comprobanteUrl != null &&
                     pago.comprobanteUrl!.isNotEmpty) ...[
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   Row(
                     children: [
                       Icon(
@@ -483,7 +483,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                         size: 14,
                         color: Colors.grey[500],
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         'Comprobante adjunto',
                         style: TextStyle(
@@ -498,9 +498,9 @@ class _PagosClientePageState extends State<PagosClientePage> {
                 // Motivo de rechazo
                 if (pago.estado == 'RECHAZADO' &&
                     pago.motivoRechazo != null) ...[
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.red[50],
                       borderRadius: BorderRadius.circular(8),
@@ -513,7 +513,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                           size: 16,
                           color: Colors.red[700],
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Motivo: ${pago.motivoRechazo}',
@@ -531,9 +531,9 @@ class _PagosClientePageState extends State<PagosClientePage> {
 
                 // Indicador de procesamiento para pendientes
                 if (pago.estado == 'PENDIENTE') ...[
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.orange[50],
                       borderRadius: BorderRadius.circular(8),
@@ -545,7 +545,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                           size: 16,
                           color: Colors.orange[700],
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
                           'Pago en proceso de verificación',
                           style: TextStyle(
@@ -588,7 +588,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => DraggableScrollableSheet(
@@ -597,7 +597,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
         maxChildSize: 0.9,
         expand: false,
         builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: ListView(
             controller: scrollController,
             children: [
@@ -612,9 +612,9 @@ class _PagosClientePageState extends State<PagosClientePage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
-              const Text(
+              Text(
                 'Detalle del Pago',
                 style: TextStyle(
                   fontSize: 24,
@@ -623,12 +623,12 @@ class _PagosClientePageState extends State<PagosClientePage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
               // Badge de estado
               Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 6,
                   ),
@@ -647,7 +647,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
               // Detalles
               _buildDetalleRow(
@@ -671,7 +671,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                 ),
               if (pago.comprobanteUrl != null &&
                   pago.comprobanteUrl!.isNotEmpty) ...[
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(bottom: 8),
                   child: Text(
                     'Comprobante',
@@ -685,7 +685,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                 GestureDetector(
                   onTap: () => _verImagenCompleta(context, pago.comprobanteUrl!),
                   child: Container(
-                    margin: const EdgeInsets.only(bottom: 16),
+                    margin: EdgeInsets.only(bottom: 16),
                     height: 200,
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -709,7 +709,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
                                       ? progress.cumulativeBytesLoaded /
                                           progress.expectedTotalBytes!
                                       : null,
-                                  color: const Color(0xFF0085FF),
+                                  color: Theme.of(context).primaryColor,
                                 ),
                               );
                             },
@@ -740,9 +740,9 @@ class _PagosClientePageState extends State<PagosClientePage> {
                                 color: Colors.black.withOpacity(0.5),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.zoom_in,
-                                color: Colors.white,
+                                color: Theme.of(context).cardColor,
                                 size: 18,
                               ),
                             ),
@@ -785,7 +785,7 @@ class _PagosClientePageState extends State<PagosClientePage> {
             title: const Text('Comprobante'),
             actions: [
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -807,15 +807,15 @@ class _PagosClientePageState extends State<PagosClientePage> {
                           ? progress.cumulativeBytesLoaded /
                               progress.expectedTotalBytes!
                           : null,
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                     ),
                   );
                 },
                 errorBuilder: (context, error, stackTrace) => Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.broken_image,
-                        size: 64, color: Colors.white54),
+                    Icon(Icons.broken_image,
+                        size: 64, color: Theme.of(context).cardColor.withOpacity(0.54)),
                     const SizedBox(height: 16),
                     Text(
                       'No se pudo cargar la imagen',

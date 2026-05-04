@@ -222,16 +222,16 @@ class _ClientesPageState extends State<ClientesPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por nombre, documento o celular...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
@@ -241,10 +241,10 @@ class _ClientesPageState extends State<ClientesPage> {
               const SizedBox(width: 16),
               ElevatedButton.icon(
                 onPressed: () => _mostrarDialogoEdicion(null),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Cliente'),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Agregar Cliente'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
+                  backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 20, vertical: 16),
@@ -255,18 +255,18 @@ class _ClientesPageState extends State<ClientesPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 tooltip: 'Recargar',
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -290,8 +290,7 @@ class _ClientesPageState extends State<ClientesPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                  const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Razón Social')),
@@ -342,7 +341,7 @@ class _ClientesPageState extends State<ClientesPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.edit,
+                                            icon: Icon(Icons.edit,
                                                 size: 18,
                                                 color: Color(0xFF0085FF)),
                                             onPressed: () =>
@@ -384,7 +383,7 @@ class _DialogoEditarCliente extends StatefulWidget {
   final List<TipoContribuyente> tiposContribuyente;
   final Function(Cliente) onGuardar;
 
-  const _DialogoEditarCliente({
+  _DialogoEditarCliente({
     this.cliente,
     required this.tiposDocumento,
     required this.tiposOperacion,
@@ -486,13 +485,13 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
     return Dialog(
       child: Container(
         width: 800,
-        constraints: const BoxConstraints(maxHeight: 740),
+        constraints: BoxConstraints(maxHeight: 740),
         child: Column(
           children: [
             // ── Header ──────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(4),
@@ -501,20 +500,20 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.person_add, color: Colors.white),
+                  Icon(Icons.person_add, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     widget.cliente == null
                         ? 'Agregar Cliente'
                         : 'Editar Cliente',
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: Theme.of(context).cardColor,
                         fontSize: 18,
                         fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -589,16 +588,16 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                                   }),
                                   decoration: InputDecoration(
                                     filled: true,
-                                    fillColor: Colors.white,
+                                    fillColor: Theme.of(context).cardColor,
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(6),
                                       borderSide: BorderSide(
-                                          color: Colors.grey.shade300),
+                                          color: Theme.of(context).dividerColor),
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(6),
                                       borderSide: BorderSide(
-                                          color: Colors.grey.shade300),
+                                          color: Theme.of(context).dividerColor),
                                     ),
                                     contentPadding:
                                         const EdgeInsets.symmetric(
@@ -763,16 +762,16 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                               () => _tipoContribuyenteSeleccionado = v),
                           decoration: InputDecoration(
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: Theme.of(context).cardColor,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(6),
                               borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
+                                  BorderSide(color: Theme.of(context).dividerColor),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(6),
                               borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
+                                  BorderSide(color: Theme.of(context).dividerColor),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 12),
@@ -799,7 +798,7 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -812,7 +811,7 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                   ElevatedButton(
                     onPressed: _guardarCliente,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
@@ -839,11 +838,11 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -851,14 +850,14 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -879,11 +878,11 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           items: items
@@ -893,14 +892,14 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

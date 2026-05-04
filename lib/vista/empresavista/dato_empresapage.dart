@@ -243,16 +243,16 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por RUC, razón social o nombre fantasía...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
@@ -265,10 +265,10 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
                     : () {
                         _mostrarDialogoEdicion(null);
                       },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Empresa'),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Agregar Empresa'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
+                  backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey.shade300,  // ← Color cuando está deshabilitado
                   disabledForegroundColor: Colors.grey.shade500,
@@ -279,18 +279,18 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 tooltip: 'Recargar',
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -312,7 +312,7 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('RUC')),
@@ -358,7 +358,7 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
+                                            icon: Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                                             onPressed: () => _mostrarDialogoEdicion(empresa),
                                             tooltip: 'Editar',
                                           ),
@@ -393,7 +393,7 @@ class _DialogoEditarEmpresa extends StatefulWidget {
   final List<ActividadEconomica> actividadesSeleccionadas;
   final Function(DatoEmpresa, List<ActividadEconomica>) onGuardar;
 
-  const _DialogoEditarEmpresa({
+  _DialogoEditarEmpresa({
     this.empresa,
     required this.tiposContribuyente,
     required this.tiposRegimen,
@@ -504,26 +504,26 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
     return Dialog(
       child: Container(
         width: 900,
-        constraints: const BoxConstraints(maxHeight: 700),
+        constraints: BoxConstraints(maxHeight: 700),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.business, color: Colors.white),
+                  Icon(Icons.business, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     widget.empresa == null ? 'Agregar Empresa' : 'Editar Empresa',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -628,16 +628,16 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
                               controller: _searchActividadController,
                               decoration: InputDecoration(
                                 hintText: 'Buscar actividad...',
-                                prefixIcon: const Icon(Icons.search, size: 18),
+                                prefixIcon: Icon(Icons.search, size: 18),
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: Theme.of(context).cardColor,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               ),
@@ -646,7 +646,7 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
                             Container(
                               height: 350,
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(color: Theme.of(context).dividerColor),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: ListView.builder(
@@ -666,7 +666,7 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
                                       onChanged: (value) => _toggleActividad(actividad),
                                       title: Text(
                                         actividad.codigo_actividad.toString(),
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                                       ),
                                       subtitle: Text(
                                         actividad.descripcion_actividad,
@@ -676,7 +676,7 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
                                       ),
                                       dense: true,
                                       controlAffinity: ListTileControlAffinity.leading,
-                                      activeColor: const Color(0xFF0085FF),
+                                      activeColor: Color(0xFF0085FF),
                                     ),
                                   );
                                 },
@@ -691,10 +691,10 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
               ),
             ),
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -707,7 +707,7 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
                   ElevatedButton(
                     onPressed: _guardarEmpresa,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
@@ -732,8 +732,8 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -741,14 +741,14 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
@@ -767,22 +767,22 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(itemLabel(item)))).toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),

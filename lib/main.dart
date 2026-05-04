@@ -4,6 +4,7 @@ import 'package:myapp/vista/dashboard_clientes/consulta_clientes.dart';
 import 'package:provider/provider.dart';
 import 'package:myapp/dao/configurations.dart';
 import 'package:myapp/vista/loginpage.dart';
+import 'package:myapp/modelo/theme_provider.dart';
 import 'package:myapp/widget/dashboard_widget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -18,9 +19,12 @@ void main() async {
   );
 
   runApp(
-    // Envolver la app con Provider
-    ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    // Envolver la app con MultiProvider
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -31,15 +35,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       title: 'Sistema de Agua',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF0085FF),
+          brightness: Brightness.light,
         ),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0085FF),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: themeProvider.themeMode,
       home: const SplashScreen(), // Cambiar a SplashScreen
     );
   }

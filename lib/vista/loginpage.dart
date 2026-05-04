@@ -98,9 +98,9 @@ class _LoginPageState extends State<LoginPage> {
             width: 450,
             margin: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: Theme.of(context).dividerColor),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -116,7 +116,7 @@ class _LoginPageState extends State<LoginPage> {
                   // Header
                   Container(
                     padding: const EdgeInsets.all(32),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: Color(0xFF0085FF),
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(12),
@@ -128,29 +128,29 @@ class _LoginPageState extends State<LoginPage> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(50),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.person,
                             size: 48,
                             color: Color(0xFF0085FF),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
+                        SizedBox(height: 16),
+                        Text(
                           'Iniciar Sesión',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).cardColor,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Ingresa tus credenciales para continuar',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: Theme.of(context).cardColor.withOpacity(0.7),
                             fontSize: 14,
                           ),
                         ),
@@ -183,16 +183,16 @@ class _LoginPageState extends State<LoginPage> {
                                   value?.isEmpty ?? true ? 'Campo requerido' : null,
                               decoration: InputDecoration(
                                 hintText: 'Ingrese su usuario',
-                                prefixIcon: const Icon(Icons.person_outline, size: 20),
+                                prefixIcon: Icon(Icons.person_outline, size: 20),
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: Theme.of(context).cardColor,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -224,7 +224,7 @@ class _LoginPageState extends State<LoginPage> {
                                   value?.isEmpty ?? true ? 'Campo requerido' : null,
                               decoration: InputDecoration(
                                 hintText: 'Ingrese su contraseña',
-                                prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                                prefixIcon: Icon(Icons.lock_outline, size: 20),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
@@ -237,14 +237,14 @@ class _LoginPageState extends State<LoginPage> {
                                   },
                                 ),
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: Theme.of(context).cardColor,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -260,7 +260,7 @@ class _LoginPageState extends State<LoginPage> {
                         ElevatedButton(
                           onPressed: _isLoading ? null : _iniciarSesion,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0085FF),
+                            backgroundColor: Theme.of(context).primaryColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(

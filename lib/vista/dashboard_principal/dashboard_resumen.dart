@@ -337,18 +337,18 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
             const SizedBox(height: 2),
             Text(
               'Período: $_labelPeriodo',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13, color: Color(0xFF6B7280)),
             ),
           ],
         ),
-        const Spacer(),
+        Spacer(),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
+            color: Color(0xFFF3F4F6),
             borderRadius: BorderRadius.circular(8),
           ),
-          padding: const EdgeInsets.all(3),
+          padding: EdgeInsets.all(3),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -382,10 +382,10 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
             ],
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         IconButton(
           onPressed: _cargarDatos,
-          icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
+          icon: Icon(Icons.refresh, color: Color(0xFF6B7280)),
           tooltip: 'Recargar',
         ),
       ],
@@ -407,7 +407,7 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                 iconColor: Colors.green.shade600,
                 iconBg: Colors.green.shade50,
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               _MetricCard(
                 label: 'Total debe',
                 value: _formatGuarani(_totalDebe),
@@ -415,20 +415,20 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                 iconColor: Colors.red.shade600,
                 iconBg: Colors.red.shade50,
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               _MetricCard(
                 label: 'Asientos del período',
                 value: '${_asientosDelMes.length}',
                 icon: Icons.receipt_long_rounded,
-                iconColor: const Color(0xFF0085FF),
-                iconBg: const Color(0xFFE6F0FF),
+                iconColor: Color(0xFF0085FF),
+                iconBg: Color(0xFFE6F0FF),
                 subtitle:
                     '$_asientosAsentados asentados · $_asientosPendientes pendientes',
               ),
             ],
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         Expanded(child: _buildGraficoEvolucion()),
       ],
     );
@@ -438,9 +438,9 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
     return Container(
       height: 210,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       child: Column(
@@ -487,9 +487,9 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
   Widget _buildTablaAsientos() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,22 +516,21 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                   ),
                   child: Text(
                     '${_asientosDelMes.length} registros',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12, color: Color(0xFF6B7280)),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           _asientosDelMes.isEmpty
               ? _buildEmptyState(Icons.receipt_long_outlined,
                   'Sin asientos en este período')
               : SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    headingRowColor: WidgetStateProperty.all(
-                        const Color(0xFFF9FAFB)),
+                    headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                     dataRowMinHeight: 44,
                     dataRowMaxHeight: 44,
                     headingRowHeight: 42,
@@ -547,7 +546,7 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                       return DataRow(cells: [
                         DataCell(Text(
                           '#${asiento.nroAsiento}',
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF0085FF)),
                         )),
@@ -572,14 +571,14 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                 ),
           if (_asientosDelMes.length > 10)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
                 'Mostrando 10 de ${_asientosDelMes.length} asientos',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12, color: Color(0xFF9CA3AF)),
               ),
             ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
         ],
       ),
     );
@@ -588,9 +587,9 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
   Widget _buildResumenCuentas() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,7 +616,7 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                   ),
                   child: Text(
                     '${_resumenCuentas.length} cuentas',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12, color: Color(0xFF6B7280)),
                   ),
                 ),
@@ -630,7 +629,7 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                   'Sin movimientos en este período')
               : ListView.separated(
                   shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                  physics: NeverScrollableScrollPhysics(),
                   itemCount: _resumenCuentas.take(8).length,
                   separatorBuilder: (_, __) =>
                       Divider(color: Colors.grey.shade100, height: 1),
@@ -639,7 +638,7 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                     final saldo = c['saldo'] as double;
                     final esSuperavit = saldo >= 0;
                     return Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
                       child: Row(
                         children: [
@@ -650,7 +649,7 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                               children: [
                                 Text(
                                   c['nombre'] as String,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                     color: Color(0xFF111827),
@@ -661,14 +660,14 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                                     .isNotEmpty)
                                   Text(
                                     c['codigo'] as String,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 11,
                                         color: Color(0xFF9CA3AF)),
                                   ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Column(
                             crossAxisAlignment:
                                 CrossAxisAlignment.end,
@@ -685,7 +684,7 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                               ),
                               Text(
                                 'D: ${_formatGuarani(c['debe'] as double)}  H: ${_formatGuarani(c['haber'] as double)}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 10,
                                     color: Color(0xFF9CA3AF)),
                               ),
@@ -698,14 +697,14 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
                 ),
           if (_resumenCuentas.length > 8)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
                 'Mostrando 8 de ${_resumenCuentas.length} cuentas',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12, color: Color(0xFF9CA3AF)),
               ),
             ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
         ],
       ),
     );
@@ -733,7 +732,7 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
     }
     return Container(
       padding:
-          const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
           color: bg, borderRadius: BorderRadius.circular(4)),
       child: Text(
@@ -748,14 +747,14 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
 
   Widget _buildEmptyState(IconData icon, String mensaje) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
+      padding: EdgeInsets.symmetric(vertical: 40),
       child: Center(
         child: Column(
           children: [
-            Icon(icon, size: 48, color: Colors.grey.shade300),
+            Icon(icon, size: 48, color: Theme.of(context).dividerColor),
             const SizedBox(height: 12),
             Text(mensaje,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14, color: Color(0xFF6B7280))),
           ],
         ),
@@ -771,7 +770,7 @@ class _PeriodoTab extends StatelessWidget {
   final bool activo;
   final VoidCallback onTap;
 
-  const _PeriodoTab({
+  _PeriodoTab({
     required this.label,
     required this.activo,
     required this.onTap,
@@ -782,8 +781,8 @@ class _PeriodoTab extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(
+        duration: Duration(milliseconds: 150),
+        padding: EdgeInsets.symmetric(
             horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: activo ? Colors.white : Colors.transparent,
@@ -793,7 +792,7 @@ class _PeriodoTab extends StatelessWidget {
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
                     blurRadius: 4,
-                    offset: const Offset(0, 1),
+                    offset: Offset(0, 1),
                   )
                 ]
               : [],
@@ -805,8 +804,8 @@ class _PeriodoTab extends StatelessWidget {
             fontWeight:
                 activo ? FontWeight.w600 : FontWeight.w400,
             color: activo
-                ? const Color(0xFF111827)
-                : const Color(0xFF6B7280),
+                ? Color(0xFF111827)
+                : Color(0xFF6B7280),
           ),
         ),
       ),
@@ -836,17 +835,17 @@ class _LineChartPainter extends CustomPainter {
         .fold(0.0, (prev, v) => v > prev ? v : prev);
     final effectiveMax = maxVal == 0 ? 1.0 : maxVal * 1.15;
 
-    const paddingLeft = 48.0;
-    const paddingBottom = 28.0;
-    const paddingTop = 8.0;
+    double paddingLeft = 48.0;
+    double paddingBottom = 28.0;
+    double paddingTop = 8.0;
     final chartW = size.width - paddingLeft;
     final chartH = size.height - paddingBottom - paddingTop;
 
     final gridPaint = Paint()
-      ..color = const Color(0xFFF3F4F6)
+      ..color = Color(0xFFF3F4F6)
       ..strokeWidth = 1;
 
-    const labelStyle = TextStyle(
+    final TextStyle labelStyle = TextStyle(
       fontSize: 10,
       color: Color(0xFF9CA3AF),
     );
@@ -889,7 +888,7 @@ class _LineChartPainter extends CustomPainter {
     canvas.drawPath(
       haberFillPath,
       Paint()
-        ..color = const Color(0xFF10B981).withOpacity(0.08)
+        ..color = Color(0xFF10B981).withOpacity(0.08)
         ..style = PaintingStyle.fill,
     );
 
@@ -905,7 +904,7 @@ class _LineChartPainter extends CustomPainter {
     canvas.drawPath(
       debeFillPath,
       Paint()
-        ..color = const Color(0xFFEF4444).withOpacity(0.06)
+        ..color = Color(0xFFEF4444).withOpacity(0.06)
         ..style = PaintingStyle.fill,
     );
 
@@ -919,7 +918,7 @@ class _LineChartPainter extends CustomPainter {
     canvas.drawPath(
       haberPath,
       Paint()
-        ..color = const Color(0xFF10B981)
+        ..color = Color(0xFF10B981)
         ..strokeWidth = 2
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
@@ -936,7 +935,7 @@ class _LineChartPainter extends CustomPainter {
     canvas.drawPath(
       debePath,
       Paint()
-        ..color = const Color(0xFFEF4444)
+        ..color = Color(0xFFEF4444)
         ..strokeWidth = 2
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
@@ -951,7 +950,7 @@ class _LineChartPainter extends CustomPainter {
             ..style = PaintingStyle.fill);
       canvas.drawCircle(Offset(xOf(i), yOf(haberVals[i])), 3.5,
           Paint()
-            ..color = const Color(0xFF10B981)
+            ..color = Color(0xFF10B981)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2);
     }
@@ -964,7 +963,7 @@ class _LineChartPainter extends CustomPainter {
             ..style = PaintingStyle.fill);
       canvas.drawCircle(Offset(xOf(i), yOf(debeVals[i])), 3.5,
           Paint()
-            ..color = const Color(0xFFEF4444)
+            ..color = Color(0xFFEF4444)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2);
     }
@@ -993,7 +992,7 @@ class _LeyendaPunto extends StatelessWidget {
   final Color color;
   final String label;
 
-  const _LeyendaPunto({required this.color, required this.label});
+  _LeyendaPunto({required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -1005,9 +1004,9 @@ class _LeyendaPunto extends StatelessWidget {
           decoration: BoxDecoration(
               color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 11, color: Color(0xFF6B7280))),
       ],
     );
@@ -1025,7 +1024,7 @@ class _MetricCard extends StatelessWidget {
   final Color? valueColor;
   final String? subtitle;
 
-  const _MetricCard({
+  _MetricCard({
     required this.label,
     required this.value,
     required this.icon,
@@ -1038,11 +1037,11 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [

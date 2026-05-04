@@ -181,16 +181,16 @@ class _CategoriaServicioPageState extends State<CategoriaServicioPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por nombre o descripción...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
@@ -202,10 +202,10 @@ class _CategoriaServicioPageState extends State<CategoriaServicioPage> {
                   onPressed: () {
                     _mostrarDialogoEdicion(null);
                   },
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Agregar', overflow: TextOverflow.ellipsis),
+                  icon: Icon(Icons.add, size: 18),
+                  label: Text('Agregar', overflow: TextOverflow.ellipsis),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0085FF),
+                    backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -215,18 +215,18 @@ class _CategoriaServicioPageState extends State<CategoriaServicioPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 tooltip: 'Recargar',
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -248,7 +248,7 @@ class _CategoriaServicioPageState extends State<CategoriaServicioPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Nombre')),
@@ -281,7 +281,7 @@ class _CategoriaServicioPageState extends State<CategoriaServicioPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
+                                            icon: Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                                             onPressed: () => _mostrarDialogoEdicion(categoria),
                                             tooltip: 'Editar',
                                           ),
@@ -312,7 +312,7 @@ class _DialogoEditarCategoriaServicio extends StatefulWidget {
   final CategoriaServicio? categoria;
   final Function(CategoriaServicio) onGuardar;
 
-  const _DialogoEditarCategoriaServicio({
+  _DialogoEditarCategoriaServicio({
     this.categoria,
     required this.onGuardar,
   });
@@ -353,12 +353,12 @@ class _DialogoEditarCategoriaServicioState extends State<_DialogoEditarCategoria
     return Dialog(
       child: Container(
         width: 600,
-        constraints: const BoxConstraints(maxHeight: 600),
+        constraints: BoxConstraints(maxHeight: 600),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(4),
@@ -367,21 +367,21 @@ class _DialogoEditarCategoriaServicioState extends State<_DialogoEditarCategoria
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.category, color: Colors.white),
+                  Icon(Icons.category, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     widget.categoria == null
                         ? 'Agregar Categoría de Servicio'
                         : 'Editar Categoría de Servicio',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).cardColor,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -481,7 +481,7 @@ class _DialogoEditarCategoriaServicioState extends State<_DialogoEditarCategoria
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -494,7 +494,7 @@ class _DialogoEditarCategoriaServicioState extends State<_DialogoEditarCategoria
                   ElevatedButton(
                     onPressed: _guardarCategoria,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -525,13 +525,13 @@ class _DialogoEditarCategoriaServicioState extends State<_DialogoEditarCategoria
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -540,14 +540,14 @@ class _DialogoEditarCategoriaServicioState extends State<_DialogoEditarCategoria
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,

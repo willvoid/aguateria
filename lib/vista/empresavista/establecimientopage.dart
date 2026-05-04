@@ -177,16 +177,16 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por código, denominación, dirección o empresa...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
@@ -197,10 +197,10 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
                 onPressed: () {
                   _mostrarDialogoEdicion(null);
                 },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Establecimiento'),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Agregar Establecimiento'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
+                  backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -209,18 +209,18 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 tooltip: 'Recargar',
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -242,7 +242,7 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Código')),
@@ -306,7 +306,7 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
+                                            icon: Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                                             onPressed: () => _mostrarDialogoEdicion(est),
                                             tooltip: 'Editar',
                                           ),
@@ -339,7 +339,7 @@ class _DialogoEditarEstablecimiento extends StatefulWidget {
   final List<DatoEmpresa> empresas;
   final Function(Establecimiento) onGuardar;
 
-  const _DialogoEditarEstablecimiento({
+  _DialogoEditarEstablecimiento({
     this.establecimiento,
     required this.barrios,
     required this.empresas,
@@ -402,26 +402,26 @@ class _DialogoEditarEstablecimientoState extends State<_DialogoEditarEstablecimi
     return Dialog(
       child: Container(
         width: 900,
-        constraints: const BoxConstraints(maxHeight: 700),
+        constraints: BoxConstraints(maxHeight: 700),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.store, color: Colors.white),
+                  Icon(Icons.store, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     widget.establecimiento == null ? 'Agregar Establecimiento' : 'Editar Establecimiento',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -559,7 +559,7 @@ class _DialogoEditarEstablecimientoState extends State<_DialogoEditarEstablecimi
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -572,7 +572,7 @@ class _DialogoEditarEstablecimientoState extends State<_DialogoEditarEstablecimi
                   ElevatedButton(
                     onPressed: _guardarEstablecimiento,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
@@ -597,8 +597,8 @@ class _DialogoEditarEstablecimientoState extends State<_DialogoEditarEstablecimi
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -606,14 +606,14 @@ class _DialogoEditarEstablecimientoState extends State<_DialogoEditarEstablecimi
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
@@ -632,22 +632,22 @@ class _DialogoEditarEstablecimientoState extends State<_DialogoEditarEstablecimi
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(itemLabel(item)))).toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),

@@ -21,6 +21,7 @@ import 'package:myapp/vista/opciones_page.dart';
 import 'package:myapp/vista/registro_usuariopage.dart';
 import 'package:myapp/vista/tarifa_page.dart';
 import 'package:provider/provider.dart';
+import 'package:myapp/modelo/theme_provider.dart';
 
 class DashboardWidget extends StatefulWidget {
   const DashboardWidget({Key? key}) : super(key: key);
@@ -215,8 +216,15 @@ class _DashboardWidgetState extends State<DashboardWidget>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F7FA);
+    final topBarColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final sidebarColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFF2A3441);
+    final textColor = isDark ? Colors.white : const Color(0xFF111827);
+    final iconColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: bgColor,
       body: Row(
         children: [
           // Sidebar Animado
@@ -228,7 +236,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                 child: _sidebarAnimation.value > 0
                     ? Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2A3441),
+                          color: sidebarColor,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
@@ -243,7 +251,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                             Container(
                               height: 60,
                               padding: const EdgeInsets.all(16),
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
                                     color: Color(0xFF3A4553),
@@ -257,22 +265,22 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                     width: 32,
                                     height: 32,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0085FF),
+                                      color: Theme.of(context).primaryColor,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.water_drop,
-                                      color: Colors.white,
+                                      color: Theme.of(context).cardColor,
                                       size: 18,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   if (_sidebarAnimation.value > 180)
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
-                                        'SERVICIO DE AGUA SANTA ROSA - C.F.',
+                                        'SERVICIO DE AGUA SANTA Rosa - C.F.',
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: Theme.of(context).cardColor,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -310,10 +318,10 @@ class _DashboardWidgetState extends State<DashboardWidget>
                   height: 60,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: topBarColor,
                     border: Border(
                       bottom: BorderSide(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: isDark ? const Color(0xFF333333) : Colors.grey.withOpacity(0.2),
                         width: 1,
                       ),
                     ),
@@ -324,7 +332,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                         onPressed: _toggleSidebar,
                         icon: Icon(
                           isSidebarVisible ? Icons.menu_open : Icons.menu,
-                          color: const Color(0xFF6B7280),
+                          color: iconColor,
                           size: 20,
                         ),
                         tooltip: isSidebarVisible
@@ -334,19 +342,32 @@ class _DashboardWidgetState extends State<DashboardWidget>
                       const SizedBox(width: 12),
                       Icon(
                         _getSelectedIcon(),
-                        color: const Color(0xFF6B7280),
+                        color: iconColor,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
                       Text(
                         _getSelectedTitle(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
+                          color: textColor,
                         ),
                       ),
                       const Spacer(),
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, _) {
+                          return IconButton(
+                            onPressed: themeProvider.toggleTheme,
+                            icon: Icon(
+                              themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                              color: iconColor,
+                            ),
+                            tooltip: themeProvider.isDarkMode ? 'Modo claro' : 'Modo oscuro',
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
                       Consumer<AuthProvider>(
                         builder: (context, authProvider, _) {
                           return Row(
@@ -357,26 +378,26 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                 children: [
                                   Text(
                                     authProvider.usuarioNombre,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF111827),
+                                      color: textColor,
                                     ),
                                   ),
                                   Text(
                                     authProvider.cargoNombre,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: Color(0xFF6B7280),
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Container(
                                 width: 36,
                                 height: 36,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: Color(0xFF0085FF),
                                   shape: BoxShape.circle,
                                 ),
@@ -386,8 +407,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                         ? authProvider.usuarioNombre[0]
                                               .toUpperCase()
                                         : 'U',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: Theme.of(context).cardColor,
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -396,7 +417,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                               ),
                               const SizedBox(width: 12),
                               PopupMenuButton<String>(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.more_vert,
                                   size: 20,
                                   color: Color(0xFF6B7280),
@@ -406,15 +427,15 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                     final confirm = await showDialog<bool>(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Text('Cerrar Sesión'),
-                                        content: const Text(
+                                        title: Text('Cerrar Sesión'),
+                                        content: Text(
                                           '¿Estás seguro de que deseas cerrar sesión?',
                                         ),
                                         actions: [
                                           TextButton(
                                             onPressed: () =>
                                                 Navigator.pop(context, false),
-                                            child: const Text('Cancelar'),
+                                            child: Text('Cancelar'),
                                           ),
                                           TextButton(
                                             onPressed: () =>
@@ -422,7 +443,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                             style: TextButton.styleFrom(
                                               foregroundColor: Colors.red,
                                             ),
-                                            child: const Text('Cerrar Sesión'),
+                                            child: Text('Cerrar Sesión'),
                                           ),
                                         ],
                                       ),
@@ -433,14 +454,14 @@ class _DashboardWidgetState extends State<DashboardWidget>
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => const LoginPage(),
+                                          builder: (_) => LoginPage(),
                                         ),
                                       );
                                     }
                                   }
                                 },
                                 itemBuilder: (context) => [
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'logout',
                                     child: Row(
                                       children: [
@@ -468,28 +489,28 @@ class _DashboardWidgetState extends State<DashboardWidget>
                 // Status Bar
                 Container(
                   height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: const BoxDecoration(color: Color(0xFF374151)),
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(color: Color(0xFF374151)),
                   child: Row(
                     children: [
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: Color(0xFF10B981),
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
+                      SizedBox(width: 8),
+                      Text(
                         'Sistema Activo',
                         style: TextStyle(color: Colors.white, fontSize: 12),
                       ),
-                      const Spacer(),
+                      Spacer(),
                       Text(
                         'Versión 1.0.0',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Theme.of(context).cardColor.withOpacity(0.8),
                           fontSize: 12,
                         ),
                       ),
@@ -567,14 +588,14 @@ class _DashboardWidgetState extends State<DashboardWidget>
             ),
             child: Row(
               children: [
-                Icon(item.icon, color: Colors.white.withOpacity(0.9), size: 18),
+                Icon(item.icon, color: Theme.of(context).cardColor.withOpacity(0.9), size: 18),
                 if (_sidebarAnimation.value > 120) ...[
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       item.title,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Theme.of(context).cardColor.withOpacity(0.9),
                         fontSize: 14,
                         fontWeight: isSelected
                             ? FontWeight.w500
@@ -588,7 +609,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                       item.isExpanded
                           ? Icons.keyboard_arrow_down
                           : Icons.keyboard_arrow_right,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Theme.of(context).cardColor.withOpacity(0.7),
                       size: 16,
                     ),
                   if (item.badge != null)
@@ -598,13 +619,13 @@ class _DashboardWidgetState extends State<DashboardWidget>
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0085FF),
+                        color: Theme.of(context).primaryColor,
                         borderRadius: BorderRadius.circular(3),
                       ),
                       child: Text(
                         item.badge!,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).cardColor,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
@@ -657,7 +678,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
               children: [
                 Icon(
                   subItem.icon,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Theme.of(context).cardColor.withOpacity(0.8),
                   size: 16,
                 ),
                 if (_sidebarAnimation.value > 120) ...[
@@ -666,7 +687,7 @@ class _DashboardWidgetState extends State<DashboardWidget>
                     child: Text(
                       subItem.title,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Theme.of(context).cardColor.withOpacity(0.8),
                         fontSize: 13,
                         fontWeight: isSelected
                             ? FontWeight.w500

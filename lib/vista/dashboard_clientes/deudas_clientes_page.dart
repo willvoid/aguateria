@@ -174,7 +174,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0085FF),
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         title: Text(_modoConsumo ? 'Mis Consumos' : 'Mis Deudas'),
@@ -204,22 +204,22 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Theme.of(context).cardColor.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.home,
-                              color: Colors.white,
+                              color: Theme.of(context).cardColor,
                               size: 16,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Inmueble: ${widget.inmueble.cod_inmueble ?? 'N/A'}',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).cardColor,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -236,8 +236,8 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                         const SizedBox(height: 8),
                         Text(
                           _formatoMoneda.format(_totalDeuda),
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).cardColor,
                             fontSize: 36,
                             fontWeight: FontWeight.bold,
                           ),
@@ -254,7 +254,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                             Container(
                               width: 1,
                               height: 40,
-                              color: Colors.white.withOpacity(0.3),
+                              color: Theme.of(context).cardColor.withOpacity(0.3),
                             ),
                             _buildEstadistica(
                               'Total',
@@ -264,7 +264,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                             Container(
                               width: 1,
                               height: 40,
-                              color: Colors.white.withOpacity(0.3),
+                              color: Theme.of(context).cardColor.withOpacity(0.3),
                             ),
                             _buildEstadistica(
                               'Pagadas',
@@ -285,7 +285,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                 ),
                 Container(
                   padding: const EdgeInsets.all(16),
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   child: _modoConsumo
                       ? _buildFiltrosAnio()
                       : _buildFiltrosEstado(),
@@ -353,17 +353,17 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
   Widget _buildFiltrosEstado() {
     return Row(
       children: [
-        const Icon(Icons.filter_list, size: 20, color: Color(0xFF6B7280)),
-        const SizedBox(width: 12),
+        Icon(Icons.filter_list, size: 20, color: Color(0xFF6B7280)),
+        SizedBox(width: 12),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
                 _buildFiltroChip('TODAS'),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _buildFiltroChip('PENDIENTE'),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _buildFiltroChip('EN REVISION'),
               ],
             ),
@@ -374,11 +374,11 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
   }
 
   Widget _buildFiltrosAnio() {
-    if (_aniosDisponibles.isEmpty) return const SizedBox.shrink();
+    if (_aniosDisponibles.isEmpty) return SizedBox.shrink();
     return Row(
       children: [
-        const Icon(Icons.calendar_today, size: 20, color: Color(0xFF6B7280)),
-        const SizedBox(width: 12),
+        Icon(Icons.calendar_today, size: 20, color: Color(0xFF6B7280)),
+        SizedBox(width: 12),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -386,11 +386,11 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
               children: _aniosDisponibles.map((anio) {
                 final seleccionado = anio == _anioSeleccionado;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: EdgeInsets.only(right: 8),
                   child: ChoiceChip(
                     label: Text('$anio'),
                     selected: seleccionado,
-                    selectedColor: const Color(0xFF0085FF),
+                    selectedColor: Color(0xFF0085FF),
                     labelStyle: TextStyle(
                       color: seleccionado ? Colors.white : Colors.black87,
                       fontWeight: seleccionado
@@ -413,19 +413,19 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
   Widget _buildEstadistica(String label, String valor, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 24),
+        Icon(icon, color: Theme.of(context).cardColor, size: 24),
         const SizedBox(height: 4),
         Text(
           valor,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).cardColor,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ],
     );
@@ -444,10 +444,10 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
       selected: isSelected,
       onSelected: (selected) => setState(() => _filtroEstado = filtro),
       backgroundColor: Colors.grey[100],
-      selectedColor: const Color(0xFF0085FF).withOpacity(0.2),
-      checkmarkColor: const Color(0xFF0085FF),
+      selectedColor: Color(0xFF0085FF).withOpacity(0.2),
+      checkmarkColor: Color(0xFF0085FF),
       labelStyle: TextStyle(
-        color: isSelected ? const Color(0xFF0085FF) : const Color(0xFF6B7280),
+        color: isSelected ? Color(0xFF0085FF) : Color(0xFF6B7280),
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
     );
@@ -489,9 +489,9 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: estaVencida ? Colors.red.withOpacity(0.3) : Colors.grey[200]!,
@@ -534,14 +534,14 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                         children: [
                           Text(
                             deuda.fk_concepto.nombre,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF111827),
                             ),
                           ),
                           if (deuda.descripcion.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               deuda.descripcion,
                               style: TextStyle(
@@ -551,7 +551,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                             ),
                           ],
                           if (deuda.fk_ciclos != null) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               'Ciclo: ${deuda.fk_ciclos!.descripcion}',
                               style: TextStyle(
@@ -565,9 +565,9 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
+                Divider(height: 1),
+                SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -581,14 +581,14 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                             color: Colors.grey[600],
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         Text(
                           _formatoMoneda.format(
                             deuda.estado == 'PAGADO'
                                 ? deuda.monto
                                 : deuda.saldo,
                           ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF111827),
@@ -596,7 +596,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                         ),
                         if (deuda.estado == 'PENDIENTE' &&
                             deuda.pagado > 0) ...[
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'Pagado: ${_formatoMoneda.format(deuda.pagado)}',
                             style: TextStyle(
@@ -611,7 +611,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
                           ),
@@ -629,7 +629,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                           ),
                         ),
                         if (deuda.fk_ciclos != null) ...[
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Row(
                             children: [
                               Icon(
@@ -637,7 +637,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                                 size: 12,
                                 color: Colors.grey[600],
                               ),
-                              const SizedBox(width: 4),
+                              SizedBox(width: 4),
                               Text(
                                 'Vence: ${DateFormat('dd/MM/yyyy').format(deuda.fk_ciclos!.vencimiento)}',
                                 style: TextStyle(
@@ -653,7 +653,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                   ],
                 ),
                 if (!_modoConsumo) ...[
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   if (deuda.estado == 'PENDIENTE' ||
                       deuda.estado == 'PAGO_PARCIAL')
                     SizedBox(
@@ -665,10 +665,10 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                           inmueble,
                           idUsuario,
                         ),
-                        icon: const Icon(Icons.payment, size: 18),
-                        label: const Text('Pagar Ahora'),
+                        icon: Icon(Icons.payment, size: 18),
+                        label: Text('Pagar Ahora'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0085FF),
+                          backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -843,7 +843,7 @@ class _DeudasClientesPageState extends State<DeudasClientesPage> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(

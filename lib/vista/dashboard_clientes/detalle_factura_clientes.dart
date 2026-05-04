@@ -136,7 +136,7 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
         // Selector de Ciclo
         DropdownButtonFormField<Ciclo>(
           value: _cicloSeleccionado,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Ciclo de Consumo *',
             border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.calendar_today),
@@ -164,7 +164,7 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
         TextFormField(
           controller: _montoController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Monto del Consumo *',
             border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.water_drop),
@@ -190,7 +190,7 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
         TextFormField(
           controller: _montoController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Monto de Conexión *',
             border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.link),
@@ -216,7 +216,7 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
         TextFormField(
           controller: _montoController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Monto *',
             border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.attach_money),
@@ -257,7 +257,7 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
               // Selector de Concepto
               DropdownButtonFormField<Concepto>(
                 value: _conceptoSeleccionado,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Concepto *',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.category),
@@ -366,15 +366,15 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.percent, size: 20),
-                      const SizedBox(width: 12),
+                      Icon(Icons.percent, size: 20),
+                      SizedBox(width: 12),
                       Text(
                         'IVA Aplicado: $_ivaAplicado%',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -382,20 +382,20 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
 
                 // Descripción (opcional)
                 TextFormField(
                   controller: _descripcionController,
                   maxLines: 2,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Descripción adicional (opcional)',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.description),
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // Subtotal y botón agregar
               Row(
@@ -404,7 +404,7 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Subtotal:',
                         style: TextStyle(
                           fontSize: 14,
@@ -413,7 +413,7 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
                       ),
                       Text(
                         '${_subtotal.toStringAsFixed(0)} Gs.',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0085FF),
@@ -423,10 +423,10 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
                   ),
                   ElevatedButton.icon(
                     onPressed: _conceptoSeleccionado != null ? _agregarDetalle : null,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Agregar'),
+                    icon: Icon(Icons.add),
+                    label: Text('Agregar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -468,7 +468,7 @@ class _DetalleFacturaDinamicoWidgetState extends State<DetalleFacturaDinamicoWid
                               : detalle.fk_concepto.id == 2
                                   ? Icons.link
                                   : Icons.receipt,
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           size: 20,
                         ),
                       ),

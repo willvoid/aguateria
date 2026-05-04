@@ -1,0 +1,355 @@
+﻿
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\categor
+ia_servicio_page.dart:370:53 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\categor
+ia_servicio_page.dart:377:30 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\categor
+ia_servicio_page.dart:384:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\cliente_page.dart:503:55 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\cliente_page.dart:510:32 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\cliente_page.dart:516:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\consulta_clientes.dart:730:4
+0 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\consulta_clientes.dart:943:3
+0 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\consulta_clientes.dart:955:2
+8 - const_eval_method_invocation
+  error - The getter 'cardColor70' 
+isn't defined for the type 'ThemeData' 
+- lib\vista\dashboard_clientes\consulta_
+clientes.dart:964:46 - undefined_getter
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\consulta_clientes.dart:979:2
+4 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\dashboard_clientes.dart:178:
+30 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\dashboard_clientes.dart:188:
+32 - const_eval_method_invocation
+  error - The getter 'cardColor70' 
+isn't defined for the type 'ThemeData' 
+- lib\vista\dashboard_clientes\dashboard
+_clientes.dart:188:50 - undefined_getter
+  error - Undefined name 'context' - lib
+\vista\dashboard_clientes\dashboard_clie
+ntes.dart:281:25 - undefined_identifier
+  error - Undefined name 'context' - lib
+\vista\dashboard_clientes\dashboard_clie
+ntes.dart:296:42 - undefined_identifier
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\deudas_clientes_page.dart:21
+5:38 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\deudas_clientes_page.dart:22
+2:40 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\deudas_clientes_page.dart:24
+0:36 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\deudas_clientes_page.dart:42
+1:20 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\pagos_clientespage.dart:126:
+38 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\pagos_clientespage.dart:133:
+40 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\pagos_clientespage.dart:270:
+20 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\pagos_clientespage.dart:745:
+40 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\dashboa
+rd_clientes\pagos_clientespage.dart:818:
+42 - const_eval_method_invocation
+  error - The getter 'cardColor54' 
+isn't defined for the type 'ThemeData' 
+- lib\vista\dashboard_clientes\pagos_cli
+entespage.dart:818:60 - undefined_getter
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\deuda_page.dart:528:57 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\deuda_page.dart:533:30 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\deuda_page.dart:540:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\cajapage.dart:462:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\cajapage.dart:467:30 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\cajapage.dart:474:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\dato_empresapage.dart:518:53 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\dato_empresapage.dart:526:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\datos_transferenciapage.dart:431:6
+0 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\datos_transferenciapage.dart:438:3
+2 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\datos_transferenciapage.dart:444:5
+8 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\establecimientopage.dart:416:50 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\establecimientopage.dart:424:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\timbradopage.dart:534:57 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\empresa
+vista\timbradopage.dart:542:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\apertura_cierre_cajapage.dart:
+475:50 - const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\ciclo_page.dart:436:59 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\ciclo_page.dart:444:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\concepto_page.dart:411:57 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\concepto_page.dart:419:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:795:52 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:800:34 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:806:60 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:933:32 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:943:36 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:951:38 - 
+const_eval_method_invocation
+  error - The getter 'cardColor70' 
+isn't defined for the type 'ThemeData' 
+- lib\vista\facturacionvista\pagos_page.
+dart:951:56 - undefined_getter
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:957:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:1320:24 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:1458:52 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:1463:32 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\factura
+cionvista\pagos_page.dart:1469:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\inmueblepage.dart:431:49 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\inmueblepage.dart:439:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\loginpage.dart:144:36 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\loginpage.dart:153:36 - 
+const_eval_method_invocation
+  error - The getter 'cardColor70' 
+isn't defined for the type 'ThemeData' 
+- lib\vista\loginpage.dart:153:54 - 
+undefined_getter
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\medidor_page.dart:385:50 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\medidor_page.dart:393:58 - 
+const_eval_method_invocation
+  error - Undefined name 'context' - 
+lib\vista\opciones_page.dart:936:46 - 
+undefined_identifier
+  error - Undefined name 'context' - 
+lib\vista\opciones_page.dart:940:46 - 
+undefined_identifier
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\registr
+o_usuariopage.dart:209:75 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\registr
+o_usuariopage.dart:219:46 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\vista\registr
+o_usuariopage.dart:228:46 - 
+const_eval_method_invocation
+  error - The getter 'cardColor70' 
+isn't defined for the type 'ThemeData' 
+- lib\vista\registro_usuariopage.dart:22
+8:64 - undefined_getter
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\tarifa_page.dart:391:57 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\tarifa_page.dart:396:30 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\vista\tarifa_page.dart:403:58 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\widget\dashboard_widget.dart:273:46 
+- const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\widget\dashboard_widget.dart:283:50 
+- const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\widget\dashboard_widget.dart:411:46 
+- const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - 
+lib\widget\dashboard_widget.dart:628:34 
+- const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\dialog
+o_exito_factura.dart:192:46 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\select
+or_ciclos_widget.dart:170:26 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\select
+or_ciclos_widget.dart:184:32 - 
+const_eval_method_invocation
+  error - The getter 'cardColor70' 
+isn't defined for the type 'ThemeData' 
+- lib\widget\selector_ciclos_widget.dart
+:189:79 - undefined_getter
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\select
+or_ciclos_widget.dart:196:54 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\select
+or_metodo_pago.dart:151:53 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\select
+or_metodo_pago.dart:163:28 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\select
+or_metodo_pago.dart:168:63 - 
+const_eval_method_invocation
+  error - The getter 'cardColor70' 
+isn't defined for the type 'ThemeData' 
+- lib\widget\selector_metodo_pago.dart:1
+68:81 - undefined_getter
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\select
+or_metodo_pago.dart:175:50 - 
+const_eval_method_invocation
+  error - Methods can't be invoked in 
+constant expressions - lib\widget\select
+or_metodo_pago.dart:542:36 - 
+const_eval_method_invocation
+
+

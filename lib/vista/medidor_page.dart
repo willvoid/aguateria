@@ -172,16 +172,16 @@ class _MedidoresPageState extends State<MedidoresPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por número o estado...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
@@ -192,10 +192,10 @@ class _MedidoresPageState extends State<MedidoresPage> {
                 onPressed: () {
                   _mostrarDialogoEdicion(null);
                 },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Medidor'),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Agregar Medidor'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
+                  backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -204,18 +204,18 @@ class _MedidoresPageState extends State<MedidoresPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 tooltip: 'Recargar',
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -237,7 +237,7 @@ class _MedidoresPageState extends State<MedidoresPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Número')),
@@ -279,7 +279,7 @@ class _MedidoresPageState extends State<MedidoresPage> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
+                                            icon: Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                                             onPressed: () => _mostrarDialogoEdicion(medidor),
                                             tooltip: 'Editar',
                                           ),
@@ -311,7 +311,7 @@ class _DialogoEditarMedidor extends StatefulWidget {
   final List<Inmuebles> inmuebles;
   final Function(Medidor) onGuardar;
 
-  const _DialogoEditarMedidor({
+  _DialogoEditarMedidor({
     this.medidor,
     required this.inmuebles,
     required this.onGuardar,
@@ -352,7 +352,7 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
       initialDate: _fechaInstalacion,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      locale: const Locale('es', 'ES'),
+      locale: Locale('es', 'ES'),
     );
     
     if (picked != null) {
@@ -371,26 +371,26 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
     return Dialog(
       child: Container(
         width: 600,
-        constraints: const BoxConstraints(maxHeight: 500),
+        constraints: BoxConstraints(maxHeight: 500),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.speed, color: Colors.white),
+                  Icon(Icons.speed, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     widget.medidor == null ? 'Agregar Medidor' : 'Editar Medidor',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -446,7 +446,7 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -459,7 +459,7 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
                   ElevatedButton(
                     onPressed: _guardarMedidor,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
@@ -484,8 +484,8 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -493,14 +493,14 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
@@ -517,15 +517,15 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         InkWell(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade300),
+              color: Theme.of(context).cardColor,
+              border: Border.all(color: Theme.of(context).dividerColor),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
@@ -551,22 +551,22 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(itemLabel(item)))).toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),

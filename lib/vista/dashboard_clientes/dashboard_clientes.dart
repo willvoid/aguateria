@@ -111,13 +111,13 @@ class ClienteDashboardPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0085FF),
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Mi Cuenta'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.home),
+            icon: Icon(Icons.home),
             onPressed: () {
               Navigator.popUntil(context, (route) => route.isFirst);
             },
@@ -131,14 +131,14 @@ class ClienteDashboardPage extends StatelessWidget {
             // Header con información del cliente
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    const Color(0xFF0085FF),
-                    const Color(0xFF0085FF).withOpacity(0.8),
+                    Color(0xFF0085FF),
+                    Color(0xFF0085FF).withOpacity(0.8),
                   ],
                 ),
               ),
@@ -148,7 +148,7 @@ class ClienteDashboardPage extends StatelessWidget {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -163,7 +163,7 @@ class ClienteDashboardPage extends StatelessWidget {
                         cliente.razonSocial.isNotEmpty
                             ? cliente.razonSocial[0].toUpperCase()
                             : 'C',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Color(0xFF0085FF),
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
@@ -171,11 +171,11 @@ class ClienteDashboardPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     cliente.razonSocial,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).cardColor,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -184,8 +184,8 @@ class ClienteDashboardPage extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Doc: ${cliente.documento}',
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 16),
+                    style: TextStyle(
+                        color: Theme.of(context).cardColor.withOpacity(0.7), fontSize: 16),
                   ),
                 ],
               ),
@@ -196,7 +196,7 @@ class ClienteDashboardPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildInfoCard('Inmueble Seleccionado', Icons.home, [
+                  _buildInfoCard(context, 'Inmueble Seleccionado', Icons.home, [
                     _InfoRow('Código', inmueble.cod_inmueble ?? 'N/A'),
                     _InfoRow('Dirección', inmueble.direccion ?? 'N/A'),
                     _InfoRow(
@@ -274,11 +274,11 @@ class ClienteDashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(String title, IconData icon, List<_InfoRow> rows) {
+  Widget _buildInfoCard(BuildContext context, String title, IconData icon, List<_InfoRow> rows) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -293,11 +293,11 @@ class ClienteDashboardPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: const Color(0xFF0085FF), size: 24),
+              Icon(icon, color: Theme.of(context).primaryColor, size: 24),
               const SizedBox(width: 12),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF111827),
@@ -305,10 +305,10 @@ class ClienteDashboardPage extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           ...rows.map(
             (row) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -326,7 +326,7 @@ class ClienteDashboardPage extends StatelessWidget {
                   Expanded(
                     child: Text(
                       row.value,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         color: Color(0xFF111827),
                         fontWeight: FontWeight.w600,
@@ -350,7 +350,7 @@ class ClienteDashboardPage extends StatelessWidget {
     VoidCallback onTap,
   ) {
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,

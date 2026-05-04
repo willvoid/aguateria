@@ -213,16 +213,16 @@ class _InmueblesPageState extends State<InmueblesPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por código, dirección o cliente...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
@@ -233,10 +233,10 @@ class _InmueblesPageState extends State<InmueblesPage> {
                 onPressed: () {
                   _mostrarDialogoEdicion(null);
                 },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Inmueble'),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Agregar Inmueble'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
+                  backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -245,18 +245,18 @@ class _InmueblesPageState extends State<InmueblesPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 tooltip: 'Recargar',
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -278,7 +278,7 @@ class _InmueblesPageState extends State<InmueblesPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Código')),
@@ -322,7 +322,7 @@ class _InmueblesPageState extends State<InmueblesPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.receipt_long, size: 18, color: Colors.purple),
+                icon: Icon(Icons.receipt_long, size: 18, color: Colors.purple),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -334,7 +334,7 @@ class _InmueblesPageState extends State<InmueblesPage> {
                 tooltip: 'Ver Deudas',
               ),
               IconButton(
-                icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
+                icon: Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
                 onPressed: () => _mostrarDialogoEdicion(inmueble),
                 tooltip: 'Editar',
               ),
@@ -367,7 +367,7 @@ class _DialogoEditarInmueble extends StatefulWidget {
   final List<CategoriaServicio> categoriasServicio;
   final Function(Inmuebles) onGuardar;
 
-  const _DialogoEditarInmueble({
+  _DialogoEditarInmueble({
     this.inmueble,
     required this.clientes,
     required this.categoriasServicio,
@@ -417,26 +417,26 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
     return Dialog(
       child: Container(
         width: 600,
-        constraints: const BoxConstraints(maxHeight: 550),
+        constraints: BoxConstraints(maxHeight: 550),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.home, color: Colors.white),
+                  Icon(Icons.home, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     widget.inmueble == null ? 'Agregar Inmueble' : 'Editar Inmueble',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -501,7 +501,7 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -514,7 +514,7 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                   ElevatedButton(
                     onPressed: _guardarInmueble,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
@@ -581,20 +581,20 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
               decoration: InputDecoration(
                 hintText: 'Buscar cliente por nombre o documento...',
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).cardColor,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 12,
                 ),
-                suffixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: Icon(Icons.search, size: 20),
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -615,12 +615,12 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                 elevation: 4.0,
                 borderRadius: BorderRadius.circular(6),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(
+                  constraints: BoxConstraints(
                     maxHeight: 200,
                     maxWidth: 550,
                   ),
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: EdgeInsets.all(8.0),
                     itemCount: options.length,
                     shrinkWrap: true,
                     itemBuilder: (BuildContext context, int index) {
@@ -630,7 +630,7 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                           onSelected(option);
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 10,
                           ),
@@ -639,12 +639,12 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                             children: [
                               Text(
                                 option.razonSocial,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w500,
                                   fontSize: 14,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              SizedBox(height: 4),
                               Text(
                                 'Doc: ${option.documento} • Tel: ${option.celular}',
                                 style: TextStyle(
@@ -676,22 +676,22 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
@@ -710,22 +710,22 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(itemLabel(item)))).toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),

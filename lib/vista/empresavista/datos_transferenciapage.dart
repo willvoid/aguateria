@@ -215,16 +215,16 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por alias, titular, banco o cuenta...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
@@ -234,10 +234,10 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
               const SizedBox(width: 16),
               ElevatedButton.icon(
                 onPressed: () => _mostrarDialogo(null),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Cuenta'),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Agregar Cuenta'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
+                  backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 20, vertical: 16),
@@ -248,20 +248,20 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 tooltip: 'Recargar',
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // ── Tabla ───────────────────────────────────────────────
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -285,8 +285,7 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
                           scrollDirection: Axis.horizontal,
                           child: SingleChildScrollView(
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                  const Color(0xFFF9FAFB)),
+                              headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
                               columns: const [
                                 DataColumn(label: Text('ID')),
                                 DataColumn(label: Text('Alias')),
@@ -315,12 +314,12 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
+            icon: Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
             onPressed: () => _mostrarDialogo(item),
             tooltip: 'Editar',
           ),
           IconButton(
-            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+            icon: Icon(Icons.delete, size: 18, color: Colors.red),
             onPressed: () => _eliminar(item),
             tooltip: 'Eliminar',
           ),
@@ -355,7 +354,7 @@ class _DialogoEditarTransferencia extends StatefulWidget {
   final List<Establecimiento> establecimientos;
   final Function(DatosTransferencia) onGuardar;
 
-  const _DialogoEditarTransferencia({
+  _DialogoEditarTransferencia({
     this.item,
     required this.establecimientos,
     required this.onGuardar,
@@ -414,13 +413,13 @@ class _DialogoEditarTransferenciaState
     return Dialog(
       child: Container(
         width: 700,
-        constraints: const BoxConstraints(maxHeight: 680), // ← ajustado
+        constraints: BoxConstraints(maxHeight: 680), // ← ajustado
         child: Column(
           children: [
             // ── Header ──────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Color(0xFF0085FF),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(4),
@@ -429,20 +428,20 @@ class _DialogoEditarTransferenciaState
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.account_balance, color: Colors.white),
+                  Icon(Icons.account_balance, color: Theme.of(context).cardColor),
                   const SizedBox(width: 12),
                   Text(
                     widget.item == null
                         ? 'Agregar Cuenta de Transferencia'
                         : 'Editar Cuenta de Transferencia',
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: Theme.of(context).cardColor,
                         fontSize: 18,
                         fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: Theme.of(context).cardColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -560,7 +559,7 @@ class _DialogoEditarTransferenciaState
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -573,7 +572,7 @@ class _DialogoEditarTransferenciaState
                   ElevatedButton(
                     onPressed: _guardar,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
@@ -600,11 +599,11 @@ class _DialogoEditarTransferenciaState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -612,14 +611,14 @@ class _DialogoEditarTransferenciaState
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -640,11 +639,11 @@ class _DialogoEditarTransferenciaState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           items: items
@@ -654,14 +653,14 @@ class _DialogoEditarTransferenciaState
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

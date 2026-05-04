@@ -398,7 +398,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                         Container(
                           padding: const EdgeInsets.all(32),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
@@ -453,17 +453,17 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
             width: 90,
             height: 90,
             decoration: BoxDecoration(
-              color: const Color(0xFF0085FF).withOpacity(0.08),
+              color: Theme.of(context).primaryColor.withOpacity(0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.badge_outlined,
               size: 52,
               color: Color(0xFF0085FF),
             ),
           ),
         ),
-        const SizedBox(height: 32),
+        SizedBox(height: 32),
         TextField(
           controller: _documentoController,
           keyboardType: TextInputType.number,
@@ -471,7 +471,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
           decoration: InputDecoration(
             labelText: 'Número de CI',
             hintText: 'Ej: 1234567',
-            prefixIcon: const Icon(Icons.badge, color: Color(0xFF0085FF)),
+            prefixIcon: Icon(Icons.badge, color: Color(0xFF0085FF)),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -481,20 +481,20 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF0085FF), width: 2),
+              borderSide: BorderSide(color: Color(0xFF0085FF), width: 2),
             ),
           ),
           onSubmitted: (_) => _buscarCliente(),
         ),
         if (_errorMessage != null) ...[
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           _buildErrorBox(_errorMessage!),
         ],
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
         ElevatedButton(
           onPressed: _isLoading ? null : _buscarCliente,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF0085FF),
+            backgroundColor: Theme.of(context).primaryColor,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
@@ -634,10 +634,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: _volverAlCI,
-          icon: const Icon(Icons.arrow_back, size: 18),
-          label: const Text('Cambiar CI'),
+          icon: Icon(Icons.arrow_back, size: 18),
+          label: Text('Cambiar CI'),
           style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF0085FF),
+            foregroundColor: Color(0xFF0085FF),
           ),
         ),
       ],
@@ -649,16 +649,16 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildGoogleUserChip(),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
         _buildClienteInfo(),
-        const SizedBox(height: 24),
-        const Divider(),
-        const SizedBox(height: 20),
+        SizedBox(height: 24),
+        Divider(),
+        SizedBox(height: 20),
         Row(
           children: [
-            const Icon(Icons.home_work_outlined,
+            Icon(Icons.home_work_outlined,
                 color: Color(0xFF0085FF), size: 20),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Text(
               'Seleccioná tu inmueble',
               style: TextStyle(
@@ -667,17 +667,17 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 color: Colors.grey[800],
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFF0085FF).withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 '${_inmuebles.length}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0085FF),
@@ -686,7 +686,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         ..._inmuebles.asMap().entries.map((entry) {
           final index = entry.key;
           final inmueble = entry.value;
@@ -694,21 +694,21 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
               _inmuebleSeleccionado?.cod_inmueble == inmueble.cod_inmueble;
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: EdgeInsets.only(bottom: 10),
             child: InkWell(
               onTap: () => _seleccionarInmueble(inmueble),
               borderRadius: BorderRadius.circular(14),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(16),
+                duration: Duration(milliseconds: 200),
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF0085FF).withOpacity(0.07)
+                      ? Color(0xFF0085FF).withOpacity(0.07)
                       : Colors.grey[50],
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isSelected
-                        ? const Color(0xFF0085FF)
+                        ? Color(0xFF0085FF)
                         : Colors.grey[200]!,
                     width: isSelected ? 2 : 1,
                   ),
@@ -720,14 +720,14 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                       height: 44,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF0085FF)
+                            ? Color(0xFF0085FF)
                             : Colors.grey[200],
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Center(
                         child: isSelected
-                            ? const Icon(Icons.home,
-                                color: Colors.white, size: 22)
+                            ? Icon(Icons.home,
+                                color: Theme.of(context).cardColor, size: 22)
                             : Text(
                                 '${index + 1}',
                                 style: TextStyle(
@@ -793,8 +793,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: _cerrarSesion,
-          icon: const Icon(Icons.logout, size: 18),
-          label: const Text('Cerrar sesión'),
+          icon: Icon(Icons.logout, size: 18),
+          label: Text('Cerrar sesión'),
           style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
         ),
       ],
@@ -803,7 +803,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   Widget _buildGoogleUserChip() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.green[50],
         borderRadius: BorderRadius.circular(12),
@@ -820,7 +820,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 ? Icon(Icons.person, color: Colors.green[700], size: 20)
                 : null,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -842,7 +842,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Icon(Icons.verified, color: Colors.green[600], size: 20),
         ],
       ),
@@ -856,13 +856,13 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: const Color(0xFF0085FF).withOpacity(0.1),
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: Center(
             child: Text(
               _clienteEncontrado!.razonSocial[0].toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 color: Color(0xFF0085FF),
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -870,20 +870,20 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 _clienteEncontrado!.razonSocial,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF111827),
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
                 'CI: ${_clienteEncontrado!.documento}',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
@@ -897,7 +897,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   Widget _buildErrorBox(String mensaje) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.red[50],
         borderRadius: BorderRadius.circular(8),
@@ -906,7 +906,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
       child: Row(
         children: [
           Icon(Icons.error_outline, color: Colors.red[700], size: 20),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               mensaje,
@@ -928,23 +928,23 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
 
   Widget _buildHeader() {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF0085FF), Color(0xFF0066CC)],
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+      padding: EdgeInsets.symmetric(vertical: 14, horizontal: 20),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 20,
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).cardColor,
             child: Icon(Icons.water_drop, size: 22, color: Color(0xFF0085FF)),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -952,7 +952,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 Text(
                   'SERVICIO DE AGUA',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -961,7 +961,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
                 Text(
                   'SANTA ROSA - C.F.',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Theme.of(context).cardColor.withOpacity(0.7),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 1.0,
@@ -975,8 +975,8 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
               context,
               MaterialPageRoute(builder: (_) => const LoginPage()),
             ),
-            icon: const Icon(Icons.admin_panel_settings,
-                color: Colors.white, size: 24),
+            icon: Icon(Icons.admin_panel_settings,
+                color: Theme.of(context).cardColor, size: 24),
             tooltip: 'Acceso Administrativo',
           ),
         ],

@@ -145,34 +145,34 @@ class _SelectorMetodoPagoDialogState extends State<SelectorMetodoPagoDialog> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Theme.of(context).cardColor.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.payment, color: Colors.white, size: 28),
+            child: Icon(Icons.payment, color: Theme.of(context).cardColor, size: 28),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Método de Pago',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                   ),
                 ),
                 Text(
                   'Total: ${widget.totalAPagar.toStringAsFixed(0)} Gs.',
-                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  style: TextStyle(fontSize: 14, color: Theme.of(context).cardColor.withOpacity(0.7)),
                 ),
               ],
             ),
           ),
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, color: Colors.white),
+            icon: Icon(Icons.close, color: Theme.of(context).cardColor),
           ),
         ],
       ),
@@ -383,7 +383,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           children: [
@@ -524,12 +524,12 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
         Expanded(
           child: Text(
             valor,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             overflow: TextOverflow.ellipsis,
           ),
         ),
         if (copiable) ...[
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           GestureDetector(
             onTap: () async {
               await Clipboard.setData(ClipboardData(text: valor));
@@ -538,8 +538,8 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                   SnackBar(
                     content: Row(
                       children: [
-                        const Icon(Icons.check_circle,
-                            color: Colors.white, size: 16),
+                        Icon(Icons.check_circle,
+                            color: Theme.of(context).cardColor, size: 16),
                         const SizedBox(width: 8),
                         Text('$label copiado'),
                       ],
@@ -558,7 +558,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -714,18 +714,18 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                     children: [
                       Text(
                         'ID de Pago: #${pagoCreado.idPago}',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 12, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         'Monto: ${widget.totalAPagar.toStringAsFixed(0)} Gs.',
-                        style: const TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 12),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         'Estado: ${pagoCreado.estado}',
-                        style: const TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
@@ -738,7 +738,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                   Navigator.pop(context);
                   Navigator.pop(context, pagoCreado);
                 },
-                child: const Text('Entendido'),
+                child: Text('Entendido'),
               ),
             ],
           ),
@@ -757,7 +757,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
       SnackBar(
         content: Text(mensaje),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -770,16 +770,16 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+        constraints: BoxConstraints(maxWidth: 500, maxHeight: 700),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
                 ),
@@ -787,7 +787,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.2),
                       shape: BoxShape.circle,
@@ -800,7 +800,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                       size: 28,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -823,7 +823,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: Icon(Icons.close),
                     color: Colors.grey.shade600,
                   ),
                 ],
@@ -833,13 +833,13 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
             // Contenido
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Monto
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [color.shade50, color.shade100],
@@ -856,7 +856,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                             style: TextStyle(
                                 fontSize: 14, color: Colors.grey.shade700),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Text(
                             '${widget.totalAPagar.toStringAsFixed(0)} Gs.',
                             style: TextStyle(
@@ -868,15 +868,15 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
 
                     // Datos de transferencia/giro
                     _buildDatosCuentas(color),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
 
                     // Instrucciones
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(12),
@@ -887,7 +887,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         children: [
                           Icon(Icons.info_outline,
                               color: Colors.blue.shade700),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Por favor, suba una foto o captura de pantalla del comprobante de pago. El pago quedará en estado PENDIENTE hasta su aprobación.',
@@ -898,7 +898,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // Previsualización
                     if (_imagenSeleccionada != null) ...[
@@ -906,7 +906,7 @@ class _SubirComprobanteDialogState extends State<SubirComprobanteDialog> {
                         height: 200,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: Theme.of(context).dividerColor),
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),

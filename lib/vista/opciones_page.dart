@@ -41,22 +41,22 @@ class _OpcionesPageState extends State<OpcionesPage>
       children: [
         // Tab Bar Header
         Container(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           child: TabBar(
             controller: _tabController,
             labelColor: const Color(0xFF0085FF),
             unselectedLabelColor: const Color(0xFF6B7280),
             indicatorColor: const Color(0xFF0085FF),
             indicatorWeight: 3,
-            labelStyle: const TextStyle(
+            labelStyle: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
-            unselectedLabelStyle: const TextStyle(
+            unselectedLabelStyle: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.normal,
             ),
-            tabs: const [
+            tabs: [
               Tab(
                 icon: Icon(Icons.settings_outlined, size: 18),
                 text: 'Configuración del Sistema',
@@ -72,7 +72,7 @@ class _OpcionesPageState extends State<OpcionesPage>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: const [
+            children: [
               _ConfiguracionSistemaTab(),
               _DatosTransferenciaTab(),
             ],
@@ -88,7 +88,7 @@ class _OpcionesPageState extends State<OpcionesPage>
 // ══════════════════════════════════════════════════════════
 
 class _ConfiguracionSistemaTab extends StatefulWidget {
-  const _ConfiguracionSistemaTab();
+  _ConfiguracionSistemaTab();
 
   @override
   State<_ConfiguracionSistemaTab> createState() =>
@@ -249,14 +249,14 @@ class _ConfiguracionSistemaTabState extends State<_ConfiguracionSistemaTab> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator());
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(32),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700),
+          constraints: BoxConstraints(maxWidth: 700),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -267,7 +267,7 @@ class _ConfiguracionSistemaTabState extends State<_ConfiguracionSistemaTab> {
                 subtitulo: _config == null
                     ? 'Sin configuración — se creará una nueva al guardar'
                     : 'ID Configuración: ${_config!.id_config}',
-                color: const Color(0xFF0085FF),
+                color: Theme.of(context).primaryColor,
               ),
               const SizedBox(height: 24),
 
@@ -371,12 +371,12 @@ class _ConfiguracionSistemaTabState extends State<_ConfiguracionSistemaTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: Color(0xFF374151),
             )),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           isExpanded: true,
@@ -402,7 +402,7 @@ class _ConfiguracionSistemaTabState extends State<_ConfiguracionSistemaTab> {
 // ══════════════════════════════════════════════════════════
 
 class _DatosTransferenciaTab extends StatefulWidget {
-  const _DatosTransferenciaTab();
+  _DatosTransferenciaTab();
 
   @override
   State<_DatosTransferenciaTab> createState() => _DatosTransferenciaTabState();
@@ -553,14 +553,14 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator());
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(32),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700),
+          constraints: BoxConstraints(maxWidth: 700),
           child: Form(
             key: _formKey,
             child: Column(
@@ -573,9 +573,9 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
                   subtitulo: _datos == null
                       ? 'Sin datos registrados — se creará uno nuevo al guardar'
                       : 'ID: ${_datos!.id}',
-                  color: const Color(0xFF059669),
+                  color: Color(0xFF059669),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // Sección: Identificación
                 _SectionCard(
@@ -592,7 +592,7 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
                             icon: Icons.label_outline,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           child: _buildTextField(
                             controller: _titularCtrl,
@@ -604,7 +604,7 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
@@ -616,7 +616,7 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
                             required: true,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           child: _buildTextField(
                             controller: _ciCtrl,
@@ -630,7 +630,7 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // Sección: Datos Bancarios
                 _SectionCard(
@@ -648,7 +648,7 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
                             required: true,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           child: _buildTextField(
                             controller: _nroGiroCtrl,
@@ -659,7 +659,7 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     _buildDropdown<Establecimiento>(
                       label: 'Sucursal Asociada *',
                       value: _sucursalSeleccionada,
@@ -672,14 +672,14 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // Botón Guardar
                 _BotonGuardar(
                   isSaving: _isSaving,
                   isNew: _datos == null,
                   onPressed: _guardar,
-                  color: const Color(0xFF059669),
+                  color: Color(0xFF059669),
                 ),
               ],
             ),
@@ -700,12 +700,12 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: Color(0xFF374151),
             )),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: required
@@ -729,12 +729,12 @@ class _DatosTransferenciaTabState extends State<_DatosTransferenciaTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: Color(0xFF374151),
             )),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
           isExpanded: true,
@@ -765,7 +765,7 @@ class _HeaderCard extends StatelessWidget {
   final String subtitulo;
   final Color color;
 
-  const _HeaderCard({
+  _HeaderCard({
     required this.icon,
     required this.titulo,
     required this.subtitulo,
@@ -775,7 +775,7 @@ class _HeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
@@ -784,14 +784,14 @@ class _HeaderCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -801,9 +801,9 @@ class _HeaderCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: color,
                   )),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Text(subtitulo,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: Color(0xFF6B7280),
                   )),
@@ -820,7 +820,7 @@ class _SectionCard extends StatelessWidget {
   final IconData icon;
   final List<Widget> children;
 
-  const _SectionCard({
+  _SectionCard({
     required this.titulo,
     required this.icon,
     required this.children,
@@ -830,7 +830,7 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
@@ -851,7 +851,7 @@ class _SectionCard extends StatelessWidget {
                 Icon(icon, size: 16, color: const Color(0xFF6B7280)),
                 const SizedBox(width: 8),
                 Text(titulo,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF374151),
@@ -861,7 +861,7 @@ class _SectionCard extends StatelessWidget {
           ),
           Divider(height: 1, color: Colors.grey.shade100),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children,
@@ -879,7 +879,7 @@ class _BotonGuardar extends StatelessWidget {
   final VoidCallback onPressed;
   final Color color;
 
-  const _BotonGuardar({
+  _BotonGuardar({
     required this.isSaving,
     required this.isNew,
     required this.onPressed,
@@ -893,14 +893,14 @@ class _BotonGuardar extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
         elevation: 0,
       ),
       icon: isSaving
-          ? const SizedBox(
+          ? SizedBox(
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
@@ -916,7 +916,7 @@ class _BotonGuardar extends StatelessWidget {
             : isNew
                 ? 'Crear Registro'
                 : 'Guardar Cambios',
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -928,24 +928,24 @@ class _BotonGuardar extends StatelessWidget {
 
 InputDecoration _inputDecoration(IconData icon) {
   return InputDecoration(
-    prefixIcon: Icon(icon, size: 18, color: const Color(0xFF9CA3AF)),
+    prefixIcon: Icon(icon, size: 18, color: Color(0xFF9CA3AF)),
     filled: true,
-    fillColor: const Color(0xFFF9FAFB),
+    fillColor: Color(0xFFF9FAFB),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide(color: Colors.grey.shade300),
+      borderSide: BorderSide(color: Color(0xFFD1D5DB)),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide(color: Colors.grey.shade300),
+      borderSide: BorderSide(color: Color(0xFFD1D5DB)),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: Color(0xFF0085FF), width: 1.5),
+      borderSide: BorderSide(color: Color(0xFF0085FF), width: 1.5),
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: Colors.red),
+      borderSide: BorderSide(color: Colors.red),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
   );

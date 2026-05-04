@@ -246,7 +246,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
             child: ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0085FF),
+                backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -379,7 +379,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
               // Concepto
               DropdownButtonFormField<Concepto>(
                 value: _conceptoSeleccionado,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Concepto *',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.category),
@@ -443,7 +443,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                         FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d*')),
                       ],
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Cantidad *',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.numbers),
@@ -468,7 +468,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                         FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d*')),
                       ],
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Monto Unit. *',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.attach_money),
@@ -490,7 +490,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
               // IVA
               DropdownButtonFormField<int>(
                 value: _ivaAplicado,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'IVA *',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.percent),
@@ -511,7 +511,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
               TextFormField(
                 controller: _descripcionController,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Descripción',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.description),
@@ -532,7 +532,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                       ),
                       Text(
                         '${_subtotal.toStringAsFixed(0)} Gs.',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0085FF),
@@ -542,10 +542,10 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                   ),
                   ElevatedButton.icon(
                     onPressed: _agregarDetalle, // async, Flutter lo maneja bien
-                    icon: const Icon(Icons.add),
-                    label: const Text('Agregar'),
+                    icon: Icon(Icons.add),
+                    label: Text('Agregar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -573,7 +573,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: const Color(0xFF0085FF),
+                        backgroundColor: Theme.of(context).primaryColor,
                         child: Text('${index + 1}'),
                       ),
                       title: Text(detalle.descripcion),
