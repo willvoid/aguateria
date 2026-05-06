@@ -155,7 +155,6 @@ class _DeudasPageState extends State<DeudasPage> {
     }
   }
 
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -175,7 +174,7 @@ class _DeudasPageState extends State<DeudasPage> {
           children: [
             Text('Deudas - ${widget.inmueble.cod_inmueble}'),
             Text(
-              widget.inmueble.cliente.razonSocial,
+              widget.inmueble.cliente?.razonSocial ?? 'Sin cliente',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.normal,

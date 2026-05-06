@@ -4,7 +4,7 @@ import 'package:myapp/modelo/cliente.dart';
 class ClienteAutocomplete extends StatelessWidget {
   final List<Cliente> clientes;
   final Cliente? clienteInicial;
-  final void Function(Cliente) onSeleccionado;
+  final void Function(Cliente?) onSeleccionado;
   final String? Function(String?)? validator;
   final String label;
   final String hint;
@@ -15,7 +15,7 @@ class ClienteAutocomplete extends StatelessWidget {
     required this.onSeleccionado,
     this.clienteInicial,
     this.validator,
-    this.label = 'Cliente *',
+    this.label = 'Cliente',
     this.hint = 'Buscar por nombre o documento...',
   }) : super(key: key);
 
@@ -70,16 +70,23 @@ class ClienteAutocomplete extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (controller.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          controller.clear();
+                          onSeleccionado(null);
+                        },
+                      ),
+                    const Icon(Icons.search, size: 20),
+                    const SizedBox(width: 8),
+                  ],
                 ),
-                suffixIcon: const Icon(Icons.search, size: 20),
               ),
-              validator: validator ??
-                  (value) => (value == null || value.isEmpty)
-                      ? 'Debe seleccionar un cliente'
-                      : null,
+              validator: validator,
             );
           },
           optionsViewBuilder: (context, onSelected, options) {

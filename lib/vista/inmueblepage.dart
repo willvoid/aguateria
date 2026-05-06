@@ -18,13 +18,14 @@ class InmueblesPage extends StatefulWidget {
 class _InmueblesPageState extends State<InmueblesPage> {
   final InmuebleCrudImpl _inmuebleCrud = InmuebleCrudImpl();
   final ClienteCrudImpl _clienteCrud = ClienteCrudImpl();
-  final CategoriaServicioCrudImpl _categoriaServicioCrud = CategoriaServicioCrudImpl();
-  
+  final CategoriaServicioCrudImpl _categoriaServicioCrud =
+      CategoriaServicioCrudImpl();
+
   List<Inmuebles> inmuebles = [];
   List<Inmuebles> inmueblesFiltrados = [];
   List<Cliente> clientes = [];
   List<CategoriaServicio> categoriasServicio = [];
-  
+
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
 
@@ -37,7 +38,7 @@ class _InmueblesPageState extends State<InmueblesPage> {
 
   Future<void> _cargarDatos() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final resultados = await Future.wait([
         _inmuebleCrud.leerInmuebles(),
@@ -67,7 +68,8 @@ class _InmueblesPageState extends State<InmueblesPage> {
         inmueblesFiltrados = inmuebles.where((inmueble) {
           return inmueble.cod_inmueble.toLowerCase().contains(query) ||
               inmueble.direccion.toLowerCase().contains(query) ||
-              inmueble.cliente.razonSocial.toLowerCase().contains(query);
+              (inmueble.cliente?.razonSocial.toLowerCase().contains(query) ??
+                  false);
         }).toList();
       }
     });
@@ -104,10 +106,12 @@ class _InmueblesPageState extends State<InmueblesPage> {
 
       bool exito = false;
       String? errorMsg;
-      
+
       if (inmueble.id == null) {
-        final codigoExiste = await _inmuebleCrud.verificarCodigoExistente(inmueble.cod_inmueble);
-        
+        final codigoExiste = await _inmuebleCrud.verificarCodigoExistente(
+          inmueble.cod_inmueble,
+        );
+
         if (codigoExiste) {
           Navigator.pop(context);
           _mostrarError('Ya existe un inmueble con ese código');
@@ -127,7 +131,7 @@ class _InmueblesPageState extends State<InmueblesPage> {
           inmueble.cod_inmueble,
           idInmuebleExcluir: inmueble.id,
         );
-        
+
         if (codigoExiste) {
           Navigator.pop(context);
           _mostrarError('Ya existe otro inmueble con ese código');
@@ -163,7 +167,7 @@ class _InmueblesPageState extends State<InmueblesPage> {
         // Verificar si realmente se guardó en la BD
         final codigo = inmueble.cod_inmueble;
         final existe = inmueblesFiltrados.any((i) => i.cod_inmueble == codigo);
-        
+
         if (existe) {
           // Se guardó en BD pero hubo error al parsear la respuesta
           ScaffoldMessenger.of(context).showSnackBar(
@@ -177,15 +181,19 @@ class _InmueblesPageState extends State<InmueblesPage> {
             ),
           );
         } else {
-          _mostrarError(errorMsg != null 
-            ? 'Error al guardar: ${errorMsg.substring(0, errorMsg.length > 100 ? 100 : errorMsg.length)}...' 
-            : 'Error al guardar el inmueble');
+          _mostrarError(
+            errorMsg != null
+                ? 'Error al guardar: ${errorMsg.substring(0, errorMsg.length > 100 ? 100 : errorMsg.length)}...'
+                : 'Error al guardar el inmueble',
+          );
         }
       }
     } catch (e) {
       Navigator.pop(context);
       print('Error general: $e');
-      _mostrarError('Error: ${e.toString().substring(0, e.toString().length > 100 ? 100 : e.toString().length)}');
+      _mostrarError(
+        'Error: ${e.toString().substring(0, e.toString().length > 100 ? 100 : e.toString().length)}',
+      );
     }
   }
 
@@ -224,7 +232,10 @@ class _InmueblesPageState extends State<InmueblesPage> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
@@ -238,8 +249,13 @@ class _InmueblesPageState extends State<InmueblesPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0085FF),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -261,92 +277,122 @@ class _InmueblesPageState extends State<InmueblesPage> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : inmueblesFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.home_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay inmuebles para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.home_outlined,
+                            size: 64,
+                            color: Colors.grey.shade400,
                           ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Código')),
-                                DataColumn(label: Text('Dirección')),
-                                DataColumn(label: Text('Cliente')),
-                                DataColumn(label: Text('Categoría')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: inmueblesFiltrados.map((inmueble) {
-    return DataRow(
-      cells: [
-        DataCell(Text('${inmueble.id}')),
-        DataCell(Text(inmueble.cod_inmueble)),
-        DataCell(Text(inmueble.direccion)),
-        DataCell(Text(inmueble.cliente.razonSocial)),
-        DataCell(Text(inmueble.categoriaServicio.descripcion)),
-        DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: inmueble.estado == 'CONECTADO'
-                  ? Colors.green.shade50
-                  : Colors.red.shade50,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              inmueble.estado,
-              style: TextStyle(
-                color: inmueble.estado == 'CONECTADO'
-                    ? Colors.green.shade700
-                    : Colors.red.shade700,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-        DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.receipt_long, size: 18, color: Colors.purple),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DeudasPage(inmueble: inmueble),
-                    ),
-                  );
-                },
-                tooltip: 'Ver Deudas',
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                onPressed: () => _mostrarDialogoEdicion(inmueble),
-                tooltip: 'Editar',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }).toList(),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No hay inmuebles para mostrar',
+                            style: TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontSize: 16,
                             ),
                           ),
+                        ],
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SingleChildScrollView(
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(
+                            const Color(0xFFF9FAFB),
+                          ),
+                          columns: const [
+                            DataColumn(label: Text('ID')),
+                            DataColumn(label: Text('Código')),
+                            DataColumn(label: Text('Dirección')),
+                            DataColumn(label: Text('Cliente')),
+                            DataColumn(label: Text('Categoría')),
+                            DataColumn(label: Text('Estado')),
+                            DataColumn(label: Text('Acciones')),
+                          ],
+                          rows: inmueblesFiltrados.map((inmueble) {
+                            return DataRow(
+                              cells: [
+                                DataCell(Text('${inmueble.id}')),
+                                DataCell(Text(inmueble.cod_inmueble)),
+                                DataCell(Text(inmueble.direccion)),
+                                DataCell(
+                                  Text(
+                                    inmueble.cliente?.razonSocial ??
+                                        'Sin cliente',
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(inmueble.categoriaServicio.descripcion),
+                                ),
+                                DataCell(
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: inmueble.estado == 'CONECTADO'
+                                          ? Colors.green.shade50
+                                          : Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      inmueble.estado,
+                                      style: TextStyle(
+                                        color: inmueble.estado == 'CONECTADO'
+                                            ? Colors.green.shade700
+                                            : Colors.red.shade700,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.receipt_long,
+                                          size: 18,
+                                          color: Colors.purple,
+                                        ),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => DeudasPage(
+                                                inmueble: inmueble,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        tooltip: 'Ver Deudas',
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          size: 18,
+                                          color: Color(0xFF0085FF),
+                                        ),
+                                        onPressed: () =>
+                                            _mostrarDialogoEdicion(inmueble),
+                                        tooltip: 'Editar',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
                         ),
+                      ),
+                    ),
             ),
           ),
         ],
@@ -382,9 +428,9 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _codigoController;
   late TextEditingController _direccionController;
-  
+
   late String _estadoSeleccionado;
-  late Cliente _clienteSeleccionado;
+  Cliente? _clienteSeleccionado;
   late CategoriaServicio _categoriaSeleccionada;
 
   final List<String> _estados = ['CONECTADO', 'DESCONECTADO'];
@@ -392,18 +438,17 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
   @override
   void initState() {
     super.initState();
-    
-    _codigoController = TextEditingController(text: widget.inmueble?.cod_inmueble ?? '');
-    _direccionController = TextEditingController(text: widget.inmueble?.direccion ?? '');
+
+    _codigoController = TextEditingController(
+      text: widget.inmueble?.cod_inmueble ?? '',
+    );
+    _direccionController = TextEditingController(
+      text: widget.inmueble?.direccion ?? '',
+    );
     _estadoSeleccionado = widget.inmueble?.estado ?? 'CONECTADO';
-    
-    _clienteSeleccionado = widget.inmueble != null
-        ? widget.clientes.firstWhere(
-            (c) => c.idCliente == widget.inmueble!.cliente.idCliente,
-            orElse: () => widget.clientes.first,
-          )
-        : widget.clientes.first;
-    
+
+    _clienteSeleccionado = widget.inmueble?.cliente;
+
     _categoriaSeleccionada = widget.inmueble != null
         ? widget.categoriasServicio.firstWhere(
             (c) => c.id == widget.inmueble!.categoriaServicio.id,
@@ -424,15 +469,24 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
                 color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(4),
+                ),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.home, color: Colors.white),
                   const SizedBox(width: 12),
                   Text(
-                    widget.inmueble == null ? 'Agregar Inmueble' : 'Editar Inmueble',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                    widget.inmueble == null
+                        ? 'Agregar Inmueble'
+                        : 'Editar Inmueble',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
@@ -454,14 +508,16 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                         controller: _codigoController,
                         label: 'Código de Inmueble *',
                         hint: 'Ingrese código único',
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
                         controller: _direccionController,
                         label: 'Dirección *',
                         hint: 'Ingrese dirección del inmueble',
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 16),
                       /*_buildDropdown<Cliente>(
@@ -473,15 +529,19 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                       ),*/
                       ClienteAutocomplete(
                         clientes: widget.clientes,
-                        clienteInicial: widget.inmueble != null ? _clienteSeleccionado : null,
-                        onSeleccionado: (c) => setState(() => _clienteSeleccionado = c),
+                        clienteInicial: widget.inmueble != null
+                            ? _clienteSeleccionado
+                            : null,
+                        onSeleccionado: (c) =>
+                            setState(() => _clienteSeleccionado = c),
                       ),
                       const SizedBox(height: 16),
                       _buildDropdown<CategoriaServicio>(
                         label: 'Categoría de Servicio *',
                         value: _categoriaSeleccionada,
                         items: widget.categoriasServicio,
-                        onChanged: (value) => setState(() => _categoriaSeleccionada = value!),
+                        onChanged: (value) =>
+                            setState(() => _categoriaSeleccionada = value!),
                         itemLabel: (item) => item.descripcion,
                       ),
                       const SizedBox(height: 16),
@@ -489,7 +549,8 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                         label: 'Estado *',
                         value: _estadoSeleccionado,
                         items: _estados,
-                        onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                        onChanged: (value) =>
+                            setState(() => _estadoSeleccionado = value!),
                         itemLabel: (item) => item,
                       ),
                     ],
@@ -516,7 +577,10 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0085FF),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text('Guardar'),
                   ),
@@ -544,7 +608,8 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
         const SizedBox(height: 8),
         Autocomplete<Cliente>(
           initialValue: TextEditingValue(
-            text: '${_clienteSeleccionado.razonSocial} - ${_clienteSeleccionado.documento}',
+            text:
+                '${_clienteSeleccionado?.razonSocial} - ${_clienteSeleccionado?.documento}',
           ),
           displayStringForOption: (Cliente cliente) =>
               '${cliente.razonSocial} - ${cliente.documento}',
@@ -556,7 +621,8 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
               final searchTerm = textEditingValue.text.toLowerCase();
               return cliente.razonSocial.toLowerCase().contains(searchTerm) ||
                   cliente.documento.toLowerCase().contains(searchTerm) ||
-                  cliente.nombreFantasia?.toLowerCase().contains(searchTerm) == true;
+                  cliente.nombreFantasia?.toLowerCase().contains(searchTerm) ==
+                      true;
             });
           },
           onSelected: (Cliente cliente) {
@@ -564,104 +630,104 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
               _clienteSeleccionado = cliente;
             });
           },
-          fieldViewBuilder: (
-            BuildContext context,
-            TextEditingController controller,
-            FocusNode focusNode,
-            VoidCallback onFieldSubmitted,
-          ) {
-            // Solo actualizamos el texto la primera vez
-            if (controller.text.isEmpty && widget.inmueble != null) {
-              controller.text = '${_clienteSeleccionado.razonSocial} - ${_clienteSeleccionado.documento}';
-            }
-            
-            return TextFormField(
-              controller: controller,
-              focusNode: focusNode,
-              decoration: InputDecoration(
-                hintText: 'Buscar cliente por nombre o documento...',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                suffixIcon: const Icon(Icons.search, size: 20),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Debe seleccionar un cliente';
+          fieldViewBuilder:
+              (
+                BuildContext context,
+                TextEditingController controller,
+                FocusNode focusNode,
+                VoidCallback onFieldSubmitted,
+              ) {
+                // Solo actualizamos el texto la primera vez
+                if (controller.text.isEmpty && widget.inmueble != null) {
+                  controller.text =
+                      '${_clienteSeleccionado?.razonSocial} - ${_clienteSeleccionado?.documento}';
                 }
-                return null;
+
+                return TextFormField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar cliente por nombre o documento...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    suffixIcon: const Icon(Icons.search, size: 20),
+                  ),
+                  validator: (value) {
+                    return null;
+                  },
+                );
               },
-            );
-          },
-          optionsViewBuilder: (
-            BuildContext context,
-            AutocompleteOnSelected<Cliente> onSelected,
-            Iterable<Cliente> options,
-          ) {
-            return Align(
-              alignment: Alignment.topLeft,
-              child: Material(
-                elevation: 4.0,
-                borderRadius: BorderRadius.circular(6),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxHeight: 200,
-                    maxWidth: 550,
-                  ),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    itemCount: options.length,
-                    shrinkWrap: true,
-                    itemBuilder: (BuildContext context, int index) {
-                      final Cliente option = options.elementAt(index);
-                      return InkWell(
-                        onTap: () {
-                          onSelected(option);
+          optionsViewBuilder:
+              (
+                BuildContext context,
+                AutocompleteOnSelected<Cliente> onSelected,
+                Iterable<Cliente> options,
+              ) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4.0,
+                    borderRadius: BorderRadius.circular(6),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxHeight: 200,
+                        maxWidth: 550,
+                      ),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(8.0),
+                        itemCount: options.length,
+                        shrinkWrap: true,
+                        itemBuilder: (BuildContext context, int index) {
+                          final Cliente option = options.elementAt(index);
+                          return InkWell(
+                            onTap: () {
+                              onSelected(option);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    option.razonSocial,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Doc: ${option.documento} • Tel: ${option.celular}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                option.razonSocial,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Doc: ${option.documento} • Tel: ${option.celular}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
+                );
+              },
         ),
       ],
     );
@@ -676,7 +742,14 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF374151),
+          ),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -693,7 +766,10 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
               borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
           ),
         ),
       ],
@@ -710,11 +786,25 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF374151),
+          ),
+        ),
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
-          items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(itemLabel(item)))).toList(),
+          items: items
+              .map(
+                (item) => DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(itemLabel(item)),
+                ),
+              )
+              .toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
@@ -727,7 +817,10 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
               borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
           ),
         ),
       ],

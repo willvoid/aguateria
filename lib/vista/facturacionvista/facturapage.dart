@@ -36,7 +36,8 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
   final DetalleFacturaCrudImpl _detalleCrud = DetalleFacturaCrudImpl();
   final ClienteCrudImpl _clienteCrud = ClienteCrudImpl();
   final InmuebleCrudImpl _inmuebleCrud = InmuebleCrudImpl();
-  final EstablecimientoCrudImpl _establecimientoCrud = EstablecimientoCrudImpl();
+  final EstablecimientoCrudImpl _establecimientoCrud =
+      EstablecimientoCrudImpl();
   final AperturaCierreCajaCrudImpl _aperturaCrud = AperturaCierreCajaCrudImpl();
   final ModoPagoCrudImpl _modoPagoCrud = ModoPagoCrudImpl();
   final MonedaCrudImpl _monedaCrud = MonedaCrudImpl();
@@ -107,7 +108,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         return;
       }
 
-      final cajaAbierta = await _aperturaCrud.verificarCajaAbiertaUsuario(usuario.id_usuario!);
+      final cajaAbierta = await _aperturaCrud.verificarCajaAbiertaUsuario(
+        usuario.id_usuario!,
+      );
 
       if (!cajaAbierta) {
         setState(() {
@@ -153,7 +156,8 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
         if (_monedas.isNotEmpty) _monedaSeleccionada = _monedas.first;
         if (_modosPago.isNotEmpty) _modoPagoSeleccionado = _modosPago.first;
-        if (_tiposFactura.isNotEmpty) _tipoFacturaSeleccionado = _tiposFactura.first;
+        if (_tiposFactura.isNotEmpty)
+          _tipoFacturaSeleccionado = _tiposFactura.first;
       });
     } catch (e) {
       setState(() {
@@ -166,7 +170,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
 
   void _cargarInmueblesPorCliente(Cliente cliente) async {
     try {
-      final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(cliente.idCliente!);
+      final inmuebles = await _inmuebleCrud.leerInmueblesPorCliente(
+        cliente.idCliente!,
+      );
       setState(() {
         _inmuebles = inmuebles;
         _inmuebleSeleccionado = null;
@@ -240,10 +246,12 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       _totalIVA = 0;
       _vuelto = 0;
       _condicionVenta = 1;
-      _detalleWidgetKey = UniqueKey(); // fuerza rebuild del DetalleFacturaWidget
+      _detalleWidgetKey =
+          UniqueKey(); // fuerza rebuild del DetalleFacturaWidget
       if (_monedas.isNotEmpty) _monedaSeleccionada = _monedas.first;
       if (_modosPago.isNotEmpty) _modoPagoSeleccionado = _modosPago.first;
-      if (_tiposFactura.isNotEmpty) _tipoFacturaSeleccionado = _tiposFactura.first;
+      if (_tiposFactura.isNotEmpty)
+        _tipoFacturaSeleccionado = _tiposFactura.first;
     });
   }
 
@@ -355,7 +363,9 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Column(
               children: [
                 Container(
@@ -364,7 +374,11 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                     color: Colors.red.shade50,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.error_outline, color: Colors.red.shade600, size: 64),
+                  child: Icon(
+                    Icons.error_outline,
+                    color: Colors.red.shade600,
+                    size: 64,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -432,280 +446,329 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorCarga
-              ? Center(
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _mensajeError,
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Volver'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0085FF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
-                      const SizedBox(height: 16),
-                      Text(
-                        _mensajeError,
-                        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                        textAlign: TextAlign.center,
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Datos de la Factura',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              ClienteAutocomplete(
+                                clientes: _clientes,
+                                onSeleccionado: (c) {
+                                  setState(() => _clienteSeleccionado = c);
+                                  _cargarInmueblesPorCliente(c!);
+                                },
+                              ),
+                              const SizedBox(height: 12),
+
+                              DropdownButtonFormField<Inmuebles>(
+                                value: _inmuebleSeleccionado,
+                                decoration: const InputDecoration(
+                                  labelText: 'Inmueble *',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.home),
+                                ),
+                                items: _inmuebles.map((inmueble) {
+                                  return DropdownMenuItem(
+                                    value: inmueble,
+                                    child: Text(
+                                      '${inmueble.cod_inmueble} - ${inmueble.direccion ?? "Sin dirección"}',
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() => _inmuebleSeleccionado = value);
+                                },
+                                validator: (value) => value == null
+                                    ? 'Seleccione un inmueble'
+                                    : null,
+                              ),
+                              const SizedBox(height: 12),
+
+                              DropdownButtonFormField<Establecimiento>(
+                                value: _establecimientoSeleccionado,
+                                decoration: const InputDecoration(
+                                  labelText: 'Establecimiento *',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.store),
+                                ),
+                                items: _establecimientos.map((est) {
+                                  return DropdownMenuItem(
+                                    value: est,
+                                    child: Text(est.denominacion),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(
+                                    () => _establecimientoSeleccionado = value,
+                                  );
+                                },
+                                validator: (value) => value == null
+                                    ? 'Seleccione un establecimiento'
+                                    : null,
+                              ),
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<TipoFactura>(
+                                      value: _tipoFacturaSeleccionado,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Tipo *',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      items: _tiposFactura.map((tipo) {
+                                        return DropdownMenuItem(
+                                          value: tipo,
+                                          child: Text(tipo.descripcion ?? ''),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        setState(
+                                          () =>
+                                              _tipoFacturaSeleccionado = value,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButtonFormField<int>(
+                                      value: _condicionVenta,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Condición *',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 1,
+                                          child: Text('Contado'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 2,
+                                          child: Text('Crédito'),
+                                        ),
+                                      ],
+                                      onChanged: (value) {
+                                        setState(
+                                          () => _condicionVenta = value!,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<ModoPago>(
+                                      value: _modoPagoSeleccionado,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Modo Pago *',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      items: _modosPago.map((modo) {
+                                        return DropdownMenuItem(
+                                          value: modo,
+                                          child: Text(modo.descripcion),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        setState(
+                                          () => _modoPagoSeleccionado = value,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DropdownButtonFormField<Moneda>(
+                                      value: _monedaSeleccionada,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Moneda *',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      items: _monedas.map((moneda) {
+                                        return DropdownMenuItem(
+                                          value: moneda,
+                                          child: Text(moneda.divisa),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        setState(
+                                          () => _monedaSeleccionada = value,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              TextFormField(
+                                controller: _observacionController,
+                                maxLines: 2,
+                                decoration: const InputDecoration(
+                                  labelText: 'Observación',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.note),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Volver'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0085FF),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+
+                      DetalleFacturaWidget(
+                        key: _detalleWidgetKey,
+                        onDetalleAgregado: _agregarDetalle,
+                        detallesActuales: _detalles,
+                        inmuebleSeleccionado: _inmuebleSeleccionado, // ← FIX
+                      ),
+                      const SizedBox(height: 24),
+
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Resumen',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildResumenItem('Gravado 10%', _totalGravado10),
+                              _buildResumenItem('Gravado 5%', _totalGravado5),
+                              _buildResumenItem('Exenta', _totalExenta),
+                              _buildResumenItem('IVA', _totalIVA),
+                              const Divider(thickness: 2),
+                              _buildResumenItem(
+                                'TOTAL',
+                                _totalGeneral,
+                                isTotal: true,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _efectivoController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: 'Efectivo *',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.payments),
+                                  suffixText: 'Gs.',
+                                ),
+                                validator: (value) {
+                                  if (value?.isEmpty ?? true)
+                                    return 'Campo requerido';
+                                  final monto = double.tryParse(value!);
+                                  if (monto == null) return 'Monto inválido';
+                                  if (monto < _totalGeneral)
+                                    return 'Insuficiente';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              _buildResumenItem(
+                                'Vuelto',
+                                _vuelto,
+                                color: Colors.green,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _guardarFactura,
+                          icon: const Icon(Icons.save),
+                          label: const Text(
+                            'Guardar Factura',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0085FF),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                )
-              : SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Datos de la Factura',
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 16),
-
-                                  ClienteAutocomplete(
-                                    clientes: _clientes,
-                                    onSeleccionado: (c) {
-                                      setState(() => _clienteSeleccionado = c);
-                                      _cargarInmueblesPorCliente(c);
-                                    },
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  DropdownButtonFormField<Inmuebles>(
-                                    value: _inmuebleSeleccionado,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Inmueble *',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.home),
-                                    ),
-                                    items: _inmuebles.map((inmueble) {
-                                      return DropdownMenuItem(
-                                        value: inmueble,
-                                        child: Text(
-                                          '${inmueble.cod_inmueble} - ${inmueble.direccion ?? "Sin dirección"}',
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setState(() => _inmuebleSeleccionado = value);
-                                    },
-                                    validator: (value) =>
-                                        value == null ? 'Seleccione un inmueble' : null,
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  DropdownButtonFormField<Establecimiento>(
-                                    value: _establecimientoSeleccionado,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Establecimiento *',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.store),
-                                    ),
-                                    items: _establecimientos.map((est) {
-                                      return DropdownMenuItem(
-                                        value: est,
-                                        child: Text(est.denominacion),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setState(() => _establecimientoSeleccionado = value);
-                                    },
-                                    validator: (value) =>
-                                        value == null ? 'Seleccione un establecimiento' : null,
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: DropdownButtonFormField<TipoFactura>(
-                                          value: _tipoFacturaSeleccionado,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Tipo *',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          items: _tiposFactura.map((tipo) {
-                                            return DropdownMenuItem(
-                                              value: tipo,
-                                              child: Text(tipo.descripcion ?? ''),
-                                            );
-                                          }).toList(),
-                                          onChanged: (value) {
-                                            setState(() => _tipoFacturaSeleccionado = value);
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: DropdownButtonFormField<int>(
-                                          value: _condicionVenta,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Condición *',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          items: const [
-                                            DropdownMenuItem(value: 1, child: Text('Contado')),
-                                            DropdownMenuItem(value: 2, child: Text('Crédito')),
-                                          ],
-                                          onChanged: (value) {
-                                            setState(() => _condicionVenta = value!);
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: DropdownButtonFormField<ModoPago>(
-                                          value: _modoPagoSeleccionado,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Modo Pago *',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          items: _modosPago.map((modo) {
-                                            return DropdownMenuItem(
-                                              value: modo,
-                                              child: Text(modo.descripcion),
-                                            );
-                                          }).toList(),
-                                          onChanged: (value) {
-                                            setState(() => _modoPagoSeleccionado = value);
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: DropdownButtonFormField<Moneda>(
-                                          value: _monedaSeleccionada,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Moneda *',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          items: _monedas.map((moneda) {
-                                            return DropdownMenuItem(
-                                              value: moneda,
-                                              child: Text(moneda.divisa),
-                                            );
-                                          }).toList(),
-                                          onChanged: (value) {
-                                            setState(() => _monedaSeleccionada = value);
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-
-                                  TextFormField(
-                                    controller: _observacionController,
-                                    maxLines: 2,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Observación',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.note),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          DetalleFacturaWidget(
-                            key: _detalleWidgetKey,
-                            onDetalleAgregado: _agregarDetalle,
-                            detallesActuales: _detalles,
-                            inmuebleSeleccionado: _inmuebleSeleccionado, // ← FIX
-                          ),
-                          const SizedBox(height: 24),
-
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Resumen',
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildResumenItem('Gravado 10%', _totalGravado10),
-                                  _buildResumenItem('Gravado 5%', _totalGravado5),
-                                  _buildResumenItem('Exenta', _totalExenta),
-                                  _buildResumenItem('IVA', _totalIVA),
-                                  const Divider(thickness: 2),
-                                  _buildResumenItem('TOTAL', _totalGeneral, isTotal: true),
-                                  const SizedBox(height: 16),
-                                  TextFormField(
-                                    controller: _efectivoController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Efectivo *',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.payments),
-                                      suffixText: 'Gs.',
-                                    ),
-                                    validator: (value) {
-                                      if (value?.isEmpty ?? true) return 'Campo requerido';
-                                      final monto = double.tryParse(value!);
-                                      if (monto == null) return 'Monto inválido';
-                                      if (monto < _totalGeneral) return 'Insuficiente';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _buildResumenItem('Vuelto', _vuelto, color: Colors.green),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _guardarFactura,
-                              icon: const Icon(Icons.save),
-                              label: const Text(
-                                'Guardar Factura',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0085FF),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ),
+              ),
+            ),
     );
   }
 
-  Widget _buildResumenItem(String label, double valor,
-      {bool isTotal = false, Color? color}) {
+  Widget _buildResumenItem(
+    String label,
+    double valor, {
+    bool isTotal = false,
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
