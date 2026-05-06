@@ -6,7 +6,7 @@ class Inmuebles {
   String cod_inmueble;
   String estado;
   String direccion;
-  Cliente cliente;
+  Cliente? cliente; // nullable: un inmueble puede no tener cliente asignado
   CategoriaServicio categoriaServicio;
 
   Inmuebles({
@@ -14,7 +14,7 @@ class Inmuebles {
     required this.cod_inmueble,
     required this.estado,
     required this.direccion,
-    required this.cliente,
+    this.cliente, // opcional
     required this.categoriaServicio,
   });
 
@@ -24,7 +24,9 @@ class Inmuebles {
       cod_inmueble: map['cod_inmueble'],
       estado: map['estado'],
       direccion: map['direccion'],
-      cliente: Cliente.fromMap(map['fk_cliente']),
+      cliente: map['fk_cliente'] != null
+          ? Cliente.fromMap(map['fk_cliente'])
+          : null,
       categoriaServicio: CategoriaServicio.fromMap(
         map['fk_categoria_servicio'],
       ),
@@ -37,7 +39,7 @@ class Inmuebles {
       'cod_inmueble': cod_inmueble,
       'estado': estado,
       'direccion': direccion,
-      'fk_cliente': cliente.toMap(),
+      'fk_cliente': cliente?.toMap(),
       'fk_categoria_servicio': categoriaServicio.toMap(),
     };
   }

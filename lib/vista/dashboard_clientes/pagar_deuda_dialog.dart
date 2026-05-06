@@ -56,6 +56,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
 
   bool get _esConsumo => widget.deuda.fk_concepto.id == 1;
   bool get _esConexion => widget.deuda.fk_concepto.id == 2;
+  bool get _esDeudaAnterior => widget.deuda.fk_concepto.id == 3;
 
   @override
   void initState() {
@@ -175,7 +176,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Future<void> _procesarPago() async {
-    if (_esConexion) {
+    if (_esConexion || _esDeudaAnterior) {
       final ingresado = double.tryParse(_montoController.text) ?? 0;
       if (ingresado <= 0) {
         _mostrarError('Ingrese un monto a pagar mayor a 0');
@@ -192,7 +193,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final error = _pagoService.validarPago(
       deuda: widget.deuda,
       ciclosSeleccionados: _ciclosSeleccionados,
-      efectivo: _esConsumo || _esConexion
+      efectivo: _esConsumo || _esConexion || _esDeudaAnterior
           ? _totalAPagar
           : double.tryParse(_efectivoController.text) ?? 0,
     );
@@ -571,14 +572,14 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                           const SizedBox(height: 24),
                           if (_esConsumo)
                             _buildResumenCiclosSeleccionados()
-                          else if (_esConexion)
+                          else if (_esConexion || _esDeudaAnterior)
                             _buildMontoConexion()
                           else
                             _buildMontoFijo(),
                           const SizedBox(height: 24),
                           _buildResumenTotales(),
                           const SizedBox(height: 24),
-                          if (!_esConsumo && !_esConexion) ...[
+                          if (!_esConsumo && !_esConexion && !_esDeudaAnterior) ...[
                             _buildInputEfectivo(),
                             const SizedBox(height: 24),
                           ],
@@ -605,6 +606,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
       case 2:
         icono = Icons.electrical_services;
         color = Colors.orange;
+        break;
+      case 3:
+        icono = Icons.history;
+        color = Colors.teal;
         break;
       default:
         icono = Icons.receipt_long;
@@ -727,32 +732,33 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final montoIngresado = double.tryParse(_montoController.text) ?? 0;
     final excedeLimite = montoIngresado > widget.deuda.saldo;
 
+    final color = _esConexion ? Colors.orange : Colors.teal;
+    final icono = _esConexion ? Icons.edit_note : Icons.history_edu;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
+        color: color.shade50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.shade200),
+        border: Border.all(color: color.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.edit_note, color: Colors.orange.shade700, size: 24),
+              Icon(icono, color: color.shade700, size: 24),
               const SizedBox(width: 8),
               const Text(
                 'Monto a Pagar',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             'Máximo: ${widget.deuda.saldo.toStringAsFixed(0)} Gs.',
-            style:
-                TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -762,22 +768,20 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
               labelText: 'Ingrese el monto *',
               prefixIcon: const Icon(Icons.attach_money),
               suffixText: 'Gs.',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
               fillColor: Colors.white,
               errorText: excedeLimite
                   ? 'No puede superar ${widget.deuda.saldo.toStringAsFixed(0)} Gs.'
                   : null,
             ),
-            style: const TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
             widget.deuda.descripcion ?? widget.deuda.fk_concepto.nombre,
-            style:
-                TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1188,14 +1192,14 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Widget _buildBotones() {
-    final montoConexionValido = _esConexion
+    final montoConexionValido = (_esConexion || _esDeudaAnterior)
         ? (_totalAPagar > 0 && _totalAPagar <= widget.deuda.saldo)
         : true;
 
     final puedeProcedar =
         _totalAPagar > 0 &&
         montoConexionValido &&
-        (_esConsumo || _esConexion || _vuelto >= 0);
+        (_esConsumo || _esConexion || _esDeudaAnterior || _vuelto >= 0);
 
     return Row(
       children: [
