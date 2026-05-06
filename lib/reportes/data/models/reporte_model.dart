@@ -1,17 +1,17 @@
 class ReporteMensual {
-  final String idInmueble; // <-- ¡Aquí está el nuevo campo!
-  final String nombres;
-  final String cedula;
-  final String celular;
+  final String idInmueble;
+  final String? nombres; // Opcional
+  final String? cedula; // Opcional
+  final String? celular; // Opcional
   final String estadoConexion;
   final double deudaTotal;
   final List<double> meses;
 
   ReporteMensual({
     required this.idInmueble,
-    required this.nombres,
-    required this.cedula,
-    required this.celular,
+    this.nombres,
+    this.cedula,
+    this.celular,
     required this.estadoConexion,
     required this.deudaTotal,
     required this.meses,
@@ -19,12 +19,13 @@ class ReporteMensual {
 
   factory ReporteMensual.fromJson(Map<String, dynamic> json) {
     return ReporteMensual(
-      // Mapeamos el id_inmueble exacto como viene de tu vista SQL
       idInmueble: json['id_inmueble']?.toString() ?? '',
-      nombres: json['nombres_y_apellidos']?.toString() ?? '',
-      cedula: json['nro_cedula']?.toString() ?? '',
-      celular: json['nro_celular']?.toString() ?? '',
-      estadoConexion: json['estado_conexion']?.toString().toUpperCase() ?? 'CONECTADO',
+      // Si no hay nombres, cedula o celular, los dejamos como null
+      nombres: json['nombres_y_apellidos']?.toString(),
+      cedula: json['nro_cedula']?.toString(),
+      celular: json['nro_celular']?.toString(),
+      estadoConexion:
+          json['estado_conexion']?.toString().toUpperCase() ?? 'CONECTADO',
       deudaTotal: (json['deuda_total'] ?? 0).toDouble(),
       meses: [
         (json['enero'] ?? 0).toDouble(),

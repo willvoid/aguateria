@@ -19,8 +19,18 @@ class _ReporteScreenState extends State<ReporteScreen> {
   bool _isLoading = true;
 
   final List<String> _mesesHeaders = [
-    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-    'JULIO', 'AGOSTO', 'SEPT', 'OCT', 'NOV', 'DICIEM'
+    'ENERO',
+    'FEBRERO',
+    'MARZO',
+    'ABRIL',
+    'MAYO',
+    'JUNIO',
+    'JULIO',
+    'AGOSTO',
+    'SEPT',
+    'OCT',
+    'NOV',
+    'DICIEM',
   ];
 
   @override
@@ -45,14 +55,19 @@ class _ReporteScreenState extends State<ReporteScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar reporte: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al cargar reporte: $e')));
     }
   }
 
-  Widget _buildCelda(String texto, double ancho,
-      {bool esCabecera = false, Color? colorTexto, bool isBold = false}) {
+  Widget _buildCelda(
+    String texto,
+    double ancho, {
+    bool esCabecera = false,
+    Color? colorTexto,
+    bool isBold = false,
+  }) {
     return Container(
       width: ancho,
       height: 40,
@@ -64,8 +79,9 @@ class _ReporteScreenState extends State<ReporteScreen> {
       child: Text(
         texto,
         style: TextStyle(
-          fontWeight:
-              esCabecera || isBold ? FontWeight.bold : FontWeight.normal,
+          fontWeight: esCabecera || isBold
+              ? FontWeight.bold
+              : FontWeight.normal,
           fontSize: 12,
           color: colorTexto ?? Colors.black,
         ),
@@ -87,83 +103,90 @@ class _ReporteScreenState extends State<ReporteScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _datos.isEmpty
-              ? const Center(child: Text('No hay datos para mostrar'))
-              : Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  // ← ÚNICO CAMBIO: ScrollConfiguration envuelve los dos scrolls
-                  child: ScrollConfiguration(
-                    behavior: _AllScrollBehavior(),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+          ? const Center(child: Text('No hay datos para mostrar'))
+          : Padding(
+              padding: const EdgeInsets.all(8.0),
+              // ← ÚNICO CAMBIO: ScrollConfiguration envuelve los dos scrolls
+              child: ScrollConfiguration(
+                behavior: _AllScrollBehavior(),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // --- CABECERA ---
+                        Row(
                           children: [
-                            // --- CABECERA ---
-                            Row(
-                              children: [
-                                _buildCelda('ID INMUEBLE', 90,
-                                    esCabecera: true),
-                                _buildCelda('ESTADO', 110, esCabecera: true),
-                                _buildCelda('NOMBRES Y APELLIDOS', 200,
-                                    esCabecera: true),
-                                _buildCelda('N° DE CEDULA', 100,
-                                    esCabecera: true),
-                                _buildCelda('N° DE CELULAR', 120,
-                                    esCabecera: true),
-                                _buildCelda('DEUDA', 90, esCabecera: true),
-                                ..._mesesHeaders.map(
-                                    (m) => _buildCelda(m, 80, esCabecera: true)),
-                              ],
+                            _buildCelda('ID INMUEBLE', 90, esCabecera: true),
+                            _buildCelda('ESTADO', 110, esCabecera: true),
+                            _buildCelda(
+                              'NOMBRES Y APELLIDOS',
+                              200,
+                              esCabecera: true,
                             ),
-
-                            // --- DATOS ---
-                            ...List.generate(_datos.length, (index) {
-                              final reporte = _datos[index];
-                              final bool estaCortado =
-                                  reporte.estadoConexion == 'DESCONECTADO';
-                              final Color colorEstado =
-                                  estaCortado ? Colors.red : Colors.green;
-
-                              return Row(
-                                children: [
-                                  _buildCelda(reporte.idInmueble, 90),
-                                  _buildCelda(reporte.estadoConexion, 110,
-                                      colorTexto: colorEstado, isBold: true),
-                                  _buildCelda(reporte.nombres, 200),
-                                  _buildCelda(reporte.cedula, 100),
-                                  _buildCelda(reporte.celular, 120),
-                                  _buildCelda(
-                                      reporte.deudaTotal.toStringAsFixed(0),
-                                      90),
-                                  ...reporte.meses.map((monto) {
-                                    return _buildCelda(
-                                      monto == 0
-                                          ? '0'
-                                          : monto.toStringAsFixed(0),
-                                      80,
-                                    );
-                                  }).toList(),
-                                ],
-                              );
-                            }),
+                            _buildCelda('N° DE CEDULA', 100, esCabecera: true),
+                            _buildCelda('N° DE CELULAR', 120, esCabecera: true),
+                            _buildCelda('DEUDA', 90, esCabecera: true),
+                            ..._mesesHeaders.map(
+                              (m) => _buildCelda(m, 80, esCabecera: true),
+                            ),
                           ],
                         ),
-                      ),
+
+                        // --- DATOS ---
+                        ...List.generate(_datos.length, (index) {
+                          final reporte = _datos[index];
+                          final bool estaCortado =
+                              reporte.estadoConexion == 'DESCONECTADO';
+                          final Color colorEstado = estaCortado
+                              ? Colors.red
+                              : Colors.green;
+
+                          return Row(
+                            children: [
+                              _buildCelda(reporte.idInmueble, 90),
+                              _buildCelda(
+                                reporte.estadoConexion,
+                                110,
+                                colorTexto: colorEstado,
+                                isBold: true,
+                              ),
+                              _buildCelda(reporte.nombres ?? '', 200),
+                              _buildCelda(reporte.cedula ?? '', 100),
+                              _buildCelda(reporte.celular ?? '', 120),
+                              _buildCelda(
+                                reporte.deudaTotal.toStringAsFixed(0),
+                                90,
+                              ),
+                              ...reporte.meses.map((monto) {
+                                return _buildCelda(
+                                  monto == 0 ? '0' : monto.toStringAsFixed(0),
+                                  80,
+                                );
+                              }).toList(),
+                            ],
+                          );
+                        }),
+                      ],
                     ),
                   ),
                 ),
+              ),
+            ),
     );
   }
 
   Future<void> _generarYDescargarPDF() async {
     final pdf = pw.Document();
 
-    pw.Widget _buildPdfCelda(String texto,
-        {PdfColor color = PdfColors.black,
-        bool isBold = false,
-        bool isHeader = false}) {
+    pw.Widget _buildPdfCelda(
+      String texto, {
+      PdfColor color = PdfColors.black,
+      bool isBold = false,
+      bool isHeader = false,
+    }) {
       return pw.Container(
         alignment: pw.Alignment.center,
         padding: const pw.EdgeInsets.all(4),
@@ -190,9 +213,13 @@ class _ReporteScreenState extends State<ReporteScreen> {
           return [
             pw.Header(
               level: 0,
-              child: pw.Text('Reporte de Deudas Mensuales',
-                  style: pw.TextStyle(
-                      fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              child: pw.Text(
+                'Reporte de Deudas Mensuales',
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
             ),
             pw.SizedBox(height: 10),
             pw.Table(
@@ -214,30 +241,34 @@ class _ReporteScreenState extends State<ReporteScreen> {
                     _buildPdfCelda('CÉDULA', isHeader: true),
                     _buildPdfCelda('CELULAR', isHeader: true),
                     _buildPdfCelda('DEUDA', isHeader: true),
-                    ..._mesesHeaders
-                        .map((m) => _buildPdfCelda(m, isHeader: true)),
+                    ..._mesesHeaders.map(
+                      (m) => _buildPdfCelda(m, isHeader: true),
+                    ),
                   ],
                 ),
                 ...List.generate(_datos.length, (index) {
                   final reporte = _datos[index];
-                  final estaCortado =
-                      reporte.estadoConexion == 'DESCONECTADO';
-                  final colorEstado =
-                      estaCortado ? PdfColors.red : PdfColors.green;
+                  final estaCortado = reporte.estadoConexion == 'DESCONECTADO';
+                  final colorEstado = estaCortado
+                      ? PdfColors.red
+                      : PdfColors.green;
 
                   return pw.TableRow(
                     children: [
                       _buildPdfCelda(reporte.idInmueble),
-                      _buildPdfCelda(reporte.estadoConexion,
-                          color: colorEstado, isBold: true),
-                      _buildPdfCelda(reporte.nombres),
-                      _buildPdfCelda(reporte.cedula),
-                      _buildPdfCelda(reporte.celular),
                       _buildPdfCelda(
-                          reporte.deudaTotal.toStringAsFixed(0)),
+                        reporte.estadoConexion,
+                        color: colorEstado,
+                        isBold: true,
+                      ),
+                      _buildPdfCelda(reporte.nombres ?? ''),
+                      _buildPdfCelda(reporte.cedula ?? ''),
+                      _buildPdfCelda(reporte.celular ?? ''),
+                      _buildPdfCelda(reporte.deudaTotal.toStringAsFixed(0)),
                       ...reporte.meses.map((monto) {
                         return _buildPdfCelda(
-                            monto == 0 ? '0' : monto.toStringAsFixed(0));
+                          monto == 0 ? '0' : monto.toStringAsFixed(0),
+                        );
                       }).toList(),
                     ],
                   );
@@ -259,9 +290,9 @@ class _ReporteScreenState extends State<ReporteScreen> {
 class _AllScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.stylus,
-        PointerDeviceKind.invertedStylus,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.invertedStylus,
+  };
 }
