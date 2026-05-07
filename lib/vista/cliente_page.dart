@@ -297,9 +297,6 @@ class _ClientesPageState extends State<ClientesPage> {
                                 DataColumn(label: Text('Razón Social')),
                                 DataColumn(label: Text('Documento')),
                                 DataColumn(label: Text('Celular')),
-                                DataColumn(label: Text('Dirección')),
-                                DataColumn(label: Text('Nro. Casa')),
-                                DataColumn(label: Text('Barrio')),
                                 DataColumn(label: Text('Estado')),
                                 DataColumn(label: Text('Acciones')),
                               ],
@@ -310,10 +307,6 @@ class _ClientesPageState extends State<ClientesPage> {
                                     DataCell(Text(cliente.razonSocial)),
                                     DataCell(Text(cliente.documento)),
                                     DataCell(Text(cliente.celular)),
-                                    DataCell(Text(cliente.direccion ?? '-')),
-                                    DataCell(Text('${cliente.nroCasa}')),
-                                    DataCell(
-                                        Text(cliente.barrio.nombre_barrio)),
                                     DataCell(
                                       Container(
                                         padding: const EdgeInsets.symmetric(
