@@ -12,7 +12,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 final supabase = Supabase.instance.client;
 
 class ConsumoCrudImpl {
-
   // ==================== HELPERS ====================
 
   int _toInt(dynamic value) {
@@ -46,7 +45,7 @@ class ConsumoCrudImpl {
         'lectura_actual': consumo.lectura_actual,
         'consumo_m3': consumo.consumo_m3,
         'fk_medidores': consumo.fk_medidores.idMedidor,
-        'fk_ciclo': consumo.fk_ciclo.id,
+        'fk_ciclo': consumo.fk_ciclo?.id ?? 0,
         'estado': consumo.estado,
       });
 
@@ -61,7 +60,9 @@ class ConsumoCrudImpl {
 
   Future<List<Consumo>> leerConsumos() async {
     try {
-      final data = await supabase.from('consumos').select('''
+      final data = await supabase
+          .from('consumos')
+          .select('''
         *,
         fk_medidores (
           *,
@@ -77,7 +78,8 @@ class ConsumoCrudImpl {
           )
         ),
         fk_ciclo(*)
-      ''').order('id_consumos', ascending: false);
+      ''')
+          .order('id_consumos', ascending: false);
 
       if (data == null || data.isEmpty) return [];
 
@@ -102,7 +104,8 @@ class ConsumoCrudImpl {
           celular: datosCliente['celular'] ?? '',
           direccion: datosCliente['direccion'] ?? '',
           email: datosCliente['email'] ?? '',
-          es_proveedor_del_estado: datosCliente['es_proveedor_del_estado'] ?? false,
+          es_proveedor_del_estado:
+              datosCliente['es_proveedor_del_estado'] ?? false,
           nroCasa: datosCliente['nro_casa'] ?? '',
           estado: datosCliente['estado_cliente'] ?? 'ACTIVO',
           tipoOperacion: TipoOperacion.fromMap(datosCliente['tipo_operacion']),
@@ -116,7 +119,9 @@ class ConsumoCrudImpl {
           estado: datosInmueble['estado'] ?? '',
           direccion: datosInmueble['direccion'] ?? '',
           cliente: cliente,
-          categoriaServicio: CategoriaServicio.fromMap(datosInmueble['fk_categoria_servicio']),
+          categoriaServicio: CategoriaServicio.fromMap(
+            datosInmueble['fk_categoria_servicio'],
+          ),
         );
 
         final medidor = Medidor(
@@ -149,7 +154,6 @@ class ConsumoCrudImpl {
           estado: mapa['estado'] ?? 'PENDIENTE',
         );
       }).toList();
-
     } catch (e) {
       print('Error al leer consumos: $e');
       return [];
@@ -193,14 +197,17 @@ class ConsumoCrudImpl {
 
   Future<bool> actualizarConsumo(Consumo consumo) async {
     try {
-      await supabase.from('consumos').update({
-        'lectura_anterior': consumo.lectura_anterior,
-        'lectura_actual': consumo.lectura_actual,
-        'consumo_m3': consumo.consumo_m3,
-        'fk_medidores': consumo.fk_medidores.idMedidor,
-        'fk_ciclo': consumo.fk_ciclo.id,
-        'estado': consumo.estado,
-      }).eq('id_consumos', consumo.id_consumos!);
+      await supabase
+          .from('consumos')
+          .update({
+            'lectura_anterior': consumo.lectura_anterior,
+            'lectura_actual': consumo.lectura_actual,
+            'consumo_m3': consumo.consumo_m3,
+            'fk_medidores': consumo.fk_medidores.idMedidor,
+            'fk_ciclo': consumo.fk_ciclo?.id,
+            'estado': consumo.estado,
+          })
+          .eq('id_consumos', consumo.id_consumos!);
 
       return true;
     } catch (e) {
@@ -223,7 +230,11 @@ class ConsumoCrudImpl {
 
   // ==================== VERIFICAR CONSUMO EXISTENTE ====================
 
-  Future<bool> verificarConsumoExistente(int idMedidor, int idCiclo, {int? idExcluir}) async {
+  Future<bool> verificarConsumoExistente(
+    int idMedidor,
+    int idCiclo, {
+    int? idExcluir,
+  }) async {
     try {
       var query = supabase
           .from('consumos')
@@ -274,7 +285,6 @@ class ConsumoCrudImpl {
       return List<Map<String, dynamic>>.from(data).map((mapa) {
         return Consumo.fromMap(mapa);
       }).toList();
-
     } catch (e) {
       print('Error al leer consumos por medidor: $e');
       return [];
@@ -312,7 +322,6 @@ class ConsumoCrudImpl {
       return List<Map<String, dynamic>>.from(data).map((mapa) {
         return Consumo.fromMap(mapa);
       }).toList();
-
     } catch (e) {
       print('Error al leer consumos por ciclo: $e');
       return [];

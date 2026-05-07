@@ -13,6 +13,14 @@ class Iva {
     );
   }
 
+  factory Iva.vacio() {
+    return Iva(
+      id: null,
+      descripcion: '',
+      valor: 0,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id_iva': id,

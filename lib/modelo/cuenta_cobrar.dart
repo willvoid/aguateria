@@ -35,11 +35,11 @@ class CuentaCobrar {
       descripcion: map['descripcion'],
       monto: map['monto'],
       estado: map['estado'],
-      fk_ciclos: Ciclo.fromMap(map['fk_ciclos']),
+      fk_ciclos: map['fk_ciclos'] != null ? Ciclo.fromMap(map['fk_ciclos']) : null,
       fk_inmueble: Inmuebles.fromMap(map['fk_inmueble']),
       saldo: map['saldo'],
       pagado: map['pagado'],
-      fk_consumos: Consumo.fromMap(map['fk_consumos']),
+      fk_consumos: map['fk_consumos'] != null ? Consumo.fromMap(map['fk_consumos']) : null,
     );
   }
 

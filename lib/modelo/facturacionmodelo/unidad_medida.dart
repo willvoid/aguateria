@@ -20,6 +20,15 @@ class UnidadMedida {
     );
   }
 
+  factory UnidadMedida.vacio() {
+    return UnidadMedida(
+      id: null,
+      cod_unidades_medida: 0,
+      representacion: '',
+      descripcion: '',
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id_unidades': id,

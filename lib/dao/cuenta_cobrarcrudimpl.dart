@@ -433,10 +433,20 @@ class CuentaCobrarCrudImpl {
       nombre: datosConcepto['nombre'] ?? '',
       arancel: _toDouble(datosConcepto['arancel']),
       descripcion: datosConcepto['descripcion'] ?? '',
-      fk_iva: Iva.fromMap(datosConcepto['fk_iva']),
-      fk_unidad_medida: UnidadMedida.fromMap(datosConcepto['fk_unidad_medida']),
+      fk_iva: datosConcepto['fk_iva'] != null
+          ? Iva.fromMap(datosConcepto['fk_iva'] as Map<String, dynamic>)
+          : Iva.vacio(),
+      fk_unidad_medida: datosConcepto['fk_unidad_medida'] != null
+          ? UnidadMedida.fromMap(
+              datosConcepto['fk_unidad_medida'] as Map<String, dynamic>,
+            )
+          : UnidadMedida.vacio(),
       estado: datosConcepto['estado'] ?? 'ACTIVO',
-      fk_servicio: CategoriaServicio.fromMap(datosConcepto['fk_servicio']),
+      fk_servicio: datosConcepto['fk_servicio'] != null
+          ? CategoriaServicio.fromMap(
+              datosConcepto['fk_servicio'] as Map<String, dynamic>,
+            )
+          : CategoriaServicio.vacio(),
     );
 
     // Construir Ciclo (opcional)
@@ -469,11 +479,21 @@ class CuentaCobrarCrudImpl {
       direccion: datosCliente['direccion'] ?? '',
       email: datosCliente['email'] ?? '',
       es_proveedor_del_estado: datosCliente['es_proveedor_del_estado'] ?? false,
-      nroCasa: datosCliente['nro_casa'] ?? '',
+      nroCasa: _toInt(datosCliente['nro_casa']),
       estado: datosCliente['estado_cliente'] ?? 'ACTIVO',
-      tipoOperacion: TipoOperacion.fromMap(datosCliente['tipo_operacion']),
-      tipoDocumento: TipoDocumento.fromMap(datosCliente['tipo_documento']),
-      barrio: Barrio.fromMap(datosCliente['barrios']),
+      tipoOperacion: datosCliente['tipo_operacion'] != null
+          ? TipoOperacion.fromMap(
+              datosCliente['tipo_operacion'] as Map<String, dynamic>,
+            )
+          : TipoOperacion.vacio(),
+      tipoDocumento: datosCliente['tipo_documento'] != null
+          ? TipoDocumento.fromMap(
+              datosCliente['tipo_documento'] as Map<String, dynamic>,
+            )
+          : null,
+      barrio: datosCliente['barrios'] != null
+          ? Barrio.fromMap(datosCliente['barrios'] as Map<String, dynamic>)
+          : Barrio.vacio(),
     );
 
     final inmueble = Inmuebles(
@@ -482,9 +502,11 @@ class CuentaCobrarCrudImpl {
       estado: datosInmueble['estado'] ?? '',
       direccion: datosInmueble['direccion'] ?? '',
       cliente: cliente,
-      categoriaServicio: CategoriaServicio.fromMap(
-        datosInmueble['fk_categoria_servicio'],
-      ),
+      categoriaServicio: datosInmueble['fk_categoria_servicio'] != null
+          ? CategoriaServicio.fromMap(
+              datosInmueble['fk_categoria_servicio'] as Map<String, dynamic>,
+            )
+          : CategoriaServicio.vacio(),
     );
 
     // Construir Consumo (opcional)
@@ -506,15 +528,23 @@ class CuentaCobrarCrudImpl {
         email: datosClienteMedidor['email'] ?? '',
         es_proveedor_del_estado:
             datosClienteMedidor['es_proveedor_del_estado'] ?? false,
-        nroCasa: datosClienteMedidor['nro_casa'] ?? '',
+        nroCasa: _toInt(datosClienteMedidor['nro_casa']),
         estado: datosClienteMedidor['estado_cliente'] ?? 'ACTIVO',
-        tipoOperacion: TipoOperacion.fromMap(
-          datosClienteMedidor['tipo_operacion'],
-        ),
-        tipoDocumento: TipoDocumento.fromMap(
-          datosClienteMedidor['tipo_documento'],
-        ),
-        barrio: Barrio.fromMap(datosClienteMedidor['barrios']),
+        tipoOperacion: datosClienteMedidor['tipo_operacion'] != null
+            ? TipoOperacion.fromMap(
+                datosClienteMedidor['tipo_operacion'] as Map<String, dynamic>,
+              )
+            : TipoOperacion.vacio(),
+        tipoDocumento: datosClienteMedidor['tipo_documento'] != null
+            ? TipoDocumento.fromMap(
+                datosClienteMedidor['tipo_documento'] as Map<String, dynamic>,
+              )
+            : null,
+        barrio: datosClienteMedidor['barrios'] != null
+            ? Barrio.fromMap(
+                datosClienteMedidor['barrios'] as Map<String, dynamic>,
+              )
+            : Barrio.vacio(),
       );
 
       final inmuebleMedidor = Inmuebles(
@@ -523,9 +553,12 @@ class CuentaCobrarCrudImpl {
         estado: datosInmuebleMedidor['estado'] ?? '',
         direccion: datosInmuebleMedidor['direccion'] ?? '',
         cliente: clienteMedidor,
-        categoriaServicio: CategoriaServicio.fromMap(
-          datosInmuebleMedidor['fk_categoria_servicio'],
-        ),
+        categoriaServicio: datosInmuebleMedidor['fk_categoria_servicio'] != null
+            ? CategoriaServicio.fromMap(
+                datosInmuebleMedidor['fk_categoria_servicio']
+                    as Map<String, dynamic>,
+              )
+            : CategoriaServicio.vacio(),
       );
 
       final medidor = Medidor(
@@ -542,7 +575,9 @@ class CuentaCobrarCrudImpl {
         lectura_actual: _toDouble(datosConsumo['lectura_actual']),
         consumo_m3: _toDouble(datosConsumo['consumo_m3']),
         fk_medidores: medidor,
-        fk_ciclo: Ciclo.fromMap(datosConsumo['fk_ciclo']),
+        fk_ciclo: datosConsumo['fk_ciclo'] != null
+            ? Ciclo.fromMap(datosConsumo['fk_ciclo'] as Map<String, dynamic>)
+            : null,
         estado: datosConsumo['estado'] ?? 'PENDIENTE',
       );
     }
