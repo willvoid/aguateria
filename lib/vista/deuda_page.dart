@@ -9,6 +9,7 @@ import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/widget/autocomplete_ciclos.dart';
+import 'package:myapp/widget/selector_ciclos_widget.dart';
 
 class DeudasPage extends StatefulWidget {
   final Inmuebles inmueble;
@@ -109,15 +110,15 @@ class _DeudasPageState extends State<DeudasPage> {
         conceptos: conceptos,
         ciclos: ciclos,
         consumos: consumos,
-        onGuardar: (deudaEditada) async {
+        onGuardar: (deudasEditadas) async {
           Navigator.of(dialogContext).pop();
-          await _guardarDeuda(deudaEditada);
+          await _guardarDeudas(deudasEditadas);
         },
       ),
     );
   }
 
-  Future<void> _guardarDeuda(CuentaCobrar deuda) async {
+  Future<void> _guardarDeudas(List<CuentaCobrar> deudasParaGuardar) async {
     try {
       showDialog(
         context: context,
@@ -125,29 +126,37 @@ class _DeudasPageState extends State<DeudasPage> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      bool exito;
-      if (deuda.id_deuda == null) {
-        exito = await _deudaCrud.crearDeuda(deuda);
-      } else {
-        exito = await _deudaCrud.actualizarDeuda(deuda);
+      bool todoExito = true;
+      for (var deuda in deudasParaGuardar) {
+        bool exito;
+        if (deuda.id_deuda == null) {
+          exito = await _deudaCrud.crearDeuda(deuda);
+        } else {
+          exito = await _deudaCrud.actualizarDeuda(deuda);
+        }
+        if (!exito) {
+          todoExito = false;
+        }
       }
 
       Navigator.pop(context);
 
-      if (exito) {
+      if (todoExito) {
         await _cargarDatos();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              deuda.id_deuda == null
-                  ? 'Deuda creada exitosamente'
-                  : 'Deuda actualizada exitosamente',
+              deudasParaGuardar.length > 1
+                  ? 'Deudas procesadas exitosamente'
+                  : deudasParaGuardar.first.id_deuda == null
+                      ? 'Deuda creada exitosamente'
+                      : 'Deuda actualizada exitosamente',
             ),
             backgroundColor: Colors.green,
           ),
         );
       } else {
-        _mostrarError('Error al guardar la deuda');
+        _mostrarError('Error al guardar algunas o todas las deudas');
       }
     } catch (e) {
       Navigator.pop(context);
@@ -437,7 +446,7 @@ class _DialogoEditarDeuda extends StatefulWidget {
   final List<Concepto> conceptos;
   final List<Ciclo> ciclos;
   final List<Consumo> consumos;
-  final Function(CuentaCobrar) onGuardar;
+  final Function(List<CuentaCobrar>) onGuardar;
 
   const _DialogoEditarDeuda({
     this.deuda,
@@ -460,6 +469,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
   late String _estadoSeleccionado;
   late Concepto _conceptoSeleccionado;
   Ciclo? _cicloSeleccionado;
+  List<Ciclo> _ciclosSeleccionados = [];
   Consumo? _consumoSeleccionado;
 
   final List<String> _estados = [
@@ -496,6 +506,10 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
             (c) => c.id == widget.deuda!.fk_ciclos!.id,
             orElse: () => widget.ciclos.first,
           );
+          
+    if (_cicloSeleccionado != null) {
+      _ciclosSeleccionados = [_cicloSeleccionado!];
+    }
 
     _consumoSeleccionado = widget.deuda?.fk_consumos == null
         ? null
@@ -554,8 +568,14 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                         label: 'Concepto *',
                         value: _conceptoSeleccionado,
                         items: widget.conceptos,
-                        onChanged: (value) =>
-                            setState(() => _conceptoSeleccionado = value!),
+                        onChanged: (value) {
+                          setState(() {
+                            _conceptoSeleccionado = value!;
+                            if (widget.deuda == null) {
+                              _montoController.text = value.arancel.toStringAsFixed(0);
+                            }
+                          });
+                        },
                         itemLabel: (item) => item.nombre,
                       ),
                       const SizedBox(height: 16),
@@ -563,39 +583,100 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CicloAutocomplete(
-                              key: ValueKey(_cicloSeleccionado?.id),
-                              ciclos: widget.ciclos,
-                              cicloInicial: _cicloSeleccionado,
-                              label: 'Ciclo *',
-                              hint: 'Buscar por ciclo o descripción...',
-                              onSeleccionado: (ciclo) {
-                                setState(() {
-                                  _cicloSeleccionado = ciclo;
-                                  _descripcionController.text =
-                                      'Consumo ${ciclo.descripcion}';
-                                });
-                              },
-                              validator: (_) {
-                                if (_conceptoSeleccionado.id == 1 &&
-                                    _cicloSeleccionado == null) {
-                                  return 'Debe seleccionar un ciclo';
-                                }
-                                return null;
-                              },
-                            ),
-                            if (_cicloSeleccionado != null)
-                              TextButton.icon(
-                                onPressed: () =>
-                                    setState(() => _cicloSeleccionado = null),
-                                icon: const Icon(Icons.clear, size: 16),
-                                label: const Text('Limpiar ciclo'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.grey.shade600,
-                                  padding: EdgeInsets.zero,
+                            if (_conceptoSeleccionado.id == 1 && widget.deuda == null) ...[
+                              const Text(
+                                'Ciclos *',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF374151),
                                 ),
                               ),
-                            const SizedBox(height: 16),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    double montoActual = double.tryParse(_montoController.text) ?? _conceptoSeleccionado.arancel;
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => SelectorCiclosDialog(
+                                        ciclosDisponibles: widget.ciclos,
+                                        ciclosSeleccionados: _ciclosSeleccionados,
+                                        montoPorCiclo: montoActual,
+                                        onCiclosSeleccionados: (ciclos) {
+                                          setState(() {
+                                            _ciclosSeleccionados = ciclos;
+                                            if (ciclos.length == 1) {
+                                              _descripcionController.text = 'Consumo ${ciclos.first.descripcion}';
+                                            } else if (ciclos.length > 1) {
+                                              _descripcionController.text = 'Consumo de ${ciclos.length} meses';
+                                            } else {
+                                              _descripcionController.text = '';
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.calendar_month, size: 18),
+                                  label: Text(_ciclosSeleccionados.isEmpty
+                                      ? 'Seleccionar Ciclos'
+                                      : '${_ciclosSeleccionados.length} ciclos seleccionados'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    side: BorderSide(color: Colors.blue.shade300),
+                                    foregroundColor: Colors.blue.shade700,
+                                    alignment: Alignment.centerLeft,
+                                  ),
+                                ),
+                              ),
+                              if (_ciclosSeleccionados.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    'Debe seleccionar al menos un ciclo',
+                                    style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                                  ),
+                                ),
+                              const SizedBox(height: 16),
+                            ] else ...[
+                              CicloAutocomplete(
+                                key: ValueKey(_cicloSeleccionado?.id),
+                                ciclos: widget.ciclos,
+                                cicloInicial: _cicloSeleccionado,
+                                label: 'Ciclo *',
+                                hint: 'Buscar por ciclo o descripción...',
+                                onSeleccionado: (ciclo) {
+                                  setState(() {
+                                    _cicloSeleccionado = ciclo;
+                                    _ciclosSeleccionados = [ciclo];
+                                    _descripcionController.text =
+                                        '${_conceptoSeleccionado.nombre} ${ciclo.descripcion}';
+                                  });
+                                },
+                                validator: (_) {
+                                  if ((_conceptoSeleccionado.id == 1 || _conceptoSeleccionado.id != 2) && _cicloSeleccionado == null) {
+                                    return 'Debe seleccionar un ciclo';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              if (_cicloSeleccionado != null)
+                                TextButton.icon(
+                                  onPressed: () => setState(() {
+                                    _cicloSeleccionado = null;
+                                    _ciclosSeleccionados = [];
+                                  }),
+                                  icon: const Icon(Icons.clear, size: 16),
+                                  label: const Text('Limpiar ciclo'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.grey.shade600,
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              const SizedBox(height: 16),
+                            ],
                           ],
                         ),
                       _buildTextField(
@@ -777,24 +858,55 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
 
   void _guardarDeuda() {
     if (_formKey.currentState!.validate()) {
+      if (_conceptoSeleccionado.id == 1 && widget.deuda == null && _ciclosSeleccionados.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Debe seleccionar al menos un ciclo para el Consumo.'), backgroundColor: Colors.red),
+        );
+        return;
+      }
+
       final monto = double.parse(_montoController.text);
-      final saldo = widget.deuda?.saldo ?? monto;
-      final pagado = widget.deuda?.pagado ?? 0.0;
+      List<CuentaCobrar> deudasAGuardar = [];
 
-      final deuda = CuentaCobrar(
-        id_deuda: widget.deuda?.id_deuda,
-        fk_concepto: _conceptoSeleccionado,
-        descripcion: _descripcionController.text,
-        monto: monto,
-        estado: _estadoSeleccionado,
-        fk_ciclos: _cicloSeleccionado,
-        fk_inmueble: widget.inmueble,
-        saldo: saldo,
-        pagado: pagado,
-        fk_consumos: _consumoSeleccionado,
-      );
+      if (_conceptoSeleccionado.id == 1 && widget.deuda == null && _ciclosSeleccionados.isNotEmpty) {
+        // Múltiples consumos
+        for (var ciclo in _ciclosSeleccionados) {
+          deudasAGuardar.add(
+            CuentaCobrar(
+              id_deuda: null,
+              fk_concepto: _conceptoSeleccionado,
+              descripcion: 'Consumo ${ciclo.descripcion}',
+              monto: monto,
+              estado: _estadoSeleccionado,
+              fk_ciclos: ciclo,
+              fk_inmueble: widget.inmueble,
+              saldo: monto,
+              pagado: 0.0,
+              fk_consumos: _consumoSeleccionado,
+            )
+          );
+        }
+      } else {
+        final saldo = widget.deuda?.saldo ?? monto;
+        final pagado = widget.deuda?.pagado ?? 0.0;
 
-      widget.onGuardar(deuda);
+        deudasAGuardar.add(
+          CuentaCobrar(
+            id_deuda: widget.deuda?.id_deuda,
+            fk_concepto: _conceptoSeleccionado,
+            descripcion: _descripcionController.text,
+            monto: monto,
+            estado: _estadoSeleccionado,
+            fk_ciclos: _ciclosSeleccionados.isNotEmpty ? _ciclosSeleccionados.first : null,
+            fk_inmueble: widget.inmueble,
+            saldo: saldo,
+            pagado: pagado,
+            fk_consumos: _consumoSeleccionado,
+          )
+        );
+      }
+
+      widget.onGuardar(deudasAGuardar);
     }
   }
 
