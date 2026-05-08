@@ -266,6 +266,7 @@ class TicketPrinterService {
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
       name: 'Ticket_Factura_$numeroFactura.pdf',
+      format: PdfPageFormat.roll80,
     );
   }
 }
