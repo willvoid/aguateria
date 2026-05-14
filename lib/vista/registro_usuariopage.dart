@@ -102,6 +102,7 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
     final AuthResponse res = await Supabase.instance.client.auth.signUp(
       email: _correoController.text.trim(),
       password: _claveController.text,
+      emailRedirectTo: 'https://aguateria-prueba4-xlo4.vercel.app/',
     );
 
     if (res.user == null) {
