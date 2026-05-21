@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/dao/configurations.dart';
 import 'package:myapp/dao/tipodoc_crudimpl.dart';
 import 'package:myapp/dao/usuariodao/cargocrudimpl.dart';
 import 'package:myapp/dao/usuariodao/usuariocrudimpl.dart';
@@ -25,7 +26,8 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
   final TextEditingController _correoController = TextEditingController();
   final TextEditingController _usuarioController = TextEditingController();
   final TextEditingController _claveController = TextEditingController();
-  final TextEditingController _confirmarClaveController = TextEditingController();
+  final TextEditingController _confirmarClaveController =
+      TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
 
   List<Cargo> cargos = [];
@@ -57,7 +59,9 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
         cargos = resultados[0] as List<Cargo>;
         tiposDocumento = resultados[1] as List<TipoDocumento>;
         _cargoSeleccionado = cargos.isNotEmpty ? cargos.first : null;
-        _tipoDocumentoSeleccionado = tiposDocumento.isNotEmpty ? tiposDocumento.first : null;
+        _tipoDocumentoSeleccionado = tiposDocumento.isNotEmpty
+            ? tiposDocumento.first
+            : null;
         _isDatosLoading = false;
       });
     } catch (e) {
@@ -67,92 +71,93 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
   }
 
   Future<void> _registrarUsuario() async {
-  if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  if (_cargoSeleccionado == null || _tipoDocumentoSeleccionado == null) {
-    _mostrarError('Por favor seleccione cargo y tipo de documento');
-    return;
-  }
-
-  if (_correoController.text.trim().isEmpty) {
-    _mostrarError('El correo electrónico es obligatorio para el registro');
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    // 1. Verificar duplicados en tu base de datos personalizada
-    final usernameExiste = await _usuarioCrud.verificarUsernameExistente(
-      _usuarioController.text.trim(),
-    );
-    if (usernameExiste) throw Exception('El nombre de usuario ya está en uso');
-
-    final documentoExiste = await _usuarioCrud.verificarDocumentoExistente(
-      _documentoController.text.trim(),
-    );
-    if (documentoExiste) throw Exception('El documento ya está registrado');
-
-    final correoExiste = await _usuarioCrud.verificarCorreoExistente(
-      _correoController.text.trim(),
-    );
-    if (correoExiste) throw Exception('El correo ya está registrado');
-
-    // 2. Registrar al usuario en auth.users (Supabase)
-    final AuthResponse res = await Supabase.instance.client.auth.signUp(
-      email: _correoController.text.trim(),
-      password: _claveController.text,
-      emailRedirectTo: 'https://aguateria-prueba4-xlo4.vercel.app/',
-    );
-
-    if (res.user == null) {
-      throw Exception('No se pudo crear el usuario en Autenticación');
+    if (_cargoSeleccionado == null || _tipoDocumentoSeleccionado == null) {
+      _mostrarError('Por favor seleccione cargo y tipo de documento');
+      return;
     }
 
-    // 3. Crear el usuario en tu tabla personalizada
-    final nuevoUsuario = Usuario(
-      // NOTA: Sería ideal guardar res.user!.id en tu modelo Usuario para enlazar ambas tablas
-      documento: _documentoController.text.trim(),
-      nombre: _nombreController.text.trim(),
-      correo: _correoController.text.trim(),
-      usuario: _usuarioController.text.trim(),
-      clave: _claveController.text,
-      fk_cargo: _cargoSeleccionado!,
-      fk_tipo_doc: _tipoDocumentoSeleccionado!,
-      telefono: _telefonoController.text.trim().isEmpty
-          ? null
-          : _telefonoController.text.trim(),
-    );
+    if (_correoController.text.trim().isEmpty) {
+      _mostrarError('El correo electrónico es obligatorio para el registro');
+      return;
+    }
 
-    final usuarioCreado = await _usuarioCrud.crearUsuario(nuevoUsuario);
+    setState(() => _isLoading = true);
 
-    setState(() => _isLoading = false);
-
-    if (usuarioCreado != null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Usuario registrado exitosamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } else {
-      // Opcional: Si falla la creación en tu tabla, deberías borrar el usuario
-      // de Auth para evitar inconsistencias
-      throw Exception(
-        'Usuario creado en Auth, pero falló en la base de datos local',
+    try {
+      // 1. Verificar duplicados en tu base de datos personalizada
+      final usernameExiste = await _usuarioCrud.verificarUsernameExistente(
+        _usuarioController.text.trim(),
       );
+      if (usernameExiste)
+        throw Exception('El nombre de usuario ya está en uso');
+
+      final documentoExiste = await _usuarioCrud.verificarDocumentoExistente(
+        _documentoController.text.trim(),
+      );
+      if (documentoExiste) throw Exception('El documento ya está registrado');
+
+      final correoExiste = await _usuarioCrud.verificarCorreoExistente(
+        _correoController.text.trim(),
+      );
+      if (correoExiste) throw Exception('El correo ya está registrado');
+
+      // 2. Registrar al usuario en auth.users (Supabase)
+      final AuthResponse res = await Supabase.instance.client.auth.signUp(
+        email: _correoController.text.trim(),
+        password: _claveController.text,
+        emailRedirectTo: Configurations.mSiteUrl,
+      );
+
+      if (res.user == null) {
+        throw Exception('No se pudo crear el usuario en Autenticación');
+      }
+
+      // 3. Crear el usuario en tu tabla personalizada
+      final nuevoUsuario = Usuario(
+        // NOTA: Sería ideal guardar res.user!.id en tu modelo Usuario para enlazar ambas tablas
+        documento: _documentoController.text.trim(),
+        nombre: _nombreController.text.trim(),
+        correo: _correoController.text.trim(),
+        usuario: _usuarioController.text.trim(),
+        clave: _claveController.text,
+        fk_cargo: _cargoSeleccionado!,
+        fk_tipo_doc: _tipoDocumentoSeleccionado!,
+        telefono: _telefonoController.text.trim().isEmpty
+            ? null
+            : _telefonoController.text.trim(),
+      );
+
+      final usuarioCreado = await _usuarioCrud.crearUsuario(nuevoUsuario);
+
+      setState(() => _isLoading = false);
+
+      if (usuarioCreado != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Usuario registrado exitosamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        // Opcional: Si falla la creación en tu tabla, deberías borrar el usuario
+        // de Auth para evitar inconsistencias
+        throw Exception(
+          'Usuario creado en Auth, pero falló en la base de datos local',
+        );
+      }
+    } on AuthException catch (e) {
+      setState(() => _isLoading = false);
+      _mostrarError('Error de Autenticación: ${e.message}');
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _mostrarError(e.toString().replaceAll('Exception: ', ''));
     }
-  } on AuthException catch (e) {
-    setState(() => _isLoading = false);
-    _mostrarError('Error de Autenticación: ${e.message}');
-  } catch (e) {
-    setState(() => _isLoading = false);
-    _mostrarError(e.toString().replaceAll('Exception: ', ''));
   }
-}
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -207,7 +212,10 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                           child: Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                                icon: const Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
+                                ),
                                 onPressed: () => Navigator.pop(context),
                               ),
                               const SizedBox(width: 12),
@@ -251,8 +259,9 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                 label: 'Nombre Completo *',
                                 hint: 'Ingrese su nombre completo',
                                 icon: Icons.person_outline,
-                                validator: (value) =>
-                                    value?.isEmpty ?? true ? 'Campo requerido' : null,
+                                validator: (value) => value?.isEmpty ?? true
+                                    ? 'Campo requerido'
+                                    : null,
                               ),
                               const SizedBox(height: 16),
 
@@ -263,9 +272,12 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                       label: 'Tipo Documento *',
                                       value: _tipoDocumentoSeleccionado,
                                       items: tiposDocumento,
-                                      onChanged: (value) =>
-                                          setState(() => _tipoDocumentoSeleccionado = value),
-                                      itemLabel: (item) => item.descripcion_tipodoc,
+                                      onChanged: (value) => setState(
+                                        () =>
+                                            _tipoDocumentoSeleccionado = value,
+                                      ),
+                                      itemLabel: (item) =>
+                                          item.descripcion_tipodoc,
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -276,7 +288,9 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                       hint: 'Ingrese su documento',
                                       icon: Icons.badge_outlined,
                                       validator: (value) =>
-                                          value?.isEmpty ?? true ? 'Campo requerido' : null,
+                                          value?.isEmpty ?? true
+                                          ? 'Campo requerido'
+                                          : null,
                                     ),
                                   ),
                                 ],
@@ -293,7 +307,8 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                       icon: Icons.email_outlined,
                                       validator: (value) {
                                         if (value != null && value.isNotEmpty) {
-                                          if (!value.contains('@') || !value.contains('.')) {
+                                          if (!value.contains('@') ||
+                                              !value.contains('.')) {
                                             return 'Email inválido';
                                           }
                                         }
@@ -318,7 +333,8 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                 label: 'Cargo *',
                                 value: _cargoSeleccionado,
                                 items: cargos,
-                                onChanged: (value) => setState(() => _cargoSeleccionado = value),
+                                onChanged: (value) =>
+                                    setState(() => _cargoSeleccionado = value),
                                 itemLabel: (item) => item.nombre,
                               ),
                               const SizedBox(height: 24),
@@ -333,7 +349,8 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                 hint: 'Ingrese su usuario',
                                 icon: Icons.account_circle_outlined,
                                 validator: (value) {
-                                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                                  if (value?.isEmpty ?? true)
+                                    return 'Campo requerido';
                                   if (value!.length < 4) {
                                     return 'Mínimo 4 caracteres';
                                   }
@@ -356,11 +373,15 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                     size: 20,
                                   ),
                                   onPressed: () {
-                                    setState(() => _obscurePassword = !_obscurePassword);
+                                    setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    );
                                   },
                                 ),
                                 validator: (value) {
-                                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                                  if (value?.isEmpty ?? true)
+                                    return 'Campo requerido';
                                   if (value!.length < 6) {
                                     return 'Mínimo 6 caracteres';
                                   }
@@ -383,12 +404,15 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                     size: 20,
                                   ),
                                   onPressed: () {
-                                    setState(() =>
-                                        _obscureConfirmPassword = !_obscureConfirmPassword);
+                                    setState(
+                                      () => _obscureConfirmPassword =
+                                          !_obscureConfirmPassword,
+                                    );
                                   },
                                 ),
                                 validator: (value) {
-                                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                                  if (value?.isEmpty ?? true)
+                                    return 'Campo requerido';
                                   if (value != _claveController.text) {
                                     return 'Las contraseñas no coinciden';
                                   }
@@ -399,11 +423,15 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
 
                               // Botón Registrar
                               ElevatedButton(
-                                onPressed: _isLoading ? null : _registrarUsuario,
+                                onPressed: _isLoading
+                                    ? null
+                                    : _registrarUsuario,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF0085FF),
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -416,7 +444,9 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                           valueColor:
-                                              AlwaysStoppedAnimation<Color>(Colors.white),
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
                                         ),
                                       )
                                     : const Text(
@@ -547,10 +577,12 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
         DropdownButtonFormField<T>(
           value: value,
           items: items
-              .map((item) => DropdownMenuItem<T>(
-                    value: item,
-                    child: Text(itemLabel(item)),
-                  ))
+              .map(
+                (item) => DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(itemLabel(item)),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
