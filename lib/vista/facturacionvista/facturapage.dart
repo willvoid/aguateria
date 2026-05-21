@@ -192,6 +192,13 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     });
   }
 
+  void _eliminarDetalle(int index) {
+    setState(() {
+      _detalles.removeAt(index);
+      _calcularTotales();
+    });
+  }
+
   void _calcularTotales() {
     double totalGravado10 = 0;
     double totalGravado5 = 0;
@@ -222,6 +229,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
       _totalIVA = totalIVA;
       _totalGeneral = totalGravado10 + totalGravado5 + totalExenta + totalIVA;
     });
+    _calcularVuelto();
   }
 
   void _calcularVuelto() {
@@ -678,6 +686,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                       DetalleFacturaWidget(
                         key: _detalleWidgetKey,
                         onDetalleAgregado: _agregarDetalle,
+                        onDetalleEliminado: _eliminarDetalle,
                         detallesActuales: _detalles,
                         inmuebleSeleccionado: _inmuebleSeleccionado, // ← FIX
                       ),

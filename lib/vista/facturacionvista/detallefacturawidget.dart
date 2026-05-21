@@ -12,12 +12,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DetalleFacturaWidget extends StatefulWidget {
   final Function(DetalleFactura) onDetalleAgregado;
+  final Function(int) onDetalleEliminado;
   final List<DetalleFactura> detallesActuales;
   final Inmuebles? inmuebleSeleccionado;
 
   const DetalleFacturaWidget({
     Key? key,
     required this.onDetalleAgregado,
+    required this.onDetalleEliminado,
     required this.detallesActuales,
     this.inmuebleSeleccionado,
   }) : super(key: key);
@@ -359,6 +361,84 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     );
   }
 
+  Future<void> _confirmarEliminacion(BuildContext context, int index, String descripcion) async {
+    final verificado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.delete_forever_rounded,
+                color: Colors.red.shade600,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Confirmar eliminación',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '¿Está seguro de que desea eliminar el ítem "$descripcion" de la factura?',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  child: Text(
+                    'Cancelar',
+                    style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Eliminar', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (verificado == true) {
+      widget.onDetalleEliminado(index);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -593,12 +673,23 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                             ),
                         ],
                       ),
-                      trailing: Text(
-                        '${detalle.subtotal.toStringAsFixed(0)} Gs.',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${detalle.subtotal.toStringAsFixed(0)} Gs.',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                            tooltip: 'Eliminar ítem',
+                            onPressed: () => _confirmarEliminacion(context, index, detalle.descripcion),
+                          ),
+                        ],
                       ),
                     ),
                   );
