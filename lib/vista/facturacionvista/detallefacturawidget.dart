@@ -6,7 +6,7 @@ import 'package:myapp/modelo/facturacionmodelo/detalle_factura.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/inmuebles.dart';
-import 'package:myapp/widget/autocomplete_ciclos.dart';
+import 'package:myapp/widget/selector_ciclos_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -36,7 +36,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
   List<Concepto> _conceptos = [];
   List<Ciclo> _ciclos = [];
   Concepto? _conceptoSeleccionado;
-  Ciclo? _cicloSeleccionado;
+  List<Ciclo> _ciclosSeleccionados = [];
 
   final TextEditingController _cantidadController =
       TextEditingController(text: '1');
@@ -62,7 +62,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.inmuebleSeleccionado?.id != widget.inmuebleSeleccionado?.id &&
         _esConsumo) {
-      _cicloSeleccionado = null;
+      _ciclosSeleccionados = [];
       _cargarCiclosFiltrados();
     }
   }
@@ -84,9 +84,16 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
   Future<void> _cargarCiclosFiltrados() async {
     final idInmueble = widget.inmuebleSeleccionado?.id;
 
+    // Ciclos ya agregados en el formulario actual (aún no guardados en BD).
+    final Set<int?> ciclosEnFormulario = widget.detallesActuales
+        .where((d) => d.fk_ciclo != null)
+        .map((d) => d.fk_ciclo!.id)
+        .toSet();
+
     if (idInmueble == null) {
       final ciclos = await _cicloCrud.leerCiclos();
-      setState(() => _ciclos = ciclos);
+      setState(() => _ciclos =
+          ciclos.where((c) => !ciclosEnFormulario.contains(c.id)).toList());
       return;
     }
 
@@ -108,20 +115,40 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
           .eq('fk_concepto', 1)
           .not('fk_ciclo', 'is', null);
 
-      if ((detallesResponse as List).isEmpty) {
-        setState(() => _ciclos = ciclos);
-        return;
-      }
-
-      final Set<int> ciclosPagados =
-          detallesResponse.map((d) => d['fk_ciclo'] as int).toSet();
+      final Set<int> ciclosPagados = (detallesResponse as List)
+          .map((d) => d['fk_ciclo'] as int)
+          .toSet();
 
       setState(() {
-        _ciclos = ciclos.where((c) => !ciclosPagados.contains(c.id)).toList();
+        _ciclos = ciclos
+            .where((c) =>
+                !ciclosPagados.contains(c.id) &&
+                !ciclosEnFormulario.contains(c.id))
+            .toList();
       });
     } catch (e) {
       _mostrarError('Error al cargar ciclos: $e');
     }
+  }
+
+  Future<void> _abrirSelectorCiclos() async {
+    if (_ciclos.isEmpty) {
+      _mostrarError('No hay ciclos pendientes para este inmueble');
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (_) => SelectorCiclosDialog(
+        ciclosDisponibles: _ciclos,
+        ciclosSeleccionados: _ciclosSeleccionados,
+        montoPorCiclo: _conceptoSeleccionado?.arancel ?? 0,
+        onCiclosSeleccionados: (ciclos) {
+          setState(() => _ciclosSeleccionados = ciclos);
+          _calcularSubtotal();
+        },
+      ),
+    );
   }
 
   // ── NUEVO: consulta el saldo pendiente de conexión del inmueble ──────────────
@@ -152,8 +179,10 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
   }
 
   void _calcularSubtotal() {
-    final cantidad = double.tryParse(_cantidadController.text) ?? 0;
     final monto = double.tryParse(_montoController.text) ?? 0;
+    final cantidad = _esConsumo
+        ? _ciclosSeleccionados.length.toDouble()
+        : double.tryParse(_cantidadController.text) ?? 0;
     setState(() {
       _subtotal = cantidad * monto;
     });
@@ -285,20 +314,38 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
       return;
     }
 
-    if (_esConsumo && _cicloSeleccionado == null) {
-      _mostrarError('Debe seleccionar un ciclo para el consumo');
-      return;
-    }
-
-    // Validación: ciclo duplicado
-    if (_esConsumo && _cicloSeleccionado != null) {
-      final cicloYaExiste = widget.detallesActuales.any(
-        (d) => d.fk_ciclo?.id == _cicloSeleccionado!.id,
-      );
-      if (cicloYaExiste) {
-        _mostrarError('El ciclo "${_cicloSeleccionado!.ciclo}" ya fue agregado');
+    if (_esConsumo) {
+      if (_ciclosSeleccionados.isEmpty) {
+        _mostrarError('Debe seleccionar al menos un ciclo para el consumo');
         return;
       }
+
+      // Validación: ciclo duplicado
+      final ciclosYaExistentes = _ciclosSeleccionados
+          .where((ciclo) => widget.detallesActuales
+              .any((d) => d.fk_ciclo?.id == ciclo.id))
+          .toList();
+      if (ciclosYaExistentes.isNotEmpty) {
+        final nombres = ciclosYaExistentes.map((c) => c.ciclo).join(', ');
+        _mostrarError('El/los ciclo(s) "$nombres" ya fueron agregados');
+        return;
+      }
+
+      final precioUnitario = double.parse(_montoController.text);
+      for (final ciclo in _ciclosSeleccionados) {
+        widget.onDetalleAgregado(DetalleFactura(
+          fk_concepto: _conceptoSeleccionado!,
+          monto: precioUnitario,
+          descripcion: 'Consumo ${ciclo.descripcion}',
+          iva_aplicado: _ivaAplicado,
+          subtotal: precioUnitario,
+          estado: 'ACTIVO',
+          cantidad: 1,
+          fk_ciclo: ciclo,
+        ));
+      }
+      _limpiarFormulario();
+      return;
     }
 
     // ── NUEVO: validación de saldo para concepto Conexión (id=2) ────────────
@@ -334,7 +381,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
       subtotal: cantidad * precioUnitario,
       estado: 'ACTIVO',
       cantidad: cantidad,
-      fk_ciclo: _esConsumo ? _cicloSeleccionado : null,
+      fk_ciclo: null,
     );
 
     widget.onDetalleAgregado(detalle);
@@ -347,7 +394,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     _descripcionController.clear();
     setState(() {
       _conceptoSeleccionado = null;
-      _cicloSeleccionado = null;
+      _ciclosSeleccionados = [];
       _ivaAplicado = 10;
       _subtotal = 0;
       _esConsumo = false;
@@ -470,7 +517,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                     child: Text(concepto.nombre),
                   );
                 }).toList(),
-                onChanged: (concepto) {
+                onChanged: (concepto) async {
                   setState(() {
                     _conceptoSeleccionado = concepto;
                     if (concepto != null) {
@@ -481,64 +528,80 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                       _esConsumo = concepto.id == 1;
                       _esConexion = concepto.id == 2; // ← NUEVO
                       if (!_esConsumo) {
-                        _cicloSeleccionado = null;
+                        _ciclosSeleccionados = [];
                         _ciclos = [];
-                      } else {
-                        _cargarCiclosFiltrados();
                       }
                     }
                   });
+
+                  if (concepto != null && _esConsumo) {
+                    await _cargarCiclosFiltrados();
+                    if (!mounted) return;
+                    await _abrirSelectorCiclos();
+                  }
                 },
                 validator: (value) =>
                     value == null ? 'Seleccione un concepto' : null,
               ),
               const SizedBox(height: 12),
 
-              // Ciclo (solo visible si es consumo)
+              // Ciclos (solo visible si es consumo)
               if (_esConsumo) ...[
-                CicloAutocomplete(
-                  ciclos: _ciclos,
-                  onSeleccionado: (ciclo) {
-                    setState(() {
-                      _cicloSeleccionado = ciclo;
-                      _descripcionController.text = 'Consumo ${ciclo.descripcion}';
-                    });
-                  },
-                  validator: (_) => _esConsumo && _cicloSeleccionado == null
-                      ? 'Debe seleccionar un ciclo'
-                      : null,
+                InkWell(
+                  onTap: _abrirSelectorCiclos,
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Ciclos *',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.event_repeat),
+                      suffixIcon: const Icon(Icons.arrow_drop_down),
+                      errorText: _ciclosSeleccionados.isEmpty
+                          ? 'Debe seleccionar al menos un ciclo'
+                          : null,
+                    ),
+                    child: Text(
+                      _ciclosSeleccionados.isEmpty
+                          ? 'Ningún ciclo seleccionado'
+                          : '${_ciclosSeleccionados.length} ciclo(s): '
+                              '${_ciclosSeleccionados.map((c) => c.ciclo).join(', ')}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
               ],
 
-              // Cantidad y Monto
+              // Cantidad y Monto (la Cantidad no aplica a Consumo: la da la
+              // cantidad de ciclos seleccionados)
               Row(
                 children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _cantidadController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Cantidad *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.numbers),
+                  if (!_esConsumo) ...[
+                    Expanded(
+                      child: TextFormField(
+                        controller: _cantidadController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d*')),
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: 'Cantidad *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.numbers),
+                        ),
+                        validator: (value) {
+                          if (value?.isEmpty ?? true) return 'Campo requerido';
+                          final cantidad = double.tryParse(value!);
+                          if (cantidad == null) return 'Solo se permiten números';
+                          if (cantidad <= 0)
+                            return 'La cantidad debe ser mayor a 0';
+                          return null;
+                        },
                       ),
-                      validator: (value) {
-                        if (value?.isEmpty ?? true) return 'Campo requerido';
-                        final cantidad = double.tryParse(value!);
-                        if (cantidad == null) return 'Solo se permiten números';
-                        if (cantidad <= 0)
-                          return 'La cantidad debe ser mayor a 0';
-                        return null;
-                      },
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: TextFormField(
                       controller: _montoController,
