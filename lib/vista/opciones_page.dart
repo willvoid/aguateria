@@ -11,6 +11,7 @@ import 'package:myapp/modelo/empresa/establecimiento.dart';
 import 'package:myapp/modelo/facturacionmodelo/moneda.dart';
 import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:myapp/modelo/facturacionmodelo/tipo_factura.dart';
+import 'package:myapp/widget/impresora_termica_card.dart';
 
 class OpcionesPage extends StatefulWidget {
   const OpcionesPage({Key? key}) : super(key: key);
@@ -344,6 +345,9 @@ class _ConfiguracionSistemaTabState extends State<_ConfiguracionSistemaTab> {
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+
+              const ImpresoraTermicaCard(),
               const SizedBox(height: 24),
 
               // Botón Guardar
