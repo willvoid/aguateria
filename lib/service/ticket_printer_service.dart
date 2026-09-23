@@ -3,9 +3,69 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:myapp/service/thermal_printer_service.dart';
+
+/// Datos ya procesados de un ticket, independientes del medio de impresión.
+class TicketData {
+  final String razonSocial;
+  final String telefono;
+  final String direccionCompleta;
+  final String ciudad;
+  final String rucEmisor;
+  final String timbrado;
+  final String timbradoFechaFmt;
+  final String numeroFactura;
+  final DateTime fecha;
+  final String rucCliente;
+  final String nombreCliente;
+  final List items;
+  final double totalAbono;
+  final double totalExenta;
+  final double totalIva5;
+  final double totalIva10;
+  final double montoIva5;
+  final double montoIva10;
+  final double importeTotalIva;
+
+  const TicketData({
+    required this.razonSocial,
+    required this.telefono,
+    required this.direccionCompleta,
+    required this.ciudad,
+    required this.rucEmisor,
+    required this.timbrado,
+    required this.timbradoFechaFmt,
+    required this.numeroFactura,
+    required this.fecha,
+    required this.rucCliente,
+    required this.nombreCliente,
+    required this.items,
+    required this.totalAbono,
+    required this.totalExenta,
+    required this.totalIva5,
+    required this.totalIva10,
+    required this.montoIva5,
+    required this.montoIva10,
+    required this.importeTotalIva,
+  });
+}
 
 class TicketPrinterService {
+  /// Imprime directo por Bluetooth si hay una impresora térmica configurada
+  /// (Android); en caso contrario abre el diálogo de impresión con un PDF.
   static Future<void> imprimirTicket(int idFactura) async {
+    final ticket = await obtenerTicket(idFactura);
+    if (ThermalPrinterService.disponible) {
+      final impresora = await ThermalPrinterService.impresoraGuardada();
+      if (impresora != null) {
+        await ThermalPrinterService.imprimir(ticket, impresora);
+        return;
+      }
+    }
+    await _imprimirPdf(ticket);
+  }
+
+  static Future<TicketData> obtenerTicket(int idFactura) async {
     // 1. Obtener JSON desde la BD
     final response = await Supabase.instance.client.rpc(
       'get_factura_json_sifen',
@@ -84,6 +144,50 @@ class TicketPrinterService {
     final montoIva5 = totalIva5 / 21;
     final montoIva10 = totalIva10 / 11;
     final importeTotalIva = montoIva5 + montoIva10;
+
+    return TicketData(
+      razonSocial: razonSocial.toString(),
+      telefono: telefono.toString(),
+      direccionCompleta: direccionCompleta.toString(),
+      ciudad: ciudad.toString(),
+      rucEmisor: rucEmisor.toString(),
+      timbrado: timbrado.toString(),
+      timbradoFechaFmt: timbradoFechaFmt.toString(),
+      numeroFactura: numeroFactura,
+      fecha: fecha,
+      rucCliente: rucCliente.toString(),
+      nombreCliente: nombreCliente.toString(),
+      items: items,
+      totalAbono: totalAbono,
+      totalExenta: totalExenta,
+      totalIva5: totalIva5,
+      totalIva10: totalIva10,
+      montoIva5: montoIva5,
+      montoIva10: montoIva10,
+      importeTotalIva: importeTotalIva,
+    );
+  }
+
+  static Future<void> _imprimirPdf(TicketData t) async {
+    final razonSocial = t.razonSocial;
+    final telefono = t.telefono;
+    final direccionCompleta = t.direccionCompleta;
+    final ciudad = t.ciudad;
+    final rucEmisor = t.rucEmisor;
+    final timbrado = t.timbrado;
+    final timbradoFechaFmt = t.timbradoFechaFmt;
+    final numeroFactura = t.numeroFactura;
+    final fecha = t.fecha;
+    final rucCliente = t.rucCliente;
+    final nombreCliente = t.nombreCliente;
+    final items = t.items;
+    final totalAbono = t.totalAbono;
+    final totalExenta = t.totalExenta;
+    final totalIva5 = t.totalIva5;
+    final totalIva10 = t.totalIva10;
+    final montoIva5 = t.montoIva5;
+    final montoIva10 = t.montoIva10;
+    final importeTotalIva = t.importeTotalIva;
 
     final formatMoneda = NumberFormat.currency(locale: 'es_PY', symbol: '', decimalDigits: 0);
 
