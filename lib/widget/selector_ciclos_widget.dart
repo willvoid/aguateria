@@ -454,16 +454,22 @@ class _CicloItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Checkbox(
-                  value: isSelected,
-                  onChanged: (_) => onToggle(),
-                  activeColor: Colors.blue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
+                Transform.scale(
+                  scale: 0.9,
+                  child: Checkbox(
+                    value: isSelected,
+                    onChanged: (_) => onToggle(),
+                    activeColor: Colors.blue,
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -473,13 +479,16 @@ class _CicloItem extends StatelessWidget {
                           Expanded(
                             child: Text(
                               ciclo.descripcion,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
                             ),
                           ),
-                          if (isVencido)
+                          if (isVencido) ...[
+                            const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 2),
@@ -496,68 +505,48 @@ class _CicloItem extends StatelessWidget {
                                 ),
                               ),
                             ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Row(
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Icon(Icons.water_drop,
-                              size: 14, color: Colors.grey.shade600),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Mes: ${ciclo.ciclo}',
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade600),
+                          _MetaInfo(
+                            icon: Icons.water_drop,
+                            text: 'Mes: ${ciclo.ciclo}',
                           ),
-                          const SizedBox(width: 12),
-                          Icon(Icons.calendar_today,
-                              size: 14, color: Colors.grey.shade600),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Año: ${ciclo.anio}',
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade600),
+                          _MetaInfo(
+                            icon: Icons.calendar_today,
+                            text: 'Año: ${ciclo.anio}',
                           ),
-                        ],
-                      ),
-                      if (ciclo.vencimiento != null) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.event,
-                              size: 14,
+                          if (ciclo.vencimiento != null)
+                            _MetaInfo(
+                              icon: Icons.event,
+                              text:
+                                  'Vence: ${ciclo.vencimiento.toString().split(' ')[0]}',
                               color: isVencido
                                   ? Colors.red.shade700
                                   : Colors.grey.shade600,
+                              bold: isVencido,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Vence: ${ciclo.vencimiento.toString().split(' ')[0]}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isVencido
-                                    ? Colors.red.shade700
-                                    : Colors.grey.shade600,
-                                fontWeight: isVencido
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${montoPorCiclo.toStringAsFixed(0)}',
+                      montoPorCiclo.toStringAsFixed(0),
+                      textAlign: TextAlign.right,
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: isSelected
                             ? Colors.blue
@@ -567,7 +556,7 @@ class _CicloItem extends StatelessWidget {
                     Text(
                       'Gs.',
                       style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
+                          fontSize: 11, color: Colors.grey.shade600),
                     ),
                   ],
                 ),
@@ -576,6 +565,40 @@ class _CicloItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MetaInfo extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color? color;
+  final bool bold;
+
+  const _MetaInfo({
+    required this.icon,
+    required this.text,
+    this.color,
+    this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedColor = color ?? Colors.grey.shade600;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: resolvedColor),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: resolvedColor,
+            fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ],
     );
   }
 }
