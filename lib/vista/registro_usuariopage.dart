@@ -129,13 +129,31 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
 
     if (usuarioCreado != null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Usuario registrado exitosamente'),
-            backgroundColor: Colors.green,
+        // Si Supabase no devuelve una sesión activa, el correo debe confirmarse
+        // antes de poder iniciar sesión (dependiendo de "Confirm email" en el proyecto).
+        final requiereConfirmacion = res.session == null;
+
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Usuario registrado'),
+            content: Text(
+              requiereConfirmacion
+                  ? 'Te enviamos un correo de verificación a '
+                      '${_correoController.text.trim()}. Debes confirmarlo '
+                      'antes de poder iniciar sesión.'
+                  : 'La cuenta se creó exitosamente.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Entendido'),
+              ),
+            ],
           ),
         );
-        Navigator.pop(context);
+
+        if (mounted) Navigator.pop(context);
       }
     } else {
       // Opcional: Si falla la creación en tu tabla, deberías borrar el usuario

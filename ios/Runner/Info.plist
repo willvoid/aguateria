@@ -45,5 +45,19 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Deep link usado por Supabase Auth para volver a la app tras
+	     confirmar el correo, iniciar sesión con Google o restablecer
+	     la contraseña (redirectTo: com.example.myapp://login-callback) -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.example.myapp</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.example.myapp</string>
+		</dict>
+	</array>
 </dict>
 </plist>
