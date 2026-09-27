@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
 import 'package:myapp/vista/dashboard_clientes/consulta_clientes.dart';
@@ -32,17 +33,27 @@ void main() async {
     }
   });
 
+  // En web, Supabase puede procesar la sesión de recuperación contenida en la
+  // URL de forma síncrona durante initialize(), antes de que el listener de
+  // arriba alcance a suscribirse (el evento se pierde). Como respaldo,
+  // revisamos la URL con la que arrancó la pestaña: si trae type=recovery,
+  // abrimos la app directamente en la pantalla de nueva contraseña.
+  final abrioParaRecuperarContrasena =
+      kIsWeb && Uri.base.queryParameters['type'] == 'recovery';
+
   runApp(
     // Envolver la app con Provider
     ChangeNotifierProvider(
       create: (_) => AuthProvider(),
-      child: const MyApp(),
+      child: MyApp(mostrarResetPasswordAlInicio: abrioParaRecuperarContrasena),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool mostrarResetPasswordAlInicio;
+
+  const MyApp({super.key, this.mostrarResetPasswordAlInicio = false});
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +67,9 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const SplashScreen(), // Cambiar a SplashScreen
+      home: mostrarResetPasswordAlInicio
+          ? const ResetPasswordPage()
+          : const SplashScreen(),
     );
   }
 }

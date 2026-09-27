@@ -83,6 +83,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     _restaurarSesionPendiente();
 
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      // Una sesión de recuperación de contraseña no es un login de cliente:
+      // se maneja aparte en main.dart, que navega a ResetPasswordPage.
+      if (data.event == AuthChangeEvent.passwordRecovery) return;
+
       final session = data.session;
       if (session != null && mounted) {
         final user = session.user;

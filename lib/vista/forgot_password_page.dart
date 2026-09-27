@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -15,7 +16,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   bool _isLoading = false;
   bool _correoEnviado = false;
 
-  static const String _redirectTo = 'com.example.myapp://login-callback';
+  // Debe coincidir con el redirectTo usado en consulta_clientes.dart para el
+  // login con Google, así reutiliza la misma Redirect URL ya permitida en
+  // el dashboard de Supabase.
+  String get _redirectTo => kIsWeb
+      ? 'https://aguateria-prueba4.netlify.app'
+      : 'com.example.myapp://login-callback';
 
   Future<void> _enviarCorreoRecuperacion() async {
     if (!_formKey.currentState!.validate()) return;
