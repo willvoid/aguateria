@@ -9,6 +9,7 @@ import 'package:myapp/modelo/empresa/tipo_contribuyente.dart';
 import 'package:myapp/modelo/empresa/tipo_regimen.dart';
 import 'package:myapp/modelo/empresa/actividad_economica.dart';
 import 'package:myapp/modelo/empresa/actividad_empresa.dart';
+import 'package:myapp/widget/crud_list_view.dart';
 
 class DatoEmpresaPage extends StatefulWidget {
   const DatoEmpresaPage({Key? key}) : super(key: key);
@@ -233,144 +234,107 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por RUC, razón social o nombre fantasía...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: CrudListView<DatoEmpresa>(
+        items: empresasFiltradas,
+        isLoading: _isLoading,
+        emptyIcon: Icons.business_outlined,
+        emptyText: 'No hay empresas para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por RUC, razón social o nombre fantasía...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: empresas.isNotEmpty
-                    ? null  // ← Deshabilitado si ya existe una empresa
-                    : () {
-                        _mostrarDialogoEdicion(null);
-                      },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Empresa'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey.shade300,  // ← Color cuando está deshabilitado
-                  disabledForegroundColor: Colors.grey.shade500,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: empresas.isNotEmpty
+                  ? null  // ← Deshabilitado si ya existe una empresa
+                  : () {
+                      _mostrarDialogoEdicion(null);
+                    },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Agregar Empresa'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey.shade300,  // ← Color cuando está deshabilitado
+                disabledForegroundColor: Colors.grey.shade500,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _cargarDatos,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Recargar',
+            ),
+          ],
+        ),
+        columns: [
+          CrudColumn<DatoEmpresa>(
+            label: 'ID',
+            cellBuilder: (empresa) => Text('${empresa.id_empresa}'),
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
+          CrudColumn<DatoEmpresa>(
+            label: 'RUC',
+            cellBuilder: (empresa) => Text(empresa.ruc),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Razón Social',
+            isTitle: true,
+            cellBuilder: (empresa) => Text(empresa.razon_social),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Nombre Fantasía',
+            isSubtitle: true,
+            cellBuilder: (empresa) => Text(empresa.nombre_fantasia),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Tipo Contribuyente',
+            cellBuilder: (empresa) => Text(empresa.fk_contribuyente.descripcion),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Tipo Régimen',
+            cellBuilder: (empresa) => Text(empresa.fk_regimen.descripcion),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Estado',
+            cellBuilder: (empresa) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                color: empresa.estado == 'ACTIVO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : empresasFiltradas.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.business_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay empresas para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('RUC')),
-                                DataColumn(label: Text('Razón Social')),
-                                DataColumn(label: Text('Nombre Fantasía')),
-                                DataColumn(label: Text('Tipo Contribuyente')),
-                                DataColumn(label: Text('Tipo Régimen')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: empresasFiltradas.map((empresa) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${empresa.id_empresa}')),
-                                    DataCell(Text(empresa.ruc)),
-                                    DataCell(Text(empresa.razon_social)),
-                                    DataCell(Text(empresa.nombre_fantasia)),
-                                    DataCell(Text(empresa.fk_contribuyente.descripcion)),
-                                    DataCell(Text(empresa.fk_regimen.descripcion)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: empresa.estado == 'ACTIVO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          empresa.estado,
-                                          style: TextStyle(
-                                            color: empresa.estado == 'ACTIVO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(empresa),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              child: Text(
+                empresa.estado,
+                style: TextStyle(
+                  color: empresa.estado == 'ACTIVO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],

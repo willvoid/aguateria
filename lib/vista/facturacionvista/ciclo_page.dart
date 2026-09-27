@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/facturaciondao/ciclocrudimpl.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
+import 'package:myapp/widget/crud_list_view.dart';
 
 class CiclosPage extends StatefulWidget {
   const CiclosPage({Key? key}) : super(key: key);
@@ -173,150 +174,110 @@ class _CiclosPageState extends State<CiclosPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por ciclo, descripción o año...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: CrudListView<Ciclo>(
+        items: ciclosFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.calendar_today_outlined,
+        emptyText: 'No hay ciclos para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por ciclo, descripción o año...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Ciclo'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                _mostrarDialogoEdicion(null);
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Agregar Ciclo'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _cargarDatos,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Recargar',
+            ),
+          ],
+        ),
+        columns: [
+          CrudColumn<Ciclo>(
+            label: 'ID',
+            cellBuilder: (ciclo) => Text('${ciclo.id}'),
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
+          CrudColumn<Ciclo>(
+            label: 'Ciclo',
+            isTitle: true,
+            cellBuilder: (ciclo) => Text(ciclo.ciclo),
+          ),
+          CrudColumn<Ciclo>(
+            label: 'Descripción',
+            isSubtitle: true,
+            cellBuilder: (ciclo) => SizedBox(
+              width: 150,
+              child: Text(ciclo.descripcion, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Ciclo>(
+            label: 'Año',
+            cellBuilder: (ciclo) => Text('${ciclo.anio}'),
+          ),
+          CrudColumn<Ciclo>(
+            label: 'Fecha Inicio',
+            cellBuilder: (ciclo) => Text(_formatearFecha(ciclo.inicio)),
+          ),
+          CrudColumn<Ciclo>(
+            label: 'Fecha Fin',
+            cellBuilder: (ciclo) => Text(_formatearFecha(ciclo.fin)),
+          ),
+          CrudColumn<Ciclo>(
+            label: 'Vencimiento',
+            cellBuilder: (ciclo) => Text(_formatearFecha(ciclo.vencimiento)),
+          ),
+          CrudColumn<Ciclo>(
+            label: 'Estado',
+            cellBuilder: (ciclo) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                color: ciclo.estado == 'ACTIVO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ciclosFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay ciclos para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Ciclo')),
-                                DataColumn(label: Text('Descripción')),
-                                DataColumn(label: Text('Año')),
-                                DataColumn(label: Text('Fecha Inicio')),
-                                DataColumn(label: Text('Fecha Fin')),
-                                DataColumn(label: Text('Vencimiento')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: ciclosFiltrados.map((ciclo) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${ciclo.id}')),
-                                    DataCell(Text(ciclo.ciclo)),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          ciclo.descripcion,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(Text('${ciclo.anio}')),
-                                    DataCell(Text(_formatearFecha(ciclo.inicio))),
-                                    DataCell(Text(_formatearFecha(ciclo.fin))),
-                                    DataCell(Text(_formatearFecha(ciclo.vencimiento))),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: ciclo.estado == 'ACTIVO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          ciclo.estado,
-                                          style: TextStyle(
-                                            color: ciclo.estado == 'ACTIVO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(ciclo),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              child: Text(
+                ciclo.estado,
+                style: TextStyle(
+                  color: ciclo.estado == 'ACTIVO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],

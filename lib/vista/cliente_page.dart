@@ -9,6 +9,7 @@ import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/empresa/tipo_contribuyente.dart';
 import 'package:myapp/modelo/tipo_operacion.dart';
+import 'package:myapp/widget/crud_list_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ClientesPage extends StatefulWidget {
@@ -212,145 +213,97 @@ class _ClientesPageState extends State<ClientesPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por nombre, documento o celular...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+      child: CrudListView<Cliente>(
+        items: clientesFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.people_outline,
+        emptyText: 'No hay clientes para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre, documento o celular...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () => _mostrarDialogoEdicion(null),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Cliente'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: () => _mostrarDialogoEdicion(null),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Agregar Cliente'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _cargarDatos,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Recargar',
+            ),
+          ],
+        ),
+        columns: [
+          CrudColumn<Cliente>(
+            label: 'ID',
+            cellBuilder: (cliente) => Text('${cliente.idCliente}'),
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
+          CrudColumn<Cliente>(
+            label: 'Razón Social',
+            isTitle: true,
+            cellBuilder: (cliente) => Text(cliente.razonSocial),
+          ),
+          CrudColumn<Cliente>(
+            label: 'Documento',
+            isSubtitle: true,
+            cellBuilder: (cliente) => Text(cliente.documento),
+          ),
+          CrudColumn<Cliente>(
+            label: 'Celular',
+            cellBuilder: (cliente) => Text(cliente.celular),
+          ),
+          CrudColumn<Cliente>(
+            label: 'Estado',
+            cellBuilder: (cliente) => Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                color: cliente.estado == 'ACTIVO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : clientesFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.people_outline,
-                                  size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay clientes para mostrar',
-                                style: TextStyle(
-                                    color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                  const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Razón Social')),
-                                DataColumn(label: Text('Documento')),
-                                DataColumn(label: Text('Celular')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: clientesFiltrados.map((cliente) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${cliente.idCliente}')),
-                                    DataCell(Text(cliente.razonSocial)),
-                                    DataCell(Text(cliente.documento)),
-                                    DataCell(Text(cliente.celular)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: cliente.estado == 'ACTIVO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          cliente.estado,
-                                          style: TextStyle(
-                                            color: cliente.estado == 'ACTIVO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit,
-                                                size: 18,
-                                                color: Color(0xFF0085FF)),
-                                            onPressed: () =>
-                                                _mostrarDialogoEdicion(cliente),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              child: Text(
+                cliente.estado,
+                style: TextStyle(
+                  color: cliente.estado == 'ACTIVO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],

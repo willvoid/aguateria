@@ -3,6 +3,7 @@ import 'package:myapp/dao/tarifacrudimpl.dart';
 import 'package:myapp/dao/categoriaserviciocrudimpl.dart';
 import 'package:myapp/modelo/tarifa.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
+import 'package:myapp/widget/crud_list_view.dart';
 
 class TarifaPage extends StatefulWidget {
   const TarifaPage({Key? key}) : super(key: key);
@@ -160,164 +161,125 @@ class _TarifaPageState extends State<TarifaPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por categoría o costo...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: CrudListView<Tarifa>(
+        items: tarifasFiltradas,
+        isLoading: _isLoading,
+        emptyIcon: Icons.attach_money,
+        emptyText: 'No hay tarifas para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por categoría o costo...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: DropdownButtonFormField<CategoriaServicio>(
-                  value: _categoriaSeleccionada,
-                  decoration: InputDecoration(
-                    hintText: 'Filtrar por categoría',
-                    prefixIcon: const Icon(Icons.category, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  items: [
-                    const DropdownMenuItem<CategoriaServicio>(
-                      value: null,
-                      child: Text('Todas las categorías'),
-                    ),
-                    ...categorias.map((categoria) {
-                      return DropdownMenuItem<CategoriaServicio>(
-                        value: categoria,
-                        child: Text(categoria.nombre),
-                      );
-                    }),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _categoriaSeleccionada = value;
-                      _filtrarTarifas();
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (categorias.isEmpty) {
-                      _mostrarError('Debe crear al menos una categoría de servicio primero');
-                      return;
-                    }
-                    _mostrarDialogoEdicion(null);
-                  },
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Agregar', overflow: TextOverflow.ellipsis),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0085FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : tarifasFiltradas.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.attach_money, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay tarifas para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Categoría')),
-                                DataColumn(label: Text('Rango Mínimo (m³)')),
-                                DataColumn(label: Text('Rango Máximo (m³)')),
-                                DataColumn(label: Text('Costo por m³')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: tarifasFiltradas.map((tarifa) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${tarifa.id_tarifa}')),
-                                    DataCell(Text(tarifa.categoriaServicio.nombre)),
-                                    DataCell(Text(tarifa.rango_min.toStringAsFixed(2))),
-                                    DataCell(Text(tarifa.rango_max.toStringAsFixed(2))),
-                                    DataCell(Text('₲ ${tarifa.costo_m3.toStringAsFixed(0)}')),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(tarifa),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: DropdownButtonFormField<CategoriaServicio>(
+                value: _categoriaSeleccionada,
+                decoration: InputDecoration(
+                  hintText: 'Filtrar por categoría',
+                  prefixIcon: const Icon(Icons.category, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                items: [
+                  const DropdownMenuItem<CategoriaServicio>(
+                    value: null,
+                    child: Text('Todas las categorías'),
+                  ),
+                  ...categorias.map((categoria) {
+                    return DropdownMenuItem<CategoriaServicio>(
+                      value: categoria,
+                      child: Text(categoria.nombre),
+                    );
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _categoriaSeleccionada = value;
+                    _filtrarTarifas();
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (categorias.isEmpty) {
+                    _mostrarError('Debe crear al menos una categoría de servicio primero');
+                    return;
+                  }
+                  _mostrarDialogoEdicion(null);
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Agregar', overflow: TextOverflow.ellipsis),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0085FF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _cargarDatos,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Recargar',
+            ),
+          ],
+        ),
+        columns: [
+          CrudColumn<Tarifa>(
+            label: 'ID',
+            cellBuilder: (tarifa) => Text('${tarifa.id_tarifa}'),
+          ),
+          CrudColumn<Tarifa>(
+            label: 'Categoría',
+            isTitle: true,
+            cellBuilder: (tarifa) => Text(tarifa.categoriaServicio.nombre),
+          ),
+          CrudColumn<Tarifa>(
+            label: 'Rango Mínimo (m³)',
+            cellBuilder: (tarifa) => Text(tarifa.rango_min.toStringAsFixed(2)),
+          ),
+          CrudColumn<Tarifa>(
+            label: 'Rango Máximo (m³)',
+            cellBuilder: (tarifa) => Text(tarifa.rango_max.toStringAsFixed(2)),
+          ),
+          CrudColumn<Tarifa>(
+            label: 'Costo por m³',
+            isSubtitle: true,
+            cellBuilder: (tarifa) => Text('₲ ${tarifa.costo_m3.toStringAsFixed(0)}'),
           ),
         ],
       ),

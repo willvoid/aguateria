@@ -3,6 +3,7 @@ import 'package:myapp/dao/empresadao/timbradocrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/timbrado.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
+import 'package:myapp/widget/crud_list_view.dart';
 import 'package:intl/intl.dart';
 
 class TimbradoPage extends StatefulWidget {
@@ -243,197 +244,154 @@ class _TimbradoPageState extends State<TimbradoPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por número de timbrado, establecimiento o empresa...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: CrudListView<Timbrado>(
+        items: timbradosFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.receipt_long_outlined,
+        emptyText: 'No hay timbrados para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por número de timbrado, establecimiento o empresa...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButton<String>(
-                  value: _filtroEstado,
-                  underline: const SizedBox(),
-                  items: _filtrosEstado.map((estado) {
-                    return DropdownMenuItem(
-                      value: estado,
-                      child: Text(estado),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _filtroEstado = value!;
-                      _aplicarFiltros();
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Timbrado'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
+            ),
+            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : timbradosFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay timbrados para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Número Timbrado')),
-                                DataColumn(label: Text('Establecimiento')),
-                                DataColumn(label: Text('Empresa')),
-                                DataColumn(label: Text('Fecha Inicio')),
-                                DataColumn(label: Text('Fecha Vencimiento')),
-                                DataColumn(label: Text('Días Restantes')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: timbradosFiltrados.map((tim) {
-                                final estadoVisual = _obtenerEstadoVisual(tim);
-                                final diasRestantes = tim.vencimiento.difference(DateTime.now()).inDays;
-                                
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${tim.id_timbrado}')),
-                                    DataCell(Text(tim.timbrado)),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          tim.fk_establecimiento.denominacion,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          tim.fk_establecimiento.fk_empresa.razon_social,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(Text(DateFormat('dd/MM/yyyy').format(tim.inicio))),
-                                    DataCell(Text(DateFormat('dd/MM/yyyy').format(tim.vencimiento))),
-                                    DataCell(
-                                      Text(
-                                        diasRestantes < 0 
-                                            ? 'Vencido' 
-                                            : '$diasRestantes días',
-                                        style: TextStyle(
-                                          color: diasRestantes < 30 
-                                              ? Colors.red 
-                                              : diasRestantes < 90 
-                                                  ? Colors.orange 
-                                                  : Colors.green,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: _obtenerColorEstado(estadoVisual).withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              estadoVisual,
-                                              style: TextStyle(
-                                                color: _obtenerColorEstado(estadoVisual),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(tim),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              child: DropdownButton<String>(
+                value: _filtroEstado,
+                underline: const SizedBox(),
+                items: _filtrosEstado.map((estado) {
+                  return DropdownMenuItem(
+                    value: estado,
+                    child: Text(estado),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _filtroEstado = value!;
+                    _aplicarFiltros();
+                  });
+                },
+              ),
             ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                _mostrarDialogoEdicion(null);
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Agregar Timbrado'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _cargarDatos,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Recargar',
+            ),
+          ],
+        ),
+        columns: [
+          CrudColumn<Timbrado>(
+            label: 'ID',
+            cellBuilder: (tim) => Text('${tim.id_timbrado}'),
+          ),
+          CrudColumn<Timbrado>(
+            label: 'Número Timbrado',
+            isTitle: true,
+            cellBuilder: (tim) => Text(tim.timbrado),
+          ),
+          CrudColumn<Timbrado>(
+            label: 'Establecimiento',
+            cellBuilder: (tim) => SizedBox(
+              width: 150,
+              child: Text(tim.fk_establecimiento.denominacion, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Timbrado>(
+            label: 'Empresa',
+            cellBuilder: (tim) => SizedBox(
+              width: 150,
+              child: Text(
+                tim.fk_establecimiento.fk_empresa.razon_social,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          CrudColumn<Timbrado>(
+            label: 'Fecha Inicio',
+            cellBuilder: (tim) => Text(DateFormat('dd/MM/yyyy').format(tim.inicio)),
+          ),
+          CrudColumn<Timbrado>(
+            label: 'Fecha Vencimiento',
+            cellBuilder: (tim) => Text(DateFormat('dd/MM/yyyy').format(tim.vencimiento)),
+          ),
+          CrudColumn<Timbrado>(
+            label: 'Días Restantes',
+            isSubtitle: true,
+            cellBuilder: (tim) {
+              final diasRestantes = tim.vencimiento.difference(DateTime.now()).inDays;
+              return Text(
+                diasRestantes < 0 ? 'Vencido' : '$diasRestantes días',
+                style: TextStyle(
+                  color: diasRestantes < 30
+                      ? Colors.red
+                      : diasRestantes < 90
+                          ? Colors.orange
+                          : Colors.green,
+                  fontWeight: FontWeight.w500,
+                ),
+              );
+            },
+          ),
+          CrudColumn<Timbrado>(
+            label: 'Estado',
+            cellBuilder: (tim) {
+              final estadoVisual = _obtenerEstadoVisual(tim);
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _obtenerColorEstado(estadoVisual).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  estadoVisual,
+                  style: TextStyle(
+                    color: _obtenerColorEstado(estadoVisual),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

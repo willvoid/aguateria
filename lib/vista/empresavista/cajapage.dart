@@ -3,6 +3,7 @@ import 'package:myapp/dao/empresadao/cajacrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/caja.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
+import 'package:myapp/widget/crud_list_view.dart';
 
 class CajaPage extends StatefulWidget {
   const CajaPage({Key? key}) : super(key: key);
@@ -174,198 +175,148 @@ class _CajaPageState extends State<CajaPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por número, descripción, establecimiento o empresa...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: CrudListView<Caja>(
+        items: cajasFiltradas,
+        isLoading: _isLoading,
+        emptyIcon: Icons.point_of_sale_outlined,
+        emptyText: 'No hay cajas para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por número, descripción, establecimiento o empresa...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButton<Establecimiento?>(
-                  value: _filtroEstablecimiento,
-                  hint: const Text('Todos los establecimientos'),
-                  underline: const SizedBox(),
-                  items: [
-                    const DropdownMenuItem<Establecimiento?>(
-                      value: null,
-                      child: Text('Todos los establecimientos'),
-                    ),
-                    ...establecimientos.map((est) {
-                      return DropdownMenuItem<Establecimiento?>(
-                        value: est,
-                        child: Text('${est.codigo_establecimiento} - ${est.denominacion}'),
-                      );
-                    }),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _filtroEstablecimiento = value;
-                      _filtrarCajas();
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Caja'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
+            ),
+            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : cajasFiltradas.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.point_of_sale_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay cajas para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Nro. Caja')),
-                                DataColumn(label: Text('Descripción')),
-                                DataColumn(label: Text('Establecimiento')),
-                                DataColumn(label: Text('Empresa')),
-                                DataColumn(label: Text('Dirección')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: cajasFiltradas.map((caja) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${caja.id_caja}')),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          '${caja.nro_caja}',
-                                          style: TextStyle(
-                                            color: Colors.blue.shade700,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 200,
-                                        child: Text(
-                                          caja.descripcion_caja,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          '${caja.fk_establecimiento.codigo_establecimiento} - ${caja.fk_establecimiento.denominacion}',
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          caja.fk_establecimiento.fk_empresa.razon_social,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          '${caja.fk_establecimiento.direccion}, ${caja.fk_establecimiento.numero_casa}',
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(caja),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              child: DropdownButton<Establecimiento?>(
+                value: _filtroEstablecimiento,
+                hint: const Text('Todos los establecimientos'),
+                underline: const SizedBox(),
+                items: [
+                  const DropdownMenuItem<Establecimiento?>(
+                    value: null,
+                    child: Text('Todos los establecimientos'),
+                  ),
+                  ...establecimientos.map((est) {
+                    return DropdownMenuItem<Establecimiento?>(
+                      value: est,
+                      child: Text('${est.codigo_establecimiento} - ${est.denominacion}'),
+                    );
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _filtroEstablecimiento = value;
+                    _filtrarCajas();
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                _mostrarDialogoEdicion(null);
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Agregar Caja'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _cargarDatos,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Recargar',
+            ),
+          ],
+        ),
+        columns: [
+          CrudColumn<Caja>(
+            label: 'ID',
+            cellBuilder: (caja) => Text('${caja.id_caja}'),
+          ),
+          CrudColumn<Caja>(
+            label: 'Nro. Caja',
+            isTitle: true,
+            cellBuilder: (caja) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '${caja.nro_caja}',
+                style: TextStyle(
+                  color: Colors.blue.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          CrudColumn<Caja>(
+            label: 'Descripción',
+            isSubtitle: true,
+            cellBuilder: (caja) => SizedBox(
+              width: 200,
+              child: Text(caja.descripcion_caja, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Caja>(
+            label: 'Establecimiento',
+            cellBuilder: (caja) => SizedBox(
+              width: 150,
+              child: Text(
+                '${caja.fk_establecimiento.codigo_establecimiento} - ${caja.fk_establecimiento.denominacion}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          CrudColumn<Caja>(
+            label: 'Empresa',
+            cellBuilder: (caja) => SizedBox(
+              width: 150,
+              child: Text(
+                caja.fk_establecimiento.fk_empresa.razon_social,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          CrudColumn<Caja>(
+            label: 'Dirección',
+            cellBuilder: (caja) => SizedBox(
+              width: 150,
+              child: Text(
+                '${caja.fk_establecimiento.direccion}, ${caja.fk_establecimiento.numero_casa}',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ],

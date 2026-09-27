@@ -5,6 +5,7 @@ import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
 import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/empresa/dato_empresa.dart';
+import 'package:myapp/widget/crud_list_view.dart';
 
 class EstablecimientosPage extends StatefulWidget {
   const EstablecimientosPage({Key? key}) : super(key: key);
@@ -167,158 +168,113 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por código, denominación, dirección o empresa...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: CrudListView<Establecimiento>(
+        items: establecimientosFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.store_outlined,
+        emptyText: 'No hay establecimientos para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por código, denominación, dirección o empresa...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Establecimiento'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                _mostrarDialogoEdicion(null);
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Agregar Establecimiento'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _cargarDatos,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Recargar',
+            ),
+          ],
+        ),
+        columns: [
+          CrudColumn<Establecimiento>(
+            label: 'ID',
+            cellBuilder: (est) => Text('${est.id_establecimiento}'),
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
+          CrudColumn<Establecimiento>(
+            label: 'Código',
+            cellBuilder: (est) => Text(est.codigo_establecimiento),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Denominación',
+            isTitle: true,
+            cellBuilder: (est) => Text(est.denominacion),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Empresa',
+            isSubtitle: true,
+            cellBuilder: (est) => SizedBox(
+              width: 150,
+              child: Text(est.fk_empresa.razon_social, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Dirección',
+            cellBuilder: (est) => SizedBox(
+              width: 120,
+              child: Text(est.direccion, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Nro. Casa',
+            cellBuilder: (est) => Text(est.numero_casa),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Barrio',
+            cellBuilder: (est) => Text(est.fk_barrio.nombre_barrio),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Estado',
+            cellBuilder: (est) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                color: est.estado_establecimiento == 'ACTIVO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : establecimientosFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.store_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay establecimientos para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Código')),
-                                DataColumn(label: Text('Denominación')),
-                                DataColumn(label: Text('Empresa')),
-                                DataColumn(label: Text('Dirección')),
-                                DataColumn(label: Text('Nro. Casa')),
-                                DataColumn(label: Text('Barrio')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: establecimientosFiltrados.map((est) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${est.id_establecimiento}')),
-                                    DataCell(Text(est.codigo_establecimiento)),
-                                    DataCell(Text(est.denominacion)),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          est.fk_empresa.razon_social,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 120,
-                                        child: Text(
-                                          est.direccion,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(Text(est.numero_casa)),
-                                    DataCell(Text(est.fk_barrio.nombre_barrio)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: est.estado_establecimiento == 'ACTIVO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          est.estado_establecimiento,
-                                          style: TextStyle(
-                                            color: est.estado_establecimiento == 'ACTIVO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(est),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              child: Text(
+                est.estado_establecimiento,
+                style: TextStyle(
+                  color: est.estado_establecimiento == 'ACTIVO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],

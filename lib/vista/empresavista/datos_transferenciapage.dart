@@ -3,6 +3,7 @@ import 'package:myapp/dao/empresadao/datos_transferenciacrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/datos_transferencia.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
+import 'package:myapp/widget/crud_list_view.dart';
 
 class DatosTransferenciaPage extends StatefulWidget {
   const DatosTransferenciaPage({Key? key}) : super(key: key);
@@ -204,135 +205,96 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Barra superior ──────────────────────────────────────
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por alias, titular, banco o cuenta...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+      child: CrudListView<DatosTransferencia>(
+        items: registrosFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.account_balance_outlined,
+        emptyText: 'No hay cuentas para mostrar',
+        onEdit: _mostrarDialogo,
+        onDelete: _eliminar,
+        toolbar: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por alias, titular, banco o cuenta...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () => _mostrarDialogo(null),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Cuenta'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // ── Tabla ───────────────────────────────────────────────
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : registrosFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.account_balance_outlined,
-                                  size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay cuentas para mostrar',
-                                style: TextStyle(
-                                    color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                  const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Alias')),
-                                DataColumn(label: Text('Titular')),
-                                DataColumn(label: Text('Banco')),
-                                DataColumn(label: Text('CI')),
-                                DataColumn(label: Text('Nro. Cuenta')),
-                                DataColumn(label: Text('Nro. Giro')),
-                                DataColumn(label: Text('CI Giro')), // ← nuevo
-                                DataColumn(label: Text('Sucursal')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: registrosFiltrados.map((item) {
-  return DataRow(cells: [
-    DataCell(Text('${item.id}')),
-    DataCell(Text(item.alias ?? '-')),
-    DataCell(Text(item.titular_cuenta)),
-    DataCell(Text(item.banco)),
-    DataCell(Text(item.ci)),
-    DataCell(Text(item.num_cuenta)),
-    DataCell(Text(item.nro_giro ?? '-')),
-    DataCell(Text(item.ci_giro ?? '-')),
-    DataCell(Text(item.fk_sucursal.denominacion)),
-    DataCell(
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-            onPressed: () => _mostrarDialogo(item),
-            tooltip: 'Editar',
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-            onPressed: () => _eliminar(item),
-            tooltip: 'Eliminar',
-          ),
-        ],
-      ),
-    ),
-  ]);
-}).toList(),
-                            ),
-                          ),
-                        ),
             ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: () => _mostrarDialogo(null),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Agregar Cuenta'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0085FF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _cargarDatos,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Recargar',
+            ),
+          ],
+        ),
+        columns: [
+          CrudColumn<DatosTransferencia>(
+            label: 'ID',
+            cellBuilder: (item) => Text('${item.id}'),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Alias',
+            isTitle: true,
+            cellBuilder: (item) => Text(item.alias ?? '-'),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Titular',
+            isSubtitle: true,
+            cellBuilder: (item) => Text(item.titular_cuenta),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Banco',
+            cellBuilder: (item) => Text(item.banco),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'CI',
+            cellBuilder: (item) => Text(item.ci),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Nro. Cuenta',
+            cellBuilder: (item) => Text(item.num_cuenta),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Nro. Giro',
+            cellBuilder: (item) => Text(item.nro_giro ?? '-'),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'CI Giro',
+            cellBuilder: (item) => Text(item.ci_giro ?? '-'),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Sucursal',
+            cellBuilder: (item) => Text(item.fk_sucursal.denominacion),
           ),
         ],
       ),
