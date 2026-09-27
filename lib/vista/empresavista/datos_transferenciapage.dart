@@ -5,6 +5,7 @@ import 'package:myapp/modelo/empresa/datos_transferencia.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
 import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 import 'package:myapp/widget/responsive_form_row.dart';
 
 class DatosTransferenciaPage extends StatefulWidget {
@@ -214,50 +215,40 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
         emptyText: 'No hay cuentas para mostrar',
         onEdit: _mostrarDialogo,
         onDelete: _eliminar,
-        toolbar: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Buscar por alias, titular, banco o cuenta...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                ),
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por alias, titular, banco o cuenta...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-            ),
-            const SizedBox(width: 16),
-            ElevatedButton.icon(
-              onPressed: () => _mostrarDialogo(null),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Agregar Cuenta'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0085FF),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 12),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _cargarDatos,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Recargar',
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () => _mostrarDialogo(null),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Cuenta'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
-          ],
+          ),
         ),
         columns: [
           CrudColumn<DatosTransferencia>(

@@ -4,6 +4,7 @@ import 'package:myapp/dao/categoriaserviciocrudimpl.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 import 'package:myapp/widget/responsive_form_row.dart';
 
 class CategoriaServicioPage extends StatefulWidget {
@@ -179,52 +180,39 @@ class _CategoriaServicioPageState extends State<CategoriaServicioPage> {
         emptyIcon: Icons.category_outlined,
         emptyText: 'No hay categorías para mostrar',
         onEdit: _mostrarDialogoEdicion,
-        toolbar: Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Buscar por nombre o descripción...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por nombre o descripción...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar', overflow: TextOverflow.ellipsis),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _cargarDatos,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Recargar',
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () {
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar', overflow: TextOverflow.ellipsis),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-          ],
+          ),
         ),
         columns: [
           CrudColumn<CategoriaServicio>(

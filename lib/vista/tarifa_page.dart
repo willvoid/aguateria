@@ -5,6 +5,7 @@ import 'package:myapp/modelo/tarifa.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 import 'package:myapp/widget/responsive_form_row.dart';
 
 class TarifaPage extends StatefulWidget {
@@ -169,96 +170,81 @@ class _TarifaPageState extends State<TarifaPage> {
         emptyIcon: Icons.attach_money,
         emptyText: 'No hay tarifas para mostrar',
         onEdit: _mostrarDialogoEdicion,
-        toolbar: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Buscar por categoría o costo...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por categoría o costo...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 2,
-              child: DropdownButtonFormField<CategoriaServicio>(
-                value: _categoriaSeleccionada,
-                decoration: InputDecoration(
-                  hintText: 'Filtrar por categoría',
-                  prefixIcon: const Icon(Icons.category, size: 20),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                items: [
-                  const DropdownMenuItem<CategoriaServicio>(
-                    value: null,
-                    child: Text('Todas las categorías'),
-                  ),
-                  ...categorias.map((categoria) {
-                    return DropdownMenuItem<CategoriaServicio>(
-                      value: categoria,
-                      child: Text(categoria.nombre),
-                    );
-                  }),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _categoriaSeleccionada = value;
-                    _filtrarTarifas();
-                  });
-                },
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  if (categorias.isEmpty) {
-                    _mostrarError('Debe crear al menos una categoría de servicio primero');
-                    return;
-                  }
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar', overflow: TextOverflow.ellipsis),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          filters: [
+            DropdownButtonFormField<CategoriaServicio>(
+              value: _categoriaSeleccionada,
+              decoration: InputDecoration(
+                hintText: 'Filtrar por categoría',
+                prefixIcon: const Icon(Icons.category, size: 20),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _cargarDatos,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Recargar',
+              items: [
+                const DropdownMenuItem<CategoriaServicio>(
+                  value: null,
+                  child: Text('Todas las categorías'),
+                ),
+                ...categorias.map((categoria) {
+                  return DropdownMenuItem<CategoriaServicio>(
+                    value: categoria,
+                    child: Text(categoria.nombre),
+                  );
+                }),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _categoriaSeleccionada = value;
+                  _filtrarTarifas();
+                });
+              },
             ),
           ],
+          action: ElevatedButton.icon(
+            onPressed: () {
+              if (categorias.isEmpty) {
+                _mostrarError('Debe crear al menos una categoría de servicio primero');
+                return;
+              }
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar', overflow: TextOverflow.ellipsis),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
         ),
         columns: [
           CrudColumn<Tarifa>(

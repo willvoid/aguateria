@@ -5,6 +5,7 @@ import 'package:myapp/modelo/empresa/caja.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
 import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 
 class CajaPage extends StatefulWidget {
   const CajaPage({Key? key}) : super(key: key);
@@ -182,30 +183,27 @@ class _CajaPageState extends State<CajaPage> {
         emptyIcon: Icons.point_of_sale_outlined,
         emptyText: 'No hay cajas para mostrar',
         onEdit: _mostrarDialogoEdicion,
-        toolbar: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Buscar por número, descripción, establecimiento o empresa...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por número, descripción, establecimiento o empresa...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            const SizedBox(width: 16),
+          ),
+          filters: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
@@ -217,6 +215,7 @@ class _CajaPageState extends State<CajaPage> {
                 value: _filtroEstablecimiento,
                 hint: const Text('Todos los establecimientos'),
                 underline: const SizedBox(),
+                isExpanded: true,
                 items: [
                   const DropdownMenuItem<Establecimiento?>(
                     value: null,
@@ -237,27 +236,20 @@ class _CajaPageState extends State<CajaPage> {
                 },
               ),
             ),
-            const SizedBox(width: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                _mostrarDialogoEdicion(null);
-              },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Agregar Caja'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0085FF),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _cargarDatos,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Recargar',
-            ),
           ],
+          action: ElevatedButton.icon(
+            onPressed: () {
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Caja'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
         ),
         columns: [
           CrudColumn<Caja>(

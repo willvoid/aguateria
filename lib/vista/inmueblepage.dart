@@ -9,6 +9,7 @@ import 'package:myapp/vista/deuda_page.dart';
 import 'package:myapp/widget/autocomplete_cliente.dart';
 import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 
 class InmueblesPage extends StatefulWidget {
   const InmueblesPage({Key? key}) : super(key: key);
@@ -233,57 +234,47 @@ class _InmueblesPageState extends State<InmueblesPage> {
             tooltip: 'Ver Deudas',
           ),
         ],
-        toolbar: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Buscar por código, dirección o cliente...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por código, dirección o cliente...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
               ),
             ),
-            const SizedBox(width: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                _mostrarDialogoEdicion(null);
-              },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Agregar Inmueble'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0085FF),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () {
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Inmueble'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _cargarDatos,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Recargar',
-            ),
-          ],
+          ),
         ),
         columns: [
           CrudColumn<Inmuebles>(

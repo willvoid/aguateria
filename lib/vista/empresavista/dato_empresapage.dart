@@ -11,6 +11,7 @@ import 'package:myapp/modelo/empresa/actividad_economica.dart';
 import 'package:myapp/modelo/empresa/actividad_empresa.dart';
 import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 import 'package:myapp/widget/responsive_form_row.dart';
 
 class DatoEmpresaPage extends StatefulWidget {
@@ -242,53 +243,43 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
         emptyIcon: Icons.business_outlined,
         emptyText: 'No hay empresas para mostrar',
         onEdit: _mostrarDialogoEdicion,
-        toolbar: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Buscar por RUC, razón social o nombre fantasía...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por RUC, razón social o nombre fantasía...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-            ),
-            const SizedBox(width: 16),
-            ElevatedButton.icon(
-              onPressed: empresas.isNotEmpty
-                  ? null  // ← Deshabilitado si ya existe una empresa
-                  : () {
-                      _mostrarDialogoEdicion(null);
-                    },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Agregar Empresa'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0085FF),
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.shade300,  // ← Color cuando está deshabilitado
-                disabledForegroundColor: Colors.grey.shade500,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _cargarDatos,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Recargar',
+          ),
+          action: ElevatedButton.icon(
+            onPressed: empresas.isNotEmpty
+                ? null  // ← Deshabilitado si ya existe una empresa
+                : () {
+                    _mostrarDialogoEdicion(null);
+                  },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Empresa'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade300,  // ← Color cuando está deshabilitado
+              disabledForegroundColor: Colors.grey.shade500,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-          ],
+          ),
         ),
         columns: [
           CrudColumn<DatoEmpresa>(
