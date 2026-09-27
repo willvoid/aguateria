@@ -20,6 +20,7 @@ import 'package:myapp/vista/medidor_page.dart';
 import 'package:myapp/vista/opciones_page.dart';
 import 'package:myapp/vista/registro_usuariopage.dart';
 import 'package:myapp/vista/tarifa_page.dart';
+import 'package:myapp/widget/responsive.dart';
 import 'package:provider/provider.dart';
 
 class DashboardWidget extends StatefulWidget {
@@ -318,7 +319,10 @@ class _DashboardWidgetState extends State<DashboardWidget>
                       ),
                     ),
                   ),
-                  child: Row(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final showUserDetails = !isMobile(constraints.maxWidth);
+                      return Row(
                     children: [
                       IconButton(
                         onPressed: _toggleSidebar,
@@ -338,41 +342,52 @@ class _DashboardWidgetState extends State<DashboardWidget>
                         size: 20,
                       ),
                       const SizedBox(width: 12),
-                      Text(
-                        _getSelectedTitle(),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
+                      Expanded(
+                        child: Text(
+                          _getSelectedTitle(),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF111827),
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       Consumer<AuthProvider>(
                         builder: (context, authProvider, _) {
                           return Row(
                             children: [
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    authProvider.usuarioNombre,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF111827),
-                                    ),
+                              if (showUserDetails) ...[
+                                Flexible(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        authProvider.usuarioNombre,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF111827),
+                                        ),
+                                      ),
+                                      Text(
+                                        authProvider.cargoNombre,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF6B7280),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    authProvider.cargoNombre,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF6B7280),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 12),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
                               Container(
                                 width: 36,
                                 height: 36,
@@ -461,6 +476,8 @@ class _DashboardWidgetState extends State<DashboardWidget>
                         },
                       ),
                     ],
+                      );
+                    },
                   ),
                 ),
                 // Content Area

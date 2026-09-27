@@ -218,6 +218,7 @@ class _AperturaCierreCajaPageState extends State<AperturaCierreCajaPage> {
         title: const Text('Apertura y Cierre de Caja'),
         backgroundColor: const Color(0xFF0085FF),
         foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
