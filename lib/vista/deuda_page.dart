@@ -9,6 +9,8 @@ import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/widget/autocomplete_ciclos.dart';
+import 'package:myapp/widget/crud_dialog.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class DeudasPage extends StatefulWidget {
   final Inmuebles inmueble;
@@ -507,171 +509,103 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 700,
-        constraints: const BoxConstraints(maxHeight: 650),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
+    return CrudDialog(
+      icon: Icons.receipt_long,
+      title: widget.deuda == null ? 'Agregar Deuda' : 'Editar Deuda',
+      preferredWidth: 700,
+      preferredMaxHeight: 650,
+      onGuardar: _guardarDeuda,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDropdown<Concepto>(
+                label: 'Concepto *',
+                value: _conceptoSeleccionado,
+                items: widget.conceptos,
+                onChanged: (value) =>
+                    setState(() => _conceptoSeleccionado = value!),
+                itemLabel: (item) => item.nombre,
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.receipt_long, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.deuda == null ? 'Agregar Deuda' : 'Editar Deuda',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+              const SizedBox(height: 16),
+              if (_conceptoSeleccionado.id != 2)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CicloAutocomplete(
+                      key: ValueKey(_cicloSeleccionado?.id),
+                      ciclos: widget.ciclos,
+                      cicloInicial: _cicloSeleccionado,
+                      label: 'Ciclo *',
+                      hint: 'Buscar por ciclo o descripción...',
+                      onSeleccionado: (ciclo) {
+                        setState(() {
+                          _cicloSeleccionado = ciclo;
+                          _descripcionController.text =
+                              'Consumo ${ciclo.descripcion}';
+                        });
+                      },
+                      validator: (_) {
+                        if (_conceptoSeleccionado.id == 1 &&
+                            _cicloSeleccionado == null) {
+                          return 'Debe seleccionar un ciclo';
+                        }
+                        return null;
+                      },
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDropdown<Concepto>(
-                        label: 'Concepto *',
-                        value: _conceptoSeleccionado,
-                        items: widget.conceptos,
-                        onChanged: (value) =>
-                            setState(() => _conceptoSeleccionado = value!),
-                        itemLabel: (item) => item.nombre,
-                      ),
-                      const SizedBox(height: 16),
-                      if (_conceptoSeleccionado.id != 2)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CicloAutocomplete(
-                              key: ValueKey(_cicloSeleccionado?.id),
-                              ciclos: widget.ciclos,
-                              cicloInicial: _cicloSeleccionado,
-                              label: 'Ciclo *',
-                              hint: 'Buscar por ciclo o descripción...',
-                              onSeleccionado: (ciclo) {
-                                setState(() {
-                                  _cicloSeleccionado = ciclo;
-                                  _descripcionController.text =
-                                      'Consumo ${ciclo.descripcion}';
-                                });
-                              },
-                              validator: (_) {
-                                if (_conceptoSeleccionado.id == 1 &&
-                                    _cicloSeleccionado == null) {
-                                  return 'Debe seleccionar un ciclo';
-                                }
-                                return null;
-                              },
-                            ),
-                            if (_cicloSeleccionado != null)
-                              TextButton.icon(
-                                onPressed: () =>
-                                    setState(() => _cicloSeleccionado = null),
-                                icon: const Icon(Icons.clear, size: 16),
-                                label: const Text('Limpiar ciclo'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.grey.shade600,
-                                  padding: EdgeInsets.zero,
-                                ),
-                              ),
-                            const SizedBox(height: 16),
-                          ],
+                    if (_cicloSeleccionado != null)
+                      TextButton.icon(
+                        onPressed: () =>
+                            setState(() => _cicloSeleccionado = null),
+                        icon: const Icon(Icons.clear, size: 16),
+                        label: const Text('Limpiar ciclo'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey.shade600,
+                          padding: EdgeInsets.zero,
                         ),
-                      _buildTextField(
-                        controller: _descripcionController,
-                        label: 'Descripción *',
-                        hint: 'Ingrese la descripción',
-                        maxLines: 2,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Campo requerido' : null,
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _montoController,
-                              label: 'Monto *',
-                              hint: 'Ingrese el monto',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value?.isEmpty ?? true)
-                                  return 'Campo requerido';
-                                if (double.tryParse(value!) == null)
-                                  return 'Debe ser un número';
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<String>(
-                              label: 'Estado *',
-                              value: _estadoSeleccionado,
-                              items: _estados,
-                              onChanged: (value) =>
-                                  setState(() => _estadoSeleccionado = value!),
-                              itemLabel: (item) => item,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
+              _buildTextField(
+                controller: _descripcionController,
+                label: 'Descripción *',
+                hint: 'Ingrese la descripción',
+                maxLines: 2,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
+                  _buildTextField(
+                    controller: _montoController,
+                    label: 'Monto *',
+                    hint: 'Ingrese el monto',
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value?.isEmpty ?? true)
+                        return 'Campo requerido';
+                      if (double.tryParse(value!) == null)
+                        return 'Debe ser un número';
+                      return null;
+                    },
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarDeuda,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                    child: const Text('Guardar'),
+                  _buildDropdown<String>(
+                    label: 'Estado *',
+                    value: _estadoSeleccionado,
+                    items: _estados,
+                    onChanged: (value) =>
+                        setState(() => _estadoSeleccionado = value!),
+                    itemLabel: (item) => item,
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

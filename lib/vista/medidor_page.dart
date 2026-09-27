@@ -3,6 +3,7 @@ import 'package:myapp/dao/medidorcrudimpl.dart';
 import 'package:myapp/dao/inmueblescrudimpl.dart';
 import 'package:myapp/modelo/medidor.dart';
 import 'package:myapp/modelo/inmuebles.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
 
 class MedidoresPage extends StatefulWidget {
@@ -328,107 +329,54 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 500),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+    return CrudDialog(
+      icon: Icons.speed,
+      title: widget.medidor == null ? 'Agregar Medidor' : 'Editar Medidor',
+      preferredWidth: 600,
+      preferredMaxHeight: 500,
+      onGuardar: _guardarMedidor,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTextField(
+                controller: _nroController,
+                label: 'Número de Medidor *',
+                hint: 'Ingrese número de medidor',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                  //if (int.tryParse(value!) == null) return 'Debe ser un número';
+                  return null;
+                },
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.speed, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.medidor == null ? 'Agregar Medidor' : 'Editar Medidor',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              _buildDateField(
+                label: 'Fecha de Instalación *',
+                fecha: _fechaInstalacion,
+                onTap: () => _seleccionarFecha(context),
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _nroController,
-                        label: 'Número de Medidor *',
-                        hint: 'Ingrese número de medidor',
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) return 'Campo requerido';
-                          //if (int.tryParse(value!) == null) return 'Debe ser un número';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDateField(
-                        label: 'Fecha de Instalación *',
-                        fecha: _fechaInstalacion,
-                        onTap: () => _seleccionarFecha(context),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<String>(
-                        label: 'Estado *',
-                        value: _estadoSeleccionado,
-                        items: _estados,
-                        onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                        itemLabel: (item) => item,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<Inmuebles>(
-                        label: 'Inmueble *',
-                        value: _inmuebleSeleccionado,
-                        items: widget.inmuebles,
-                        onChanged: (value) => setState(() => _inmuebleSeleccionado = value!),
-                        itemLabel: (item) => 'ID: ${item.id}',
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 16),
+              _buildDropdown<String>(
+                label: 'Estado *',
+                value: _estadoSeleccionado,
+                items: _estados,
+                onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                itemLabel: (item) => item,
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+              const SizedBox(height: 16),
+              _buildDropdown<Inmuebles>(
+                label: 'Inmueble *',
+                value: _inmuebleSeleccionado,
+                items: widget.inmuebles,
+                onChanged: (value) => setState(() => _inmuebleSeleccionado = value!),
+                itemLabel: (item) => 'ID: ${item.id}',
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarMedidor,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -7,7 +7,9 @@ import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/facturacionmodelo/iva.dart';
 import 'package:myapp/modelo/facturacionmodelo/unidad_medida.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class ConceptosPage extends StatefulWidget {
   const ConceptosPage({Key? key}) : super(key: key);
@@ -355,149 +357,86 @@ class _DialogoEditarConceptoState extends State<_DialogoEditarConcepto> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 700,
-        constraints: const BoxConstraints(maxHeight: 650),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+    return CrudDialog(
+      icon: Icons.receipt_long,
+      title: widget.concepto == null ? 'Agregar Concepto' : 'Editar Concepto',
+      preferredWidth: 700,
+      preferredMaxHeight: 650,
+      onGuardar: _guardarConcepto,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTextField(
+                controller: _nombreController,
+                label: 'Nombre *',
+                hint: 'Ingrese el nombre del concepto',
+                validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-              child: Row(
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _descripcionController,
+                label: 'Descripción *',
+                hint: 'Ingrese la descripción',
+                maxLines: 3,
+                validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.receipt_long, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.concepto == null ? 'Agregar Concepto' : 'Editar Concepto',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  _buildTextField(
+                    controller: _arancelController,
+                    label: 'Arancel *',
+                    hint: 'Ingrese el arancel',
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Campo requerido';
+                      if (double.tryParse(value!) == null) return 'Debe ser un número';
+                      if (double.parse(value) < 0) return 'Debe ser mayor o igual a 0';
+                      return null;
+                    },
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildDropdown<Iva>(
+                    label: 'IVA *',
+                    value: _ivaSeleccionado,
+                    items: widget.ivas,
+                    onChanged: (value) => setState(() => _ivaSeleccionado = value!),
+                    itemLabel: (item) => '${item.descripcion} (${item.valor}%)',
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _nombreController,
-                        label: 'Nombre *',
-                        hint: 'Ingrese el nombre del concepto',
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _descripcionController,
-                        label: 'Descripción *',
-                        hint: 'Ingrese la descripción',
-                        maxLines: 3,
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _arancelController,
-                              label: 'Arancel *',
-                              hint: 'Ingrese el arancel',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Campo requerido';
-                                if (double.tryParse(value!) == null) return 'Debe ser un número';
-                                if (double.parse(value) < 0) return 'Debe ser mayor o igual a 0';
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<Iva>(
-                              label: 'IVA *',
-                              value: _ivaSeleccionado,
-                              items: widget.ivas,
-                              onChanged: (value) => setState(() => _ivaSeleccionado = value!),
-                              itemLabel: (item) => '${item.descripcion} (${item.valor}%)',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildDropdown<UnidadMedida>(
-                              label: 'Unidad de Medida *',
-                              value: _unidadMedidaSeleccionada,
-                              items: widget.unidadesMedida,
-                              onChanged: (value) => setState(() => _unidadMedidaSeleccionada = value!),
-                              itemLabel: (item) => '${item.representacion} - ${item.descripcion}',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<String>(
-                              label: 'Estado *',
-                              value: _estadoSeleccionado,
-                              items: _estados,
-                              onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                              itemLabel: (item) => item,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<CategoriaServicio>(
-                        label: 'Categoría de Servicio *',
-                        value: _categoriaServicioSeleccionada,
-                        items: widget.categoriasServicio,
-                        onChanged: (value) => setState(() => _categoriaServicioSeleccionada = value!),
-                        itemLabel: (item) => item.nombre,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
+                  _buildDropdown<UnidadMedida>(
+                    label: 'Unidad de Medida *',
+                    value: _unidadMedidaSeleccionada,
+                    items: widget.unidadesMedida,
+                    onChanged: (value) => setState(() => _unidadMedidaSeleccionada = value!),
+                    itemLabel: (item) => '${item.representacion} - ${item.descripcion}',
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarConcepto,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
+                  _buildDropdown<String>(
+                    label: 'Estado *',
+                    value: _estadoSeleccionado,
+                    items: _estados,
+                    onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                    itemLabel: (item) => item,
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              _buildDropdown<CategoriaServicio>(
+                label: 'Categoría de Servicio *',
+                value: _categoriaServicioSeleccionada,
+                items: widget.categoriasServicio,
+                onChanged: (value) => setState(() => _categoriaServicioSeleccionada = value!),
+                itemLabel: (item) => item.nombre,
+              ),
+            ],
+          ),
         ),
       ),
     );

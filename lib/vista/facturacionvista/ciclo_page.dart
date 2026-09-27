@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/facturaciondao/ciclocrudimpl.dart';
 import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class CiclosPage extends StatefulWidget {
   const CiclosPage({Key? key}) : super(key: key);
@@ -380,160 +382,102 @@ class _DialogoEditarCicloState extends State<_DialogoEditarCiclo> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 700,
-        constraints: const BoxConstraints(maxHeight: 750),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
-              ),
-              child: Row(
+    return CrudDialog(
+      icon: Icons.calendar_month,
+      title: widget.ciclo == null ? 'Agregar Ciclo' : 'Editar Ciclo',
+      preferredWidth: 700,
+      preferredMaxHeight: 750,
+      onGuardar: _guardarCiclo,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.calendar_month, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.ciclo == null ? 'Agregar Ciclo' : 'Editar Ciclo',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  _buildTextField(
+                    controller: _cicloController,
+                    label: 'Código de Ciclo *',
+                    hint: 'Ej: 2024-01',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildTextField(
+                    controller: _anioController,
+                    label: 'Año *',
+                    hint: 'Ingrese el año',
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Campo requerido';
+                      if (int.tryParse(value!) == null) return 'Debe ser un número';
+                      return null;
+                    },
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _cicloController,
-                              label: 'Código de Ciclo *',
-                              hint: 'Ej: 2024-01',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _anioController,
-                              label: 'Año *',
-                              hint: 'Ingrese el año',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Campo requerido';
-                                if (int.tryParse(value!) == null) return 'Debe ser un número';
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _descripcionController,
+                label: 'Descripción *',
+                hint: 'Ej: Ciclo de Enero 2024',
+                maxLines: 2,
+                validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+              ),
+              const SizedBox(height: 16),
+              _buildDropdown<String>(
+                label: 'Estado *',
+                value: _estadoSeleccionado,
+                items: _estados,
+                onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                itemLabel: (item) => item,
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Fechas del Ciclo',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+              ),
+              const SizedBox(height: 16),
+              _buildDateField(
+                label: 'Fecha de Inicio *',
+                fecha: _fechaInicio,
+                onTap: () => _seleccionarFecha(context, 'inicio'),
+              ),
+              const SizedBox(height: 16),
+              _buildDateField(
+                label: 'Fecha de Fin *',
+                fecha: _fechaFin,
+                onTap: () => _seleccionarFecha(context, 'fin'),
+              ),
+              const SizedBox(height: 16),
+              _buildDateField(
+                label: 'Fecha de Vencimiento *',
+                fecha: _fechaVencimiento,
+                onTap: () => _seleccionarFecha(context, 'vencimiento'),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'La fecha de vencimiento debe ser posterior a la fecha de fin del ciclo.',
+                        style: TextStyle(color: Colors.blue.shade900, fontSize: 13),
                       ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _descripcionController,
-                        label: 'Descripción *',
-                        hint: 'Ej: Ciclo de Enero 2024',
-                        maxLines: 2,
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<String>(
-                        label: 'Estado *',
-                        value: _estadoSeleccionado,
-                        items: _estados,
-                        onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                        itemLabel: (item) => item,
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Fechas del Ciclo',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDateField(
-                        label: 'Fecha de Inicio *',
-                        fecha: _fechaInicio,
-                        onTap: () => _seleccionarFecha(context, 'inicio'),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDateField(
-                        label: 'Fecha de Fin *',
-                        fecha: _fechaFin,
-                        onTap: () => _seleccionarFecha(context, 'fin'),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDateField(
-                        label: 'Fecha de Vencimiento *',
-                        fecha: _fechaVencimiento,
-                        onTap: () => _seleccionarFecha(context, 'vencimiento'),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'La fecha de vencimiento debe ser posterior a la fecha de fin del ciclo.',
-                                style: TextStyle(color: Colors.blue.shade900, fontSize: 13),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarCiclo,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

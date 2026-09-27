@@ -3,7 +3,9 @@ import 'package:myapp/dao/empresadao/timbradocrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/timbrado.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 import 'package:intl/intl.dart';
 
 class TimbradoPage extends StatefulWidget {
@@ -475,144 +477,86 @@ class _DialogoEditarTimbradoState extends State<_DialogoEditarTimbrado> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 700,
-        constraints: const BoxConstraints(maxHeight: 600),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+    return CrudDialog(
+      icon: Icons.receipt_long,
+      title: widget.timbrado == null ? 'Agregar Timbrado' : 'Editar Timbrado',
+      preferredWidth: 700,
+      preferredMaxHeight: 600,
+      onGuardar: _guardarTimbrado,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTextField(
+                controller: _numeroTimbradoController,
+                label: 'Número de Timbrado *',
+                hint: 'Ej: 12345678',
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                  if (value!.length < 8) return 'Debe tener al menos 8 caracteres';
+                  return null;
+                },
               ),
-              child: Row(
+              const SizedBox(height: 16),
+              _buildDropdown<Establecimiento>(
+                label: 'Establecimiento *',
+                value: _establecimientoSeleccionado,
+                items: widget.establecimientos,
+                onChanged: (value) => setState(() => _establecimientoSeleccionado = value!),
+                itemLabel: (item) => '${item.codigo_establecimiento} - ${item.denominacion}',
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.receipt_long, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.timbrado == null ? 'Agregar Timbrado' : 'Editar Timbrado',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  _buildDateField(
+                    label: 'Fecha de Inicio *',
+                    fecha: _fechaInicio,
+                    onTap: () => _seleccionarFecha(context, true),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildDateField(
+                    label: 'Fecha de Vencimiento *',
+                    fecha: _fechaVencimiento,
+                    onTap: () => _seleccionarFecha(context, false),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _numeroTimbradoController,
-                        label: 'Número de Timbrado *',
-                        hint: 'Ej: 12345678',
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) return 'Campo requerido';
-                          if (value!.length < 8) return 'Debe tener al menos 8 caracteres';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<Establecimiento>(
-                        label: 'Establecimiento *',
-                        value: _establecimientoSeleccionado,
-                        items: widget.establecimientos,
-                        onChanged: (value) => setState(() => _establecimientoSeleccionado = value!),
-                        itemLabel: (item) => '${item.codigo_establecimiento} - ${item.denominacion}',
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildDateField(
-                              label: 'Fecha de Inicio *',
-                              fecha: _fechaInicio,
-                              onTap: () => _seleccionarFecha(context, true),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDateField(
-                              label: 'Fecha de Vencimiento *',
-                              fecha: _fechaVencimiento,
-                              onTap: () => _seleccionarFecha(context, false),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, color: Colors.blue.shade700),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Vigencia: ${_fechaVencimiento.difference(_fechaInicio).inDays} días',
-                                style: TextStyle(
-                                  color: Colors.blue.shade700,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Vigencia: ${_fechaVencimiento.difference(_fechaInicio).inDays} días',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<String>(
-                        label: 'Estado *',
-                        value: _estadoSeleccionado,
-                        items: _estados,
-                        onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                        itemLabel: (item) => item,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+              const SizedBox(height: 16),
+              _buildDropdown<String>(
+                label: 'Estado *',
+                value: _estadoSeleccionado,
+                items: _estados,
+                onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                itemLabel: (item) => item,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarTimbrado,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

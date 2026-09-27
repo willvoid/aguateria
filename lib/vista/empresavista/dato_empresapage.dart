@@ -9,7 +9,9 @@ import 'package:myapp/modelo/empresa/tipo_contribuyente.dart';
 import 'package:myapp/modelo/empresa/tipo_regimen.dart';
 import 'package:myapp/modelo/empresa/actividad_economica.dart';
 import 'package:myapp/modelo/empresa/actividad_empresa.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class DatoEmpresaPage extends StatefulWidget {
   const DatoEmpresaPage({Key? key}) : super(key: key);
@@ -465,222 +467,159 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 900,
-        constraints: const BoxConstraints(maxHeight: 700),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
-              ),
-              child: Row(
+    return CrudDialog(
+      icon: Icons.business,
+      title: widget.empresa == null ? 'Agregar Empresa' : 'Editar Empresa',
+      preferredWidth: 900,
+      preferredMaxHeight: 700,
+      onGuardar: _guardarEmpresa,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ResponsiveFormRow(
+            flexes: const [3, 2],
+            breakpoint: 700,
+            spacing: 24,
+            children: [
+              // Columna izquierda - Datos básicos
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.business, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.empresa == null ? 'Agregar Empresa' : 'Editar Empresa',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  const Text(
+                    'Datos de la Empresa',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _rucController,
+                    label: 'RUC *',
+                    hint: 'Ingrese RUC',
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Campo requerido';
+                      if (value!.length < 6) return 'RUC debe tener al menos 6 dígitos';
+                      return null;
+                    },
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _razonSocialController,
+                    label: 'Razón Social *',
+                    hint: 'Ingrese razón social',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _nombreFantasiaController,
+                    label: 'Nombre Fantasía *',
+                    hint: 'Ingrese nombre fantasía',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  ResponsiveFormRow(
                     children: [
-                      // Columna izquierda - Datos básicos
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Datos de la Empresa',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: _rucController,
-                              label: 'RUC *',
-                              hint: 'Ingrese RUC',
-                              validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Campo requerido';
-                                if (value!.length < 6) return 'RUC debe tener al menos 6 dígitos';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: _razonSocialController,
-                              label: 'Razón Social *',
-                              hint: 'Ingrese razón social',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: _nombreFantasiaController,
-                              label: 'Nombre Fantasía *',
-                              hint: 'Ingrese nombre fantasía',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildDropdown<TipoContribuyente>(
-                                    label: 'Tipo Contribuyente *',
-                                    value: _tipoContribuyenteSeleccionado,
-                                    items: widget.tiposContribuyente,
-                                    onChanged: (value) => setState(() => _tipoContribuyenteSeleccionado = value!),
-                                    itemLabel: (item) => item.descripcion,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildDropdown<TipoRegimen>(
-                                    label: 'Tipo Régimen *',
-                                    value: _tipoRegimenSeleccionado,
-                                    items: widget.tiposRegimen,
-                                    onChanged: (value) => setState(() => _tipoRegimenSeleccionado = value!),
-                                    itemLabel: (item) => item.descripcion,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDropdown<String>(
-                              label: 'Estado *',
-                              value: _estadoSeleccionado,
-                              items: _estados,
-                              onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                              itemLabel: (item) => item,
-                            ),
-                          ],
-                        ),
+                      _buildDropdown<TipoContribuyente>(
+                        label: 'Tipo Contribuyente *',
+                        value: _tipoContribuyenteSeleccionado,
+                        items: widget.tiposContribuyente,
+                        onChanged: (value) => setState(() => _tipoContribuyenteSeleccionado = value!),
+                        itemLabel: (item) => item.descripcion,
                       ),
-                      const SizedBox(width: 24),
-                      // Columna derecha - Actividades económicas
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Actividades Económicas',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${_actividadesSeleccionadas.length} seleccionada(s)',
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _searchActividadController,
-                              decoration: InputDecoration(
-                                hintText: 'Buscar actividad...',
-                                prefixIcon: const Icon(Icons.search, size: 18),
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              height: 350,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: ListView.builder(
-                                itemCount: _actividadesFiltradas.length,
-                                itemBuilder: (context, index) {
-                                  final actividad = _actividadesFiltradas[index];
-                                  final isSeleccionada = _isActividadSeleccionada(actividad);
-                                  
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(color: Colors.grey.shade200),
-                                      ),
-                                    ),
-                                    child: CheckboxListTile(
-                                      value: isSeleccionada,
-                                      onChanged: (value) => _toggleActividad(actividad),
-                                      title: Text(
-                                        actividad.codigo_actividad.toString(),
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                                      ),
-                                      subtitle: Text(
-                                        actividad.descripcion_actividad,
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      dense: true,
-                                      controlAffinity: ListTileControlAffinity.leading,
-                                      activeColor: const Color(0xFF0085FF),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
+                      _buildDropdown<TipoRegimen>(
+                        label: 'Tipo Régimen *',
+                        value: _tipoRegimenSeleccionado,
+                        items: widget.tiposRegimen,
+                        onChanged: (value) => setState(() => _tipoRegimenSeleccionado = value!),
+                        itemLabel: (item) => item.descripcion,
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarEmpresa,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
+                  const SizedBox(height: 16),
+                  _buildDropdown<String>(
+                    label: 'Estado *',
+                    value: _estadoSeleccionado,
+                    items: _estados,
+                    onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                    itemLabel: (item) => item,
                   ),
                 ],
               ),
-            ),
-          ],
+              // Columna derecha - Actividades económicas
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Actividades Económicas',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_actividadesSeleccionadas.length} seleccionada(s)',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _searchActividadController,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar actividad...',
+                      prefixIcon: const Icon(Icons.search, size: 18),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 350,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: ListView.builder(
+                      itemCount: _actividadesFiltradas.length,
+                      itemBuilder: (context, index) {
+                        final actividad = _actividadesFiltradas[index];
+                        final isSeleccionada = _isActividadSeleccionada(actividad);
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Colors.grey.shade200),
+                            ),
+                          ),
+                          child: CheckboxListTile(
+                            value: isSeleccionada,
+                            onChanged: (value) => _toggleActividad(actividad),
+                            title: Text(
+                              actividad.codigo_actividad.toString(),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                            subtitle: Text(
+                              actividad.descripcion_actividad,
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            dense: true,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            activeColor: const Color(0xFF0085FF),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

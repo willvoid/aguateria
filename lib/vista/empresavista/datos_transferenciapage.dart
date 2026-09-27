@@ -3,7 +3,9 @@ import 'package:myapp/dao/empresadao/datos_transferenciacrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/datos_transferencia.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class DatosTransferenciaPage extends StatefulWidget {
   const DatosTransferenciaPage({Key? key}) : super(key: key);
@@ -373,179 +375,93 @@ class _DialogoEditarTransferenciaState
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 700,
-        constraints: const BoxConstraints(maxHeight: 680), // ← ajustado
-        child: Column(
-          children: [
-            // ── Header ──────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
-              ),
-              child: Row(
+    return CrudDialog(
+      icon: Icons.account_balance,
+      title: widget.item == null
+          ? 'Agregar Cuenta de Transferencia'
+          : 'Editar Cuenta de Transferencia',
+      preferredWidth: 700,
+      preferredMaxHeight: 680,
+      onGuardar: _guardar,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.account_balance, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.item == null
-                        ? 'Agregar Cuenta de Transferencia'
-                        : 'Editar Cuenta de Transferencia',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600),
+                  _buildTextField(
+                    controller: _titularController,
+                    label: 'Titular de la Cuenta *',
+                    hint: 'Ingrese el titular',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildTextField(
+                    controller: _aliasController,
+                    label: 'Alias',
+                    hint: 'Ingrese alias (opcional)',
                   ),
                 ],
               ),
-            ),
-
-            // ── Formulario ──────────────────────────────────────
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _titularController,
-                              label: 'Titular de la Cuenta *',
-                              hint: 'Ingrese el titular',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _aliasController,
-                              label: 'Alias',
-                              hint: 'Ingrese alias (opcional)',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _bancoController,
-                              label: 'Banco *',
-                              hint: 'Nombre del banco',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _ciController,
-                              label: 'CI *',
-                              hint: 'Cédula de identidad',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _numCuentaController,
-                              label: 'Nro. de Cuenta *',
-                              hint: 'Ingrese número de cuenta',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _nroGiroController,
-                              label: 'Nro. de Giro',
-                              hint: 'Ingrese nro. de giro (opcional)',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // ── Fila nueva: CI Giro + Sucursal ──────────
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _ciGiroController,
-                              label: 'CI Giro',
-                              hint: 'CI del giro (opcional)',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<Establecimiento>(
-                              label: 'Sucursal *',
-                              value: _sucursalSeleccionada,
-                              items: widget.establecimientos,
-                              onChanged: (v) =>
-                                  setState(() => _sucursalSeleccionada = v!),
-                              itemLabel: (e) => e.denominacion,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Footer ──────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
+                  _buildTextField(
+                    controller: _bancoController,
+                    label: 'Banco *',
+                    hint: 'Nombre del banco',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
+                  _buildTextField(
+                    controller: _ciController,
+                    label: 'CI *',
+                    hint: 'Cédula de identidad',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildTextField(
+                    controller: _numCuentaController,
+                    label: 'Nro. de Cuenta *',
+                    hint: 'Ingrese número de cuenta',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
+                  ),
+                  _buildTextField(
+                    controller: _nroGiroController,
+                    label: 'Nro. de Giro',
+                    hint: 'Ingrese nro. de giro (opcional)',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildTextField(
+                    controller: _ciGiroController,
+                    label: 'CI Giro',
+                    hint: 'CI del giro (opcional)',
+                  ),
+                  _buildDropdown<Establecimiento>(
+                    label: 'Sucursal *',
+                    value: _sucursalSeleccionada,
+                    items: widget.establecimientos,
+                    onChanged: (v) =>
+                        setState(() => _sucursalSeleccionada = v!),
+                    itemLabel: (e) => e.denominacion,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -9,7 +9,9 @@ import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/empresa/tipo_contribuyente.dart';
 import 'package:myapp/modelo/tipo_operacion.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ClientesPage extends StatefulWidget {
@@ -429,346 +431,254 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 800,
-        constraints: const BoxConstraints(maxHeight: 740),
-        child: Column(
-          children: [
-            // ── Header ──────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
-              ),
-              child: Row(
+    return CrudDialog(
+      icon: Icons.person_add,
+      title: widget.cliente == null ? 'Agregar Cliente' : 'Editar Cliente',
+      preferredWidth: 800,
+      preferredMaxHeight: 740,
+      onGuardar: _guardarCliente,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.person_add, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.cliente == null
-                        ? 'Agregar Cliente'
-                        : 'Editar Cliente',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600),
+                  _buildTextField(
+                    controller: _razonSocialController,
+                    label: 'Razón Social *',
+                    hint: 'Ingrese razón social',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildTextField(
+                    controller: _nombreFantasiaController,
+                    label: 'Nombre Fantasía',
+                    hint: 'Ingrese nombre fantasía',
                   ),
                 ],
               ),
-            ),
-
-            // ── Formulario ──────────────────────────────────────
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _razonSocialController,
-                              label: 'Razón Social *',
-                              hint: 'Ingrese razón social',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _nombreFantasiaController,
-                              label: 'Nombre Fantasía',
-                              hint: 'Ingrese nombre fantasía',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Tipo Documento',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF374151),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                DropdownButtonFormField<TipoDocumento?>(
-                                  value: _tipoDocumentoSeleccionado,
-                                  items: [
-                                    const DropdownMenuItem<TipoDocumento?>(
-                                      value: null,
-                                      child: Text('— Sin tipo documento —'),
-                                    ),
-                                    ...widget.tiposDocumento.map(
-                                      (t) => DropdownMenuItem<TipoDocumento?>(
-                                        value: t,
-                                        child: Text(t.descripcion_tipodoc),
-                                      ),
-                                    ),
-                                  ],
-                                  onChanged: (v) => setState(() {
-                                    _tipoDocumentoSeleccionado = v;
-                                    // Limpiar el campo documento al cambiar
-                                    // el tipo para evitar valores residuales
-                                    _documentoController.clear();
-                                  }),
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                      borderSide: BorderSide(
-                                          color: Colors.grey.shade300),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                      borderSide: BorderSide(
-                                          color: Colors.grey.shade300),
-                                    ),
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 12),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _documentoController,
-                              label: 'Documento *',
-                              hint: 'Ingrese documento',
-                              validator: (v) {
-                                if (v?.isEmpty ?? true) {
-                                  return 'Campo requerido';
-                                }
-                                // Solo validar que no sea '0' si tiene
-                                // tipo de documento seleccionado
-                                if (_tipoDocumentoSeleccionado != null &&
-                                    v == '0') {
-                                  return 'Ingrese un documento válido';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _telefonoController,
-                              label: 'Teléfono',
-                              hint: 'Ingrese teléfono',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _celularController,
-                              label: 'Celular *',
-                              hint: 'Ingrese celular',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _direccionController,
-                        label: 'Dirección',
-                        hint: 'Ingrese dirección',
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _emailController,
-                        label: 'Email',
-                        hint: 'Ingrese email',
-                        validator: (v) {
-                          if (v != null && v.isNotEmpty) {
-                            if (!v.contains('@') || !v.contains('.')) {
-                              return 'Email inválido';
-                            }
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _nroCasaController,
-                              label: 'Nro. Casa *',
-                              hint: 'Ingrese número de casa',
-                              keyboardType: TextInputType.number,
-                              validator: (v) {
-                                if (v?.isEmpty ?? true) {
-                                  return 'Campo requerido';
-                                }
-                                if (int.tryParse(v!) == null) {
-                                  return 'Debe ser un número';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<Barrio>(
-                              label: 'Barrio *',
-                              value: _barrioSeleccionado,
-                              items: widget.barrios,
-                              onChanged: (v) =>
-                                  setState(() => _barrioSeleccionado = v!),
-                              itemLabel: (i) => i.nombre_barrio,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildDropdown<TipoOperacion>(
-                              label: 'Tipo Operación *',
-                              value: _tipoOperacionSeleccionado,
-                              items: widget.tiposOperacion,
-                              onChanged: (v) => setState(
-                                  () => _tipoOperacionSeleccionado = v!),
-                              itemLabel: (i) => i.codigo_tipo_operacion,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<String>(
-                              label: 'Estado *',
-                              value: _estadoSeleccionado,
-                              items: _estados,
-                              onChanged: (v) =>
-                                  setState(() => _estadoSeleccionado = v!),
-                              itemLabel: (i) => i,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── Tipo Contribuyente ─────────────────────
-                      if (widget.tiposContribuyente.isNotEmpty) ...[
-                        const Text(
-                          'Tipo Contribuyente',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF374151),
-                          ),
+                      const Text(
+                        'Tipo Documento',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF374151),
                         ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<TipoContribuyente?>(
-                          value: _tipoContribuyenteSeleccionado,
-                          items: [
-                            const DropdownMenuItem<TipoContribuyente?>(
-                              value: null,
-                              child: Text('— Sin tipo contribuyente —'),
-                            ),
-                            ...widget.tiposContribuyente.map(
-                              (t) => DropdownMenuItem<TipoContribuyente?>(
-                                value: t,
-                                child: Text(
-                                    '${t.codigo_contribuyente} - ${t.descripcion}'),
-                              ),
-                            ),
-                          ],
-                          onChanged: (v) => setState(
-                              () => _tipoContribuyenteSeleccionado = v),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<TipoDocumento?>(
+                        value: _tipoDocumentoSeleccionado,
+                        items: [
+                          const DropdownMenuItem<TipoDocumento?>(
+                            value: null,
+                            child: Text('— Sin tipo documento —'),
                           ),
+                          ...widget.tiposDocumento.map(
+                            (t) => DropdownMenuItem<TipoDocumento?>(
+                              value: t,
+                              child: Text(t.descripcion_tipodoc),
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() {
+                          _tipoDocumentoSeleccionado = v;
+                          // Limpiar el campo documento al cambiar
+                          // el tipo para evitar valores residuales
+                          _documentoController.clear();
+                        }),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide(
+                                color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide(
+                                color: Colors.grey.shade300),
+                          ),
+                          contentPadding:
+                              const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
                         ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      CheckboxListTile(
-                        title: const Text('¿Es proveedor del estado?'),
-                        value: _esProveedorEstado,
-                        onChanged: (v) =>
-                            setState(() => _esProveedorEstado = v ?? false),
-                        controlAffinity: ListTileControlAffinity.leading,
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
-
-            // ── Footer ──────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarCliente,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
+                  _buildTextField(
+                    controller: _documentoController,
+                    label: 'Documento *',
+                    hint: 'Ingrese documento',
+                    validator: (v) {
+                      if (v?.isEmpty ?? true) {
+                        return 'Campo requerido';
+                      }
+                      // Solo validar que no sea '0' si tiene
+                      // tipo de documento seleccionado
+                      if (_tipoDocumentoSeleccionado != null &&
+                          v == '0') {
+                        return 'Ingrese un documento válido';
+                      }
+                      return null;
+                    },
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildTextField(
+                    controller: _telefonoController,
+                    label: 'Teléfono',
+                    hint: 'Ingrese teléfono',
+                  ),
+                  _buildTextField(
+                    controller: _celularController,
+                    label: 'Celular *',
+                    hint: 'Ingrese celular',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _direccionController,
+                label: 'Dirección',
+                hint: 'Ingrese dirección',
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _emailController,
+                label: 'Email',
+                hint: 'Ingrese email',
+                validator: (v) {
+                  if (v != null && v.isNotEmpty) {
+                    if (!v.contains('@') || !v.contains('.')) {
+                      return 'Email inválido';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildTextField(
+                    controller: _nroCasaController,
+                    label: 'Nro. Casa *',
+                    hint: 'Ingrese número de casa',
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      if (v?.isEmpty ?? true) {
+                        return 'Campo requerido';
+                      }
+                      if (int.tryParse(v!) == null) {
+                        return 'Debe ser un número';
+                      }
+                      return null;
+                    },
+                  ),
+                  _buildDropdown<Barrio>(
+                    label: 'Barrio *',
+                    value: _barrioSeleccionado,
+                    items: widget.barrios,
+                    onChanged: (v) =>
+                        setState(() => _barrioSeleccionado = v!),
+                    itemLabel: (i) => i.nombre_barrio,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildDropdown<TipoOperacion>(
+                    label: 'Tipo Operación *',
+                    value: _tipoOperacionSeleccionado,
+                    items: widget.tiposOperacion,
+                    onChanged: (v) => setState(
+                        () => _tipoOperacionSeleccionado = v!),
+                    itemLabel: (i) => i.codigo_tipo_operacion,
+                  ),
+                  _buildDropdown<String>(
+                    label: 'Estado *',
+                    value: _estadoSeleccionado,
+                    items: _estados,
+                    onChanged: (v) =>
+                        setState(() => _estadoSeleccionado = v!),
+                    itemLabel: (i) => i,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // ── Tipo Contribuyente ─────────────────────
+              if (widget.tiposContribuyente.isNotEmpty) ...[
+                const Text(
+                  'Tipo Contribuyente',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<TipoContribuyente?>(
+                  value: _tipoContribuyenteSeleccionado,
+                  items: [
+                    const DropdownMenuItem<TipoContribuyente?>(
+                      value: null,
+                      child: Text('— Sin tipo contribuyente —'),
+                    ),
+                    ...widget.tiposContribuyente.map(
+                      (t) => DropdownMenuItem<TipoContribuyente?>(
+                        value: t,
+                        child: Text(
+                            '${t.codigo_contribuyente} - ${t.descripcion}'),
+                      ),
+                    ),
+                  ],
+                  onChanged: (v) => setState(
+                      () => _tipoContribuyenteSeleccionado = v),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide:
+                          BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide:
+                          BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              CheckboxListTile(
+                title: const Text('¿Es proveedor del estado?'),
+                value: _esProveedorEstado,
+                onChanged: (v) =>
+                    setState(() => _esProveedorEstado = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+            ],
+          ),
         ),
       ),
     );

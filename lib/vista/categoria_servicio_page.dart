@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:myapp/dao/categoriaserviciocrudimpl.dart';
 
 import 'package:myapp/modelo/categoria_servicio.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class CategoriaServicioPage extends StatefulWidget {
   const CategoriaServicioPage({Key? key}) : super(key: key);
@@ -312,163 +314,95 @@ class _DialogoEditarCategoriaServicioState extends State<_DialogoEditarCategoria
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 600),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
+    return CrudDialog(
+      icon: Icons.category,
+      title: widget.categoria == null
+          ? 'Agregar Categoría de Servicio'
+          : 'Editar Categoría de Servicio',
+      preferredWidth: 600,
+      preferredMaxHeight: 600,
+      onGuardar: _guardarCategoria,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTextField(
+                controller: _nombreController,
+                label: 'Nombre *',
+                hint: 'Ingrese nombre de la categoría',
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-              child: Row(
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _tarifaFijaController,
+                label: 'Tarifa Fija *',
+                hint: 'Ingrese tarifa fija',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                  if (double.tryParse(value!) == null) {
+                    return 'Debe ser un número válido';
+                  }
+                  if (double.parse(value) < 0) {
+                    return 'Debe ser mayor o igual a 0';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.category, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.categoria == null
-                        ? 'Agregar Categoría de Servicio'
-                        : 'Editar Categoría de Servicio',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  _buildTextField(
+                    controller: _m2MinController,
+                    label: 'M² Mínimo *',
+                    hint: 'Ingrese m² mínimo',
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Campo requerido';
+                      if (double.tryParse(value!) == null) {
+                        return 'Debe ser un número válido';
+                      }
+                      if (double.parse(value) < 0) {
+                        return 'Debe ser mayor o igual a 0';
+                      }
+                      return null;
+                    },
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildTextField(
+                    controller: _m2MaxController,
+                    label: 'M² Máximo *',
+                    hint: 'Ingrese m² máximo',
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Campo requerido';
+                      if (double.tryParse(value!) == null) {
+                        return 'Debe ser un número válido';
+                      }
+                      final m2Min = double.tryParse(_m2MinController.text);
+                      final m2Max = double.tryParse(value);
+                      if (m2Min != null && m2Max != null && m2Max <= m2Min) {
+                        return 'Debe ser mayor que el m² mínimo';
+                      }
+                      return null;
+                    },
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _nombreController,
-                        label: 'Nombre *',
-                        hint: 'Ingrese nombre de la categoría',
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _tarifaFijaController,
-                        label: 'Tarifa Fija *',
-                        hint: 'Ingrese tarifa fija',
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) return 'Campo requerido';
-                          if (double.tryParse(value!) == null) {
-                            return 'Debe ser un número válido';
-                          }
-                          if (double.parse(value) < 0) {
-                            return 'Debe ser mayor o igual a 0';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _m2MinController,
-                              label: 'M² Mínimo *',
-                              hint: 'Ingrese m² mínimo',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Campo requerido';
-                                if (double.tryParse(value!) == null) {
-                                  return 'Debe ser un número válido';
-                                }
-                                if (double.parse(value) < 0) {
-                                  return 'Debe ser mayor o igual a 0';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _m2MaxController,
-                              label: 'M² Máximo *',
-                              hint: 'Ingrese m² máximo',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Campo requerido';
-                                if (double.tryParse(value!) == null) {
-                                  return 'Debe ser un número válido';
-                                }
-                                final m2Min = double.tryParse(_m2MinController.text);
-                                final m2Max = double.tryParse(value);
-                                if (m2Min != null && m2Max != null && m2Max <= m2Min) {
-                                  return 'Debe ser mayor que el m² mínimo';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _descripcionController,
-                        label: 'Descripción *',
-                        hint: 'Ingrese descripción',
-                        maxLines: 3,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _descripcionController,
+                label: 'Descripción *',
+                hint: 'Ingrese descripción',
+                maxLines: 3,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarCategoria,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

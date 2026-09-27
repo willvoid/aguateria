@@ -7,6 +7,7 @@ import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/vista/deuda_page.dart';
 import 'package:myapp/widget/autocomplete_cliente.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
 
 class InmueblesPage extends StatefulWidget {
@@ -394,135 +395,70 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 550),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
+    return CrudDialog(
+      icon: Icons.home,
+      title: widget.inmueble == null ? 'Agregar Inmueble' : 'Editar Inmueble',
+      preferredWidth: 600,
+      preferredMaxHeight: 550,
+      onGuardar: _guardarInmueble,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTextField(
+                controller: _codigoController,
+                label: 'Código de Inmueble *',
+                hint: 'Ingrese código único',
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.home, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.inmueble == null
-                        ? 'Agregar Inmueble'
-                        : 'Editar Inmueble',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _direccionController,
+                label: 'Dirección *',
+                hint: 'Ingrese dirección del inmueble',
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _codigoController,
-                        label: 'Código de Inmueble *',
-                        hint: 'Ingrese código único',
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _direccionController,
-                        label: 'Dirección *',
-                        hint: 'Ingrese dirección del inmueble',
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      /*_buildDropdown<Cliente>(
-                        label: 'Cliente *',
-                        value: _clienteSeleccionado,
-                        items: widget.clientes,
-                        onChanged: (value) => setState(() => _clienteSeleccionado = value!),
-                        itemLabel: (item) => '${item.razonSocial} - ${item.documento}',
-                      ),*/
-                      ClienteAutocomplete(
-                        clientes: widget.clientes,
-                        clienteInicial: widget.inmueble != null
-                            ? _clienteSeleccionado
-                            : null,
-                        onSeleccionado: (c) =>
-                            setState(() => _clienteSeleccionado = c),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<CategoriaServicio>(
-                        label: 'Categoría de Servicio *',
-                        value: _categoriaSeleccionada,
-                        items: widget.categoriasServicio,
-                        onChanged: (value) =>
-                            setState(() => _categoriaSeleccionada = value!),
-                        itemLabel: (item) => item.descripcion,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<String>(
-                        label: 'Estado *',
-                        value: _estadoSeleccionado,
-                        items: _estados,
-                        onChanged: (value) =>
-                            setState(() => _estadoSeleccionado = value!),
-                        itemLabel: (item) => item,
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 16),
+              /*_buildDropdown<Cliente>(
+                label: 'Cliente *',
+                value: _clienteSeleccionado,
+                items: widget.clientes,
+                onChanged: (value) => setState(() => _clienteSeleccionado = value!),
+                itemLabel: (item) => '${item.razonSocial} - ${item.documento}',
+              ),*/
+              ClienteAutocomplete(
+                clientes: widget.clientes,
+                clienteInicial: widget.inmueble != null
+                    ? _clienteSeleccionado
+                    : null,
+                onSeleccionado: (c) =>
+                    setState(() => _clienteSeleccionado = c),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+              const SizedBox(height: 16),
+              _buildDropdown<CategoriaServicio>(
+                label: 'Categoría de Servicio *',
+                value: _categoriaSeleccionada,
+                items: widget.categoriasServicio,
+                onChanged: (value) =>
+                    setState(() => _categoriaSeleccionada = value!),
+                itemLabel: (item) => item.descripcion,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarInmueble,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              _buildDropdown<String>(
+                label: 'Estado *',
+                value: _estadoSeleccionado,
+                items: _estados,
+                onChanged: (value) =>
+                    setState(() => _estadoSeleccionado = value!),
+                itemLabel: (item) => item,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:myapp/dao/empresadao/cajacrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/caja.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
+import 'package:myapp/widget/crud_dialog.dart';
 import 'package:myapp/widget/crud_list_view.dart';
 
 class CajaPage extends StatefulWidget {
@@ -393,179 +394,119 @@ class _DialogoEditarCajaState extends State<_DialogoEditarCaja> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 550),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
+    return CrudDialog(
+      icon: Icons.point_of_sale,
+      title: widget.caja == null ? 'Agregar Caja' : 'Editar Caja',
+      preferredWidth: 600,
+      preferredMaxHeight: 550,
+      onGuardar: _guardarCaja,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDropdown<Establecimiento>(
+                label: 'Establecimiento *',
+                value: _establecimientoSeleccionado,
+                items: widget.establecimientos,
+                onChanged: (value) {
+                  setState(() {
+                    _establecimientoSeleccionado = value!;
+                    if (_autoGenerarNumero) {
+                      _cargarProximoNumero();
+                    }
+                  });
+                },
+                itemLabel: (item) => '${item.codigo_establecimiento} - ${item.denominacion}',
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.point_of_sale, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.caja == null ? 'Agregar Caja' : 'Editar Caja',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+              const SizedBox(height: 16),
+              if (widget.caja == null) ...[
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _autoGenerarNumero,
+                      onChanged: (value) {
+                        setState(() {
+                          _autoGenerarNumero = value ?? false;
+                          if (_autoGenerarNumero) {
+                            _numeroCajaController.text = _proximoNumero.toString();
+                          } else {
+                            _numeroCajaController.clear();
+                          }
+                        });
+                      },
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDropdown<Establecimiento>(
-                        label: 'Establecimiento *',
-                        value: _establecimientoSeleccionado,
-                        items: widget.establecimientos,
-                        onChanged: (value) {
-                          setState(() {
-                            _establecimientoSeleccionado = value!;
-                            if (_autoGenerarNumero) {
-                              _cargarProximoNumero();
-                            }
-                          });
-                        },
-                        itemLabel: (item) => '${item.codigo_establecimiento} - ${item.denominacion}',
-                      ),
-                      const SizedBox(height: 16),
-                      if (widget.caja == null) ...[
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _autoGenerarNumero,
-                              onChanged: (value) {
-                                setState(() {
-                                  _autoGenerarNumero = value ?? false;
-                                  if (_autoGenerarNumero) {
-                                    _numeroCajaController.text = _proximoNumero.toString();
-                                  } else {
-                                    _numeroCajaController.clear();
-                                  }
-                                });
-                              },
-                            ),
-                            const Text('Auto-generar número de caja'),
-                            const SizedBox(width: 8),
-                            if (_proximoNumero > 0)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'Próximo: $_proximoNumero',
-                                  style: TextStyle(
-                                    color: Colors.blue.shade700,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      _buildTextField(
-                        controller: _numeroCajaController,
-                        label: 'Número de Caja *',
-                        hint: 'Ej: 1',
-                        keyboardType: TextInputType.number,
-                        enabled: !_autoGenerarNumero,
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) return 'Campo requerido';
-                          if (int.tryParse(value!) == null) return 'Debe ser un número';
-                          if (int.parse(value) <= 0) return 'Debe ser mayor a 0';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _descripcionController,
-                        label: 'Descripción *',
-                        hint: 'Ej: Caja Principal',
-                        maxLines: 2,
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
+                    const Text('Auto-generar número de caja'),
+                    const SizedBox(width: 8),
+                    if (_proximoNumero > 0)
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.blue.shade200),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'El número de caja debe ser único para cada establecimiento.',
-                                style: TextStyle(
-                                  color: Colors.blue.shade900,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          'Próximo: $_proximoNumero',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              _buildTextField(
+                controller: _numeroCajaController,
+                label: 'Número de Caja *',
+                hint: 'Ej: 1',
+                keyboardType: TextInputType.number,
+                enabled: !_autoGenerarNumero,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                  if (int.tryParse(value!) == null) return 'Debe ser un número';
+                  if (int.parse(value) <= 0) return 'Debe ser mayor a 0';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _descripcionController,
+                label: 'Descripción *',
+                hint: 'Ej: Caja Principal',
+                maxLines: 2,
+                validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'El número de caja debe ser único para cada establecimiento.',
+                        style: TextStyle(
+                          color: Colors.blue.shade900,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarCaja,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
