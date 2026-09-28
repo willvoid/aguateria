@@ -19,16 +19,15 @@ SELECT * FROM public.unidades_medida;
 
 -- 3) Backfill: crear un concepto por cada categoría de servicio que
 --    todavía no tenga uno asociado (arancel = tarifa_fija de la categoría).
---    Reemplazar <ID_IVA> y <ID_UNIDAD_MEDIDA> por los valores reales
---    obtenidos en el paso 2 (usar el IVA/unidad que corresponda a un
---    cargo fijo mensual, por ejemplo "exenta" o "10%" según tu operativa).
+--    IVA = 1 (10%) y unidad de medida = 1 (UNI) son las únicas opciones
+--    existentes en esta base.
 INSERT INTO public.conceptos (nombre, arancel, descripcion, fk_iva, fk_unidad_medida, estado, fk_servicio)
 SELECT
   'Cargo mensual ' || cs.nombre,
   cs.tarifa_fija,
   'Tarifa fija mensual - ' || cs.nombre,
-  <ID_IVA>,
-  <ID_UNIDAD_MEDIDA>,
+  1,
+  1,
   'ACTIVO',
   cs.id
 FROM public.categoria_servicio cs
