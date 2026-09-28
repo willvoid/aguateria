@@ -63,7 +63,18 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     if (oldWidget.inmuebleSeleccionado?.id != widget.inmuebleSeleccionado?.id &&
         _esConsumo) {
       _ciclosSeleccionados = [];
+      _actualizarMontoConsumo();
       _cargarCiclosFiltrados();
+    }
+  }
+
+  // Carga en _montoController la tarifa fija de la categoría del inmueble
+  // seleccionado (no el arancel del concepto, que es fijo para todas las
+  // categorías).
+  void _actualizarMontoConsumo() {
+    final tarifa = widget.inmuebleSeleccionado?.categoriaServicio.tarifa_fija;
+    if (tarifa != null) {
+      _montoController.text = tarifa.toStringAsFixed(0);
     }
   }
 
@@ -521,13 +532,15 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                   setState(() {
                     _conceptoSeleccionado = concepto;
                     if (concepto != null) {
-                      _montoController.text =
-                          concepto.arancel.toStringAsFixed(0);
                       _ivaAplicado = concepto.fk_iva.valor;
                       _descripcionController.text = concepto.nombre;
                       _esConsumo = concepto.id == 1;
                       _esConexion = concepto.id == 2; // ← NUEVO
-                      if (!_esConsumo) {
+                      if (_esConsumo) {
+                        _actualizarMontoConsumo();
+                      } else {
+                        _montoController.text =
+                            concepto.arancel.toStringAsFixed(0);
                         _ciclosSeleccionados = [];
                         _ciclos = [];
                       }
@@ -535,6 +548,11 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                   });
 
                   if (concepto != null && _esConsumo) {
+                    if (widget.inmuebleSeleccionado == null) {
+                      _mostrarError(
+                          'Seleccione un inmueble antes de cargar Consumo');
+                      return;
+                    }
                     await _cargarCiclosFiltrados();
                     if (!mounted) return;
                     await _abrirSelectorCiclos();

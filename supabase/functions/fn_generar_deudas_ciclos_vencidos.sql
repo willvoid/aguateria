@@ -3,16 +3,16 @@
 -- Agendada en pg_cron (jobid=2) para correr diariamente.
 --
 -- Al vencer un ciclo, genera en cuentas_cobrar el cargo mensual de cada
--- inmueble CONECTADO según el concepto asociado a su categoria_servicio
--- (conceptos.fk_servicio -> categoria_servicio.id), evita duplicar el
--- cargo del mismo ciclo, y rota el ciclo activo al siguiente.
+-- inmueble CONECTADO usando el concepto "Consumo" (fk_concepto=1, único
+-- y común a todas las categorías) con monto = tarifa_fija de la
+-- categoria_servicio del inmueble. Evita duplicar el cargo del mismo
+-- ciclo, y rota el ciclo activo al siguiente.
 --
--- Requiere que cada categoria_servicio tenga un concepto ACTIVO con
--- fk_servicio = categoria_servicio.id Y arancel = tarifa_fija (ver
--- supabase/migrations para el backfill inicial). El filtro por arancel
--- es necesario porque una categoría puede tener varios conceptos con el
--- mismo fk_servicio (ej. Conexión, Deuda anterior) que no deben cobrarse
--- todos los meses: solo el que coincide con tarifa_fija es el recurrente.
+-- El monto ya varía correctamente por categoría porque sale de
+-- categoria_servicio.tarifa_fija, no del concepto: no hace falta un
+-- concepto distinto por categoría (ver facturación manual en
+-- lib/vista/facturacionvista/detallefacturawidget.dart, que sigue el
+-- mismo criterio).
 -- =====================================================================
 
 CREATE OR REPLACE FUNCTION public.fn_generar_deudas_ciclos_vencidos()
@@ -32,25 +32,19 @@ BEGIN
     LOOP
         RAISE NOTICE 'Procesando ciclo: %', v_ciclo.descripcion;
 
-        -- 2. Seleccionamos inmuebles activos, con su concepto según categoría,
-        --    que NO tengan deuda de este ciclo para ese concepto
+        -- 2. Seleccionamos inmuebles activos que NO tengan deuda de este ciclo
         FOR v_inmueble IN
             SELECT
                 i.id AS inmueble_id,
-                c.id_concepto AS concepto_id,
-                c.arancel AS monto
+                cs.tarifa_fija
             FROM public.inmuebles i
             JOIN public.categoria_servicio cs ON i.fk_categoria_servicio = cs.id
-            JOIN public.conceptos c
-                ON c.fk_servicio = cs.id
-               AND c.estado = 'ACTIVO'
-               AND c.arancel = cs.tarifa_fija
             WHERE i.estado = 'CONECTADO'
               AND NOT EXISTS (
                   SELECT 1 FROM public.cuentas_cobrar cc
                   WHERE cc.fk_inmueble = i.id
                     AND cc.fk_ciclos = v_ciclo.id_ciclos
-                    AND cc.fk_concepto = c.id_concepto
+                    AND cc.fk_concepto = 1
               )
         LOOP
             -- 3. Insertamos la deuda directamente como PENDIENTE
@@ -64,13 +58,13 @@ BEGIN
                 saldo,
                 pagado
             ) VALUES (
-                v_inmueble.concepto_id,
+                1,
                 'Consumo mes: ' || v_ciclo.descripcion,
-                v_inmueble.monto,
+                v_inmueble.tarifa_fija,
                 'PENDIENTE',
                 v_ciclo.id_ciclos,
                 v_inmueble.inmueble_id,
-                v_inmueble.monto,
+                v_inmueble.tarifa_fija,
                 0
             );
         END LOOP;
