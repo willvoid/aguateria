@@ -3,6 +3,9 @@ import 'package:myapp/dao/empresadao/cajacrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/caja.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
+import 'package:myapp/widget/crud_dialog.dart';
+import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 
 class CajaPage extends StatefulWidget {
   const CajaPage({Key? key}) : super(key: key);
@@ -174,198 +177,139 @@ class _CajaPageState extends State<CajaPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por número, descripción, establecimiento o empresa...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                ),
+      child: CrudListView<Caja>(
+        items: cajasFiltradas,
+        isLoading: _isLoading,
+        emptyIcon: Icons.point_of_sale_outlined,
+        emptyText: 'No hay cajas para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por número, descripción, establecimiento o empresa...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: DropdownButton<Establecimiento?>(
-                  value: _filtroEstablecimiento,
-                  hint: const Text('Todos los establecimientos'),
-                  underline: const SizedBox(),
-                  items: [
-                    const DropdownMenuItem<Establecimiento?>(
-                      value: null,
-                      child: Text('Todos los establecimientos'),
-                    ),
-                    ...establecimientos.map((est) {
-                      return DropdownMenuItem<Establecimiento?>(
-                        value: est,
-                        child: Text('${est.codigo_establecimiento} - ${est.denominacion}'),
-                      );
-                    }),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _filtroEstablecimiento = value;
-                      _filtrarCajas();
-                    });
-                  },
-                ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Caja'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
+          filters: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : cajasFiltradas.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.point_of_sale_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay cajas para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Nro. Caja')),
-                                DataColumn(label: Text('Descripción')),
-                                DataColumn(label: Text('Establecimiento')),
-                                DataColumn(label: Text('Empresa')),
-                                DataColumn(label: Text('Dirección')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: cajasFiltradas.map((caja) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${caja.id_caja}')),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          '${caja.nro_caja}',
-                                          style: TextStyle(
-                                            color: Colors.blue.shade700,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 200,
-                                        child: Text(
-                                          caja.descripcion_caja,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          '${caja.fk_establecimiento.codigo_establecimiento} - ${caja.fk_establecimiento.denominacion}',
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          caja.fk_establecimiento.fk_empresa.razon_social,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          '${caja.fk_establecimiento.direccion}, ${caja.fk_establecimiento.numero_casa}',
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(caja),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              child: DropdownButton<Establecimiento?>(
+                value: _filtroEstablecimiento,
+                hint: const Text('Todos los establecimientos'),
+                underline: const SizedBox(),
+                isExpanded: true,
+                items: [
+                  const DropdownMenuItem<Establecimiento?>(
+                    value: null,
+                    child: Text('Todos los establecimientos'),
+                  ),
+                  ...establecimientos.map((est) {
+                    return DropdownMenuItem<Establecimiento?>(
+                      value: est,
+                      child: Text('${est.codigo_establecimiento} - ${est.denominacion}'),
+                    );
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _filtroEstablecimiento = value;
+                    _filtrarCajas();
+                  });
+                },
+              ),
+            ),
+          ],
+          action: ElevatedButton.icon(
+            onPressed: () {
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Caja'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        columns: [
+          CrudColumn<Caja>(
+            label: 'ID',
+            cellBuilder: (caja) => Text('${caja.id_caja}'),
+          ),
+          CrudColumn<Caja>(
+            label: 'Nro. Caja',
+            isTitle: true,
+            cellBuilder: (caja) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '${caja.nro_caja}',
+                style: TextStyle(
+                  color: Colors.blue.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          CrudColumn<Caja>(
+            label: 'Descripción',
+            isSubtitle: true,
+            cellBuilder: (caja) => SizedBox(
+              width: 200,
+              child: Text(caja.descripcion_caja, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Caja>(
+            label: 'Establecimiento',
+            cellBuilder: (caja) => SizedBox(
+              width: 150,
+              child: Text(
+                '${caja.fk_establecimiento.codigo_establecimiento} - ${caja.fk_establecimiento.denominacion}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          CrudColumn<Caja>(
+            label: 'Empresa',
+            cellBuilder: (caja) => SizedBox(
+              width: 150,
+              child: Text(
+                caja.fk_establecimiento.fk_empresa.razon_social,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          CrudColumn<Caja>(
+            label: 'Dirección',
+            cellBuilder: (caja) => SizedBox(
+              width: 150,
+              child: Text(
+                '${caja.fk_establecimiento.direccion}, ${caja.fk_establecimiento.numero_casa}',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ],
@@ -442,179 +386,119 @@ class _DialogoEditarCajaState extends State<_DialogoEditarCaja> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 550),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
+    return CrudDialog(
+      icon: Icons.point_of_sale,
+      title: widget.caja == null ? 'Agregar Caja' : 'Editar Caja',
+      preferredWidth: 600,
+      preferredMaxHeight: 550,
+      onGuardar: _guardarCaja,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDropdown<Establecimiento>(
+                label: 'Establecimiento *',
+                value: _establecimientoSeleccionado,
+                items: widget.establecimientos,
+                onChanged: (value) {
+                  setState(() {
+                    _establecimientoSeleccionado = value!;
+                    if (_autoGenerarNumero) {
+                      _cargarProximoNumero();
+                    }
+                  });
+                },
+                itemLabel: (item) => '${item.codigo_establecimiento} - ${item.denominacion}',
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.point_of_sale, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.caja == null ? 'Agregar Caja' : 'Editar Caja',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+              const SizedBox(height: 16),
+              if (widget.caja == null) ...[
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _autoGenerarNumero,
+                      onChanged: (value) {
+                        setState(() {
+                          _autoGenerarNumero = value ?? false;
+                          if (_autoGenerarNumero) {
+                            _numeroCajaController.text = _proximoNumero.toString();
+                          } else {
+                            _numeroCajaController.clear();
+                          }
+                        });
+                      },
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDropdown<Establecimiento>(
-                        label: 'Establecimiento *',
-                        value: _establecimientoSeleccionado,
-                        items: widget.establecimientos,
-                        onChanged: (value) {
-                          setState(() {
-                            _establecimientoSeleccionado = value!;
-                            if (_autoGenerarNumero) {
-                              _cargarProximoNumero();
-                            }
-                          });
-                        },
-                        itemLabel: (item) => '${item.codigo_establecimiento} - ${item.denominacion}',
-                      ),
-                      const SizedBox(height: 16),
-                      if (widget.caja == null) ...[
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _autoGenerarNumero,
-                              onChanged: (value) {
-                                setState(() {
-                                  _autoGenerarNumero = value ?? false;
-                                  if (_autoGenerarNumero) {
-                                    _numeroCajaController.text = _proximoNumero.toString();
-                                  } else {
-                                    _numeroCajaController.clear();
-                                  }
-                                });
-                              },
-                            ),
-                            const Text('Auto-generar número de caja'),
-                            const SizedBox(width: 8),
-                            if (_proximoNumero > 0)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'Próximo: $_proximoNumero',
-                                  style: TextStyle(
-                                    color: Colors.blue.shade700,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      _buildTextField(
-                        controller: _numeroCajaController,
-                        label: 'Número de Caja *',
-                        hint: 'Ej: 1',
-                        keyboardType: TextInputType.number,
-                        enabled: !_autoGenerarNumero,
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) return 'Campo requerido';
-                          if (int.tryParse(value!) == null) return 'Debe ser un número';
-                          if (int.parse(value) <= 0) return 'Debe ser mayor a 0';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _descripcionController,
-                        label: 'Descripción *',
-                        hint: 'Ej: Caja Principal',
-                        maxLines: 2,
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
+                    const Text('Auto-generar número de caja'),
+                    const SizedBox(width: 8),
+                    if (_proximoNumero > 0)
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.blue.shade200),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'El número de caja debe ser único para cada establecimiento.',
-                                style: TextStyle(
-                                  color: Colors.blue.shade900,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          'Próximo: $_proximoNumero',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              _buildTextField(
+                controller: _numeroCajaController,
+                label: 'Número de Caja *',
+                hint: 'Ej: 1',
+                keyboardType: TextInputType.number,
+                enabled: !_autoGenerarNumero,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                  if (int.tryParse(value!) == null) return 'Debe ser un número';
+                  if (int.parse(value) <= 0) return 'Debe ser mayor a 0';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _descripcionController,
+                label: 'Descripción *',
+                hint: 'Ej: Caja Principal',
+                maxLines: 2,
+                validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'El número de caja debe ser único para cada establecimiento.',
+                        style: TextStyle(
+                          color: Colors.blue.shade900,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarCaja,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

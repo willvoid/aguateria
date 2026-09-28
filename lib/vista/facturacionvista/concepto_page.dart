@@ -7,6 +7,10 @@ import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/modelo/facturacionmodelo/concepto.dart';
 import 'package:myapp/modelo/facturacionmodelo/iva.dart';
 import 'package:myapp/modelo/facturacionmodelo/unidad_medida.dart';
+import 'package:myapp/widget/crud_dialog.dart';
+import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class ConceptosPage extends StatefulWidget {
   const ConceptosPage({Key? key}) : super(key: key);
@@ -170,150 +174,100 @@ class _ConceptosPageState extends State<ConceptosPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por nombre, descripción o servicio...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Concepto'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
+      child: CrudListView<Concepto>(
+        items: conceptosFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.receipt_long_outlined,
+        emptyText: 'No hay conceptos para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por nombre, descripción o servicio...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : conceptosFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay conceptos para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Nombre')),
-                                DataColumn(label: Text('Descripción')),
-                                DataColumn(label: Text('Arancel')),
-                                DataColumn(label: Text('IVA')),
-                                DataColumn(label: Text('Unidad')),
-                                DataColumn(label: Text('Servicio')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: conceptosFiltrados.map((concepto) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${concepto.id}')),
-                                    DataCell(Text(concepto.nombre)),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 200,
-                                        child: Text(
-                                          concepto.descripcion,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(Text('${concepto.arancel.toStringAsFixed(0)} Gs.')),
-                                    DataCell(Text('${concepto.fk_iva.valor}%')),
-                                    DataCell(Text(concepto.fk_unidad_medida.representacion)),
-                                    DataCell(Text(concepto.fk_servicio.nombre)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: concepto.estado == 'ACTIVO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          concepto.estado,
-                                          style: TextStyle(
-                                            color: concepto.estado == 'ACTIVO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(concepto),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () {
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Concepto'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        columns: [
+          CrudColumn<Concepto>(
+            label: 'ID',
+            cellBuilder: (concepto) => Text('${concepto.id}'),
+          ),
+          CrudColumn<Concepto>(
+            label: 'Nombre',
+            isTitle: true,
+            cellBuilder: (concepto) => Text(concepto.nombre),
+          ),
+          CrudColumn<Concepto>(
+            label: 'Descripción',
+            isSubtitle: true,
+            cellBuilder: (concepto) => SizedBox(
+              width: 200,
+              child: Text(concepto.descripcion, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Concepto>(
+            label: 'Arancel',
+            cellBuilder: (concepto) => Text('${concepto.arancel.toStringAsFixed(0)} Gs.'),
+          ),
+          CrudColumn<Concepto>(
+            label: 'IVA',
+            cellBuilder: (concepto) => Text('${concepto.fk_iva.valor}%'),
+          ),
+          CrudColumn<Concepto>(
+            label: 'Unidad',
+            cellBuilder: (concepto) => Text(concepto.fk_unidad_medida.representacion),
+          ),
+          CrudColumn<Concepto>(
+            label: 'Servicio',
+            cellBuilder: (concepto) => Text(concepto.fk_servicio.nombre),
+          ),
+          CrudColumn<Concepto>(
+            label: 'Estado',
+            cellBuilder: (concepto) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: concepto.estado == 'ACTIVO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                concepto.estado,
+                style: TextStyle(
+                  color: concepto.estado == 'ACTIVO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],
@@ -394,149 +348,86 @@ class _DialogoEditarConceptoState extends State<_DialogoEditarConcepto> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 700,
-        constraints: const BoxConstraints(maxHeight: 650),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+    return CrudDialog(
+      icon: Icons.receipt_long,
+      title: widget.concepto == null ? 'Agregar Concepto' : 'Editar Concepto',
+      preferredWidth: 700,
+      preferredMaxHeight: 650,
+      onGuardar: _guardarConcepto,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTextField(
+                controller: _nombreController,
+                label: 'Nombre *',
+                hint: 'Ingrese el nombre del concepto',
+                validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-              child: Row(
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _descripcionController,
+                label: 'Descripción *',
+                hint: 'Ingrese la descripción',
+                maxLines: 3,
+                validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.receipt_long, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.concepto == null ? 'Agregar Concepto' : 'Editar Concepto',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  _buildTextField(
+                    controller: _arancelController,
+                    label: 'Arancel *',
+                    hint: 'Ingrese el arancel',
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Campo requerido';
+                      if (double.tryParse(value!) == null) return 'Debe ser un número';
+                      if (double.parse(value) < 0) return 'Debe ser mayor o igual a 0';
+                      return null;
+                    },
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildDropdown<Iva>(
+                    label: 'IVA *',
+                    value: _ivaSeleccionado,
+                    items: widget.ivas,
+                    onChanged: (value) => setState(() => _ivaSeleccionado = value!),
+                    itemLabel: (item) => '${item.descripcion} (${item.valor}%)',
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _nombreController,
-                        label: 'Nombre *',
-                        hint: 'Ingrese el nombre del concepto',
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _descripcionController,
-                        label: 'Descripción *',
-                        hint: 'Ingrese la descripción',
-                        maxLines: 3,
-                        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _arancelController,
-                              label: 'Arancel *',
-                              hint: 'Ingrese el arancel',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Campo requerido';
-                                if (double.tryParse(value!) == null) return 'Debe ser un número';
-                                if (double.parse(value) < 0) return 'Debe ser mayor o igual a 0';
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<Iva>(
-                              label: 'IVA *',
-                              value: _ivaSeleccionado,
-                              items: widget.ivas,
-                              onChanged: (value) => setState(() => _ivaSeleccionado = value!),
-                              itemLabel: (item) => '${item.descripcion} (${item.valor}%)',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildDropdown<UnidadMedida>(
-                              label: 'Unidad de Medida *',
-                              value: _unidadMedidaSeleccionada,
-                              items: widget.unidadesMedida,
-                              onChanged: (value) => setState(() => _unidadMedidaSeleccionada = value!),
-                              itemLabel: (item) => '${item.representacion} - ${item.descripcion}',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<String>(
-                              label: 'Estado *',
-                              value: _estadoSeleccionado,
-                              items: _estados,
-                              onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                              itemLabel: (item) => item,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<CategoriaServicio>(
-                        label: 'Categoría de Servicio *',
-                        value: _categoriaServicioSeleccionada,
-                        items: widget.categoriasServicio,
-                        onChanged: (value) => setState(() => _categoriaServicioSeleccionada = value!),
-                        itemLabel: (item) => item.nombre,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
+                  _buildDropdown<UnidadMedida>(
+                    label: 'Unidad de Medida *',
+                    value: _unidadMedidaSeleccionada,
+                    items: widget.unidadesMedida,
+                    onChanged: (value) => setState(() => _unidadMedidaSeleccionada = value!),
+                    itemLabel: (item) => '${item.representacion} - ${item.descripcion}',
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarConcepto,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
+                  _buildDropdown<String>(
+                    label: 'Estado *',
+                    value: _estadoSeleccionado,
+                    items: _estados,
+                    onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                    itemLabel: (item) => item,
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              _buildDropdown<CategoriaServicio>(
+                label: 'Categoría de Servicio *',
+                value: _categoriaServicioSeleccionada,
+                items: widget.categoriasServicio,
+                onChanged: (value) => setState(() => _categoriaServicioSeleccionada = value!),
+                itemLabel: (item) => item.nombre,
+              ),
+            ],
+          ),
         ),
       ),
     );

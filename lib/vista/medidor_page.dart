@@ -3,6 +3,9 @@ import 'package:myapp/dao/medidorcrudimpl.dart';
 import 'package:myapp/dao/inmueblescrudimpl.dart';
 import 'package:myapp/modelo/medidor.dart';
 import 'package:myapp/modelo/inmuebles.dart';
+import 'package:myapp/widget/crud_dialog.dart';
+import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 
 class MedidoresPage extends StatefulWidget {
   const MedidoresPage({Key? key}) : super(key: key);
@@ -162,137 +165,86 @@ class _MedidoresPageState extends State<MedidoresPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por número o estado...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Medidor'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
+      child: CrudListView<Medidor>(
+        items: medidoresFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.speed,
+        emptyText: 'No hay medidores para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por número o estado...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : medidoresFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.speed, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay medidores para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Número')),
-                                DataColumn(label: Text('Fecha Instalación')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Inmueble')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: medidoresFiltrados.map((medidor) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${medidor.idMedidor}')),
-                                    DataCell(Text('${medidor.nro}')),
-                                    DataCell(Text(_formatearFecha(medidor.fechaInstalacion))),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: medidor.estado == 'ACTIVO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          medidor.estado,
-                                          style: TextStyle(
-                                            color: medidor.estado == 'ACTIVO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(Text('ID: ${medidor.inmueble.id}')),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(medidor),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () {
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Medidor'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        columns: [
+          CrudColumn<Medidor>(
+            label: 'ID',
+            cellBuilder: (medidor) => Text('${medidor.idMedidor}'),
+          ),
+          CrudColumn<Medidor>(
+            label: 'Número',
+            isTitle: true,
+            cellBuilder: (medidor) => Text('${medidor.nro}'),
+          ),
+          CrudColumn<Medidor>(
+            label: 'Fecha Instalación',
+            isSubtitle: true,
+            cellBuilder: (medidor) => Text(_formatearFecha(medidor.fechaInstalacion)),
+          ),
+          CrudColumn<Medidor>(
+            label: 'Estado',
+            cellBuilder: (medidor) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: medidor.estado == 'ACTIVO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                medidor.estado,
+                style: TextStyle(
+                  color: medidor.estado == 'ACTIVO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+          CrudColumn<Medidor>(
+            label: 'Inmueble',
+            cellBuilder: (medidor) => Text('ID: ${medidor.inmueble.id}'),
           ),
         ],
       ),
@@ -368,107 +320,54 @@ class _DialogoEditarMedidorState extends State<_DialogoEditarMedidor> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 500),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+    return CrudDialog(
+      icon: Icons.speed,
+      title: widget.medidor == null ? 'Agregar Medidor' : 'Editar Medidor',
+      preferredWidth: 600,
+      preferredMaxHeight: 500,
+      onGuardar: _guardarMedidor,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTextField(
+                controller: _nroController,
+                label: 'Número de Medidor *',
+                hint: 'Ingrese número de medidor',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return 'Campo requerido';
+                  //if (int.tryParse(value!) == null) return 'Debe ser un número';
+                  return null;
+                },
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.speed, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.medidor == null ? 'Agregar Medidor' : 'Editar Medidor',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              _buildDateField(
+                label: 'Fecha de Instalación *',
+                fecha: _fechaInstalacion,
+                onTap: () => _seleccionarFecha(context),
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _nroController,
-                        label: 'Número de Medidor *',
-                        hint: 'Ingrese número de medidor',
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) return 'Campo requerido';
-                          //if (int.tryParse(value!) == null) return 'Debe ser un número';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDateField(
-                        label: 'Fecha de Instalación *',
-                        fecha: _fechaInstalacion,
-                        onTap: () => _seleccionarFecha(context),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<String>(
-                        label: 'Estado *',
-                        value: _estadoSeleccionado,
-                        items: _estados,
-                        onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                        itemLabel: (item) => item,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<Inmuebles>(
-                        label: 'Inmueble *',
-                        value: _inmuebleSeleccionado,
-                        items: widget.inmuebles,
-                        onChanged: (value) => setState(() => _inmuebleSeleccionado = value!),
-                        itemLabel: (item) => 'ID: ${item.id}',
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 16),
+              _buildDropdown<String>(
+                label: 'Estado *',
+                value: _estadoSeleccionado,
+                items: _estados,
+                onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                itemLabel: (item) => item,
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+              const SizedBox(height: 16),
+              _buildDropdown<Inmuebles>(
+                label: 'Inmueble *',
+                value: _inmuebleSeleccionado,
+                items: widget.inmuebles,
+                onChanged: (value) => setState(() => _inmuebleSeleccionado = value!),
+                itemLabel: (item) => 'ID: ${item.id}',
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarMedidor,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

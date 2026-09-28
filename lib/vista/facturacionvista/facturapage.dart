@@ -450,6 +450,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         title: const Text('Nueva Factura'),
         backgroundColor: const Color(0xFF0085FF),
         foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

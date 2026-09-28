@@ -7,6 +7,9 @@ import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/categoria_servicio.dart';
 import 'package:myapp/vista/deuda_page.dart';
 import 'package:myapp/widget/autocomplete_cliente.dart';
+import 'package:myapp/widget/crud_dialog.dart';
+import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
 
 class InmueblesPage extends StatefulWidget {
   const InmueblesPage({Key? key}) : super(key: key);
@@ -211,188 +214,112 @@ class _InmueblesPageState extends State<InmueblesPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por código, dirección o cliente...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
+      child: CrudListView<Inmuebles>(
+        items: inmueblesFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.home_outlined,
+        emptyText: 'No hay inmuebles para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        extraActions: (inmueble) => [
+          IconButton(
+            icon: const Icon(Icons.receipt_long, size: 18, color: Colors.purple),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DeudasPage(inmueble: inmueble),
                 ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Inmueble'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
+              );
+            },
+            tooltip: 'Ver Deudas',
           ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
+        ],
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por código, dirección o cliente...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : inmueblesFiltrados.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.home_outlined,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No hay inmuebles para mostrar',
-                            style: TextStyle(
-                              color: Color(0xFF6B7280),
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SingleChildScrollView(
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(
-                            const Color(0xFFF9FAFB),
-                          ),
-                          columns: const [
-                            DataColumn(label: Text('ID')),
-                            DataColumn(label: Text('Código')),
-                            DataColumn(label: Text('Dirección')),
-                            DataColumn(label: Text('Cliente')),
-                            DataColumn(label: Text('Categoría')),
-                            DataColumn(label: Text('Estado')),
-                            DataColumn(label: Text('Acciones')),
-                          ],
-                          rows: inmueblesFiltrados.map((inmueble) {
-                            return DataRow(
-                              cells: [
-                                DataCell(Text('${inmueble.id}')),
-                                DataCell(Text(inmueble.cod_inmueble)),
-                                DataCell(Text(inmueble.direccion)),
-                                DataCell(
-                                  Text(
-                                    inmueble.cliente?.razonSocial ??
-                                        'Sin cliente',
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(inmueble.categoriaServicio.descripcion),
-                                ),
-                                DataCell(
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: inmueble.estado == 'CONECTADO'
-                                          ? Colors.green.shade50
-                                          : Colors.red.shade50,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      inmueble.estado,
-                                      style: TextStyle(
-                                        color: inmueble.estado == 'CONECTADO'
-                                            ? Colors.green.shade700
-                                            : Colors.red.shade700,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.receipt_long,
-                                          size: 18,
-                                          color: Colors.purple,
-                                        ),
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => DeudasPage(
-                                                inmueble: inmueble,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        tooltip: 'Ver Deudas',
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.edit,
-                                          size: 18,
-                                          color: Color(0xFF0085FF),
-                                        ),
-                                        onPressed: () =>
-                                            _mostrarDialogoEdicion(inmueble),
-                                        tooltip: 'Editar',
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () {
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Inmueble'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+        columns: [
+          CrudColumn<Inmuebles>(
+            label: 'ID',
+            cellBuilder: (inmueble) => Text('${inmueble.id}'),
+          ),
+          CrudColumn<Inmuebles>(
+            label: 'Código',
+            isTitle: true,
+            cellBuilder: (inmueble) => Text(inmueble.cod_inmueble),
+          ),
+          CrudColumn<Inmuebles>(
+            label: 'Dirección',
+            isSubtitle: true,
+            cellBuilder: (inmueble) => Text(inmueble.direccion),
+          ),
+          CrudColumn<Inmuebles>(
+            label: 'Cliente',
+            cellBuilder: (inmueble) =>
+                Text(inmueble.cliente?.razonSocial ?? 'Sin cliente'),
+          ),
+          CrudColumn<Inmuebles>(
+            label: 'Categoría',
+            cellBuilder: (inmueble) => Text(inmueble.categoriaServicio.descripcion),
+          ),
+          CrudColumn<Inmuebles>(
+            label: 'Estado',
+            cellBuilder: (inmueble) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: inmueble.estado == 'CONECTADO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                inmueble.estado,
+                style: TextStyle(
+                  color: inmueble.estado == 'CONECTADO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],
@@ -459,135 +386,70 @@ class _DialogoEditarInmuebleState extends State<_DialogoEditarInmueble> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 550),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
+    return CrudDialog(
+      icon: Icons.home,
+      title: widget.inmueble == null ? 'Agregar Inmueble' : 'Editar Inmueble',
+      preferredWidth: 600,
+      preferredMaxHeight: 550,
+      onGuardar: _guardarInmueble,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTextField(
+                controller: _codigoController,
+                label: 'Código de Inmueble *',
+                hint: 'Ingrese código único',
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.home, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.inmueble == null
-                        ? 'Agregar Inmueble'
-                        : 'Editar Inmueble',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _direccionController,
+                label: 'Dirección *',
+                hint: 'Ingrese dirección del inmueble',
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Campo requerido' : null,
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(
-                        controller: _codigoController,
-                        label: 'Código de Inmueble *',
-                        hint: 'Ingrese código único',
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _direccionController,
-                        label: 'Dirección *',
-                        hint: 'Ingrese dirección del inmueble',
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      /*_buildDropdown<Cliente>(
-                        label: 'Cliente *',
-                        value: _clienteSeleccionado,
-                        items: widget.clientes,
-                        onChanged: (value) => setState(() => _clienteSeleccionado = value!),
-                        itemLabel: (item) => '${item.razonSocial} - ${item.documento}',
-                      ),*/
-                      ClienteAutocomplete(
-                        clientes: widget.clientes,
-                        clienteInicial: widget.inmueble != null
-                            ? _clienteSeleccionado
-                            : null,
-                        onSeleccionado: (c) =>
-                            setState(() => _clienteSeleccionado = c),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<CategoriaServicio>(
-                        label: 'Categoría de Servicio *',
-                        value: _categoriaSeleccionada,
-                        items: widget.categoriasServicio,
-                        onChanged: (value) =>
-                            setState(() => _categoriaSeleccionada = value!),
-                        itemLabel: (item) => item.descripcion,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<String>(
-                        label: 'Estado *',
-                        value: _estadoSeleccionado,
-                        items: _estados,
-                        onChanged: (value) =>
-                            setState(() => _estadoSeleccionado = value!),
-                        itemLabel: (item) => item,
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 16),
+              /*_buildDropdown<Cliente>(
+                label: 'Cliente *',
+                value: _clienteSeleccionado,
+                items: widget.clientes,
+                onChanged: (value) => setState(() => _clienteSeleccionado = value!),
+                itemLabel: (item) => '${item.razonSocial} - ${item.documento}',
+              ),*/
+              ClienteAutocomplete(
+                clientes: widget.clientes,
+                clienteInicial: widget.inmueble != null
+                    ? _clienteSeleccionado
+                    : null,
+                onSeleccionado: (c) =>
+                    setState(() => _clienteSeleccionado = c),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+              const SizedBox(height: 16),
+              _buildDropdown<CategoriaServicio>(
+                label: 'Categoría de Servicio *',
+                value: _categoriaSeleccionada,
+                items: widget.categoriasServicio,
+                onChanged: (value) =>
+                    setState(() => _categoriaSeleccionada = value!),
+                itemLabel: (item) => item.descripcion,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarInmueble,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                    child: const Text('Guardar'),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              _buildDropdown<String>(
+                label: 'Estado *',
+                value: _estadoSeleccionado,
+                items: _estados,
+                onChanged: (value) =>
+                    setState(() => _estadoSeleccionado = value!),
+                itemLabel: (item) => item,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

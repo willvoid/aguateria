@@ -9,6 +9,10 @@ import 'package:myapp/modelo/empresa/tipo_contribuyente.dart';
 import 'package:myapp/modelo/empresa/tipo_regimen.dart';
 import 'package:myapp/modelo/empresa/actividad_economica.dart';
 import 'package:myapp/modelo/empresa/actividad_empresa.dart';
+import 'package:myapp/widget/crud_dialog.dart';
+import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class DatoEmpresaPage extends StatefulWidget {
   const DatoEmpresaPage({Key? key}) : super(key: key);
@@ -233,144 +237,97 @@ class _DatoEmpresaPageState extends State<DatoEmpresaPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por RUC, razón social o nombre fantasía...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: empresas.isNotEmpty
-                    ? null  // ← Deshabilitado si ya existe una empresa
-                    : () {
-                        _mostrarDialogoEdicion(null);
-                      },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Empresa'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey.shade300,  // ← Color cuando está deshabilitado
-                  disabledForegroundColor: Colors.grey.shade500,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
+      child: CrudListView<DatoEmpresa>(
+        items: empresasFiltradas,
+        isLoading: _isLoading,
+        emptyIcon: Icons.business_outlined,
+        emptyText: 'No hay empresas para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por RUC, razón social o nombre fantasía...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : empresasFiltradas.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.business_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay empresas para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('RUC')),
-                                DataColumn(label: Text('Razón Social')),
-                                DataColumn(label: Text('Nombre Fantasía')),
-                                DataColumn(label: Text('Tipo Contribuyente')),
-                                DataColumn(label: Text('Tipo Régimen')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: empresasFiltradas.map((empresa) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${empresa.id_empresa}')),
-                                    DataCell(Text(empresa.ruc)),
-                                    DataCell(Text(empresa.razon_social)),
-                                    DataCell(Text(empresa.nombre_fantasia)),
-                                    DataCell(Text(empresa.fk_contribuyente.descripcion)),
-                                    DataCell(Text(empresa.fk_regimen.descripcion)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: empresa.estado == 'ACTIVO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          empresa.estado,
-                                          style: TextStyle(
-                                            color: empresa.estado == 'ACTIVO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(empresa),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          action: ElevatedButton.icon(
+            onPressed: empresas.isNotEmpty
+                ? null  // ← Deshabilitado si ya existe una empresa
+                : () {
+                    _mostrarDialogoEdicion(null);
+                  },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Empresa'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade300,  // ← Color cuando está deshabilitado
+              disabledForegroundColor: Colors.grey.shade500,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        columns: [
+          CrudColumn<DatoEmpresa>(
+            label: 'ID',
+            cellBuilder: (empresa) => Text('${empresa.id_empresa}'),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'RUC',
+            cellBuilder: (empresa) => Text(empresa.ruc),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Razón Social',
+            isTitle: true,
+            cellBuilder: (empresa) => Text(empresa.razon_social),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Nombre Fantasía',
+            isSubtitle: true,
+            cellBuilder: (empresa) => Text(empresa.nombre_fantasia),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Tipo Contribuyente',
+            cellBuilder: (empresa) => Text(empresa.fk_contribuyente.descripcion),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Tipo Régimen',
+            cellBuilder: (empresa) => Text(empresa.fk_regimen.descripcion),
+          ),
+          CrudColumn<DatoEmpresa>(
+            label: 'Estado',
+            cellBuilder: (empresa) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: empresa.estado == 'ACTIVO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                empresa.estado,
+                style: TextStyle(
+                  color: empresa.estado == 'ACTIVO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],
@@ -501,222 +458,159 @@ bool _isActividadSeleccionada(ActividadEconomica actividad) {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 900,
-        constraints: const BoxConstraints(maxHeight: 700),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
-              ),
-              child: Row(
+    return CrudDialog(
+      icon: Icons.business,
+      title: widget.empresa == null ? 'Agregar Empresa' : 'Editar Empresa',
+      preferredWidth: 900,
+      preferredMaxHeight: 700,
+      onGuardar: _guardarEmpresa,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ResponsiveFormRow(
+            flexes: const [3, 2],
+            breakpoint: 700,
+            spacing: 24,
+            children: [
+              // Columna izquierda - Datos básicos
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.business, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.empresa == null ? 'Agregar Empresa' : 'Editar Empresa',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  const Text(
+                    'Datos de la Empresa',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _rucController,
+                    label: 'RUC *',
+                    hint: 'Ingrese RUC',
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Campo requerido';
+                      if (value!.length < 6) return 'RUC debe tener al menos 6 dígitos';
+                      return null;
+                    },
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _razonSocialController,
+                    label: 'Razón Social *',
+                    hint: 'Ingrese razón social',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _nombreFantasiaController,
+                    label: 'Nombre Fantasía *',
+                    hint: 'Ingrese nombre fantasía',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  ResponsiveFormRow(
                     children: [
-                      // Columna izquierda - Datos básicos
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Datos de la Empresa',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: _rucController,
-                              label: 'RUC *',
-                              hint: 'Ingrese RUC',
-                              validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Campo requerido';
-                                if (value!.length < 6) return 'RUC debe tener al menos 6 dígitos';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: _razonSocialController,
-                              label: 'Razón Social *',
-                              hint: 'Ingrese razón social',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: _nombreFantasiaController,
-                              label: 'Nombre Fantasía *',
-                              hint: 'Ingrese nombre fantasía',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildDropdown<TipoContribuyente>(
-                                    label: 'Tipo Contribuyente *',
-                                    value: _tipoContribuyenteSeleccionado,
-                                    items: widget.tiposContribuyente,
-                                    onChanged: (value) => setState(() => _tipoContribuyenteSeleccionado = value!),
-                                    itemLabel: (item) => item.descripcion,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildDropdown<TipoRegimen>(
-                                    label: 'Tipo Régimen *',
-                                    value: _tipoRegimenSeleccionado,
-                                    items: widget.tiposRegimen,
-                                    onChanged: (value) => setState(() => _tipoRegimenSeleccionado = value!),
-                                    itemLabel: (item) => item.descripcion,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDropdown<String>(
-                              label: 'Estado *',
-                              value: _estadoSeleccionado,
-                              items: _estados,
-                              onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                              itemLabel: (item) => item,
-                            ),
-                          ],
-                        ),
+                      _buildDropdown<TipoContribuyente>(
+                        label: 'Tipo Contribuyente *',
+                        value: _tipoContribuyenteSeleccionado,
+                        items: widget.tiposContribuyente,
+                        onChanged: (value) => setState(() => _tipoContribuyenteSeleccionado = value!),
+                        itemLabel: (item) => item.descripcion,
                       ),
-                      const SizedBox(width: 24),
-                      // Columna derecha - Actividades económicas
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Actividades Económicas',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${_actividadesSeleccionadas.length} seleccionada(s)',
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _searchActividadController,
-                              decoration: InputDecoration(
-                                hintText: 'Buscar actividad...',
-                                prefixIcon: const Icon(Icons.search, size: 18),
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              height: 350,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: ListView.builder(
-                                itemCount: _actividadesFiltradas.length,
-                                itemBuilder: (context, index) {
-                                  final actividad = _actividadesFiltradas[index];
-                                  final isSeleccionada = _isActividadSeleccionada(actividad);
-                                  
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(color: Colors.grey.shade200),
-                                      ),
-                                    ),
-                                    child: CheckboxListTile(
-                                      value: isSeleccionada,
-                                      onChanged: (value) => _toggleActividad(actividad),
-                                      title: Text(
-                                        actividad.codigo_actividad.toString(),
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                                      ),
-                                      subtitle: Text(
-                                        actividad.descripcion_actividad,
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      dense: true,
-                                      controlAffinity: ListTileControlAffinity.leading,
-                                      activeColor: const Color(0xFF0085FF),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
+                      _buildDropdown<TipoRegimen>(
+                        label: 'Tipo Régimen *',
+                        value: _tipoRegimenSeleccionado,
+                        items: widget.tiposRegimen,
+                        onChanged: (value) => setState(() => _tipoRegimenSeleccionado = value!),
+                        itemLabel: (item) => item.descripcion,
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarEmpresa,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
+                  const SizedBox(height: 16),
+                  _buildDropdown<String>(
+                    label: 'Estado *',
+                    value: _estadoSeleccionado,
+                    items: _estados,
+                    onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                    itemLabel: (item) => item,
                   ),
                 ],
               ),
-            ),
-          ],
+              // Columna derecha - Actividades económicas
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Actividades Económicas',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_actividadesSeleccionadas.length} seleccionada(s)',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _searchActividadController,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar actividad...',
+                      prefixIcon: const Icon(Icons.search, size: 18),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 350,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: ListView.builder(
+                      itemCount: _actividadesFiltradas.length,
+                      itemBuilder: (context, index) {
+                        final actividad = _actividadesFiltradas[index];
+                        final isSeleccionada = _isActividadSeleccionada(actividad);
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Colors.grey.shade200),
+                            ),
+                          ),
+                          child: CheckboxListTile(
+                            value: isSeleccionada,
+                            onChanged: (value) => _toggleActividad(actividad),
+                            title: Text(
+                              actividad.codigo_actividad.toString(),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                            subtitle: Text(
+                              actividad.descripcion_actividad,
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            dense: true,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            activeColor: const Color(0xFF0085FF),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

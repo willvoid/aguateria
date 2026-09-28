@@ -5,6 +5,10 @@ import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
 import 'package:myapp/modelo/barrio.dart';
 import 'package:myapp/modelo/empresa/dato_empresa.dart';
+import 'package:myapp/widget/crud_dialog.dart';
+import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class EstablecimientosPage extends StatefulWidget {
   const EstablecimientosPage({Key? key}) : super(key: key);
@@ -167,158 +171,103 @@ class _EstablecimientosPageState extends State<EstablecimientosPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por código, denominación, dirección o empresa...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _mostrarDialogoEdicion(null);
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Establecimiento'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
+      child: CrudListView<Establecimiento>(
+        items: establecimientosFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.store_outlined,
+        emptyText: 'No hay establecimientos para mostrar',
+        onEdit: _mostrarDialogoEdicion,
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por código, denominación, dirección o empresa...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : establecimientosFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.store_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay establecimientos para mostrar',
-                                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Código')),
-                                DataColumn(label: Text('Denominación')),
-                                DataColumn(label: Text('Empresa')),
-                                DataColumn(label: Text('Dirección')),
-                                DataColumn(label: Text('Nro. Casa')),
-                                DataColumn(label: Text('Barrio')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: establecimientosFiltrados.map((est) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(Text('${est.id_establecimiento}')),
-                                    DataCell(Text(est.codigo_establecimiento)),
-                                    DataCell(Text(est.denominacion)),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 150,
-                                        child: Text(
-                                          est.fk_empresa.razon_social,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      SizedBox(
-                                        width: 120,
-                                        child: Text(
-                                          est.direccion,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(Text(est.numero_casa)),
-                                    DataCell(Text(est.fk_barrio.nombre_barrio)),
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: est.estado_establecimiento == 'ACTIVO'
-                                              ? Colors.green.shade50
-                                              : Colors.red.shade50,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          est.estado_establecimiento,
-                                          style: TextStyle(
-                                            color: est.estado_establecimiento == 'ACTIVO'
-                                                ? Colors.green.shade700
-                                                : Colors.red.shade700,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-                                            onPressed: () => _mostrarDialogoEdicion(est),
-                                            tooltip: 'Editar',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () {
+              _mostrarDialogoEdicion(null);
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Establecimiento'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        columns: [
+          CrudColumn<Establecimiento>(
+            label: 'ID',
+            cellBuilder: (est) => Text('${est.id_establecimiento}'),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Código',
+            cellBuilder: (est) => Text(est.codigo_establecimiento),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Denominación',
+            isTitle: true,
+            cellBuilder: (est) => Text(est.denominacion),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Empresa',
+            isSubtitle: true,
+            cellBuilder: (est) => SizedBox(
+              width: 150,
+              child: Text(est.fk_empresa.razon_social, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Dirección',
+            cellBuilder: (est) => SizedBox(
+              width: 120,
+              child: Text(est.direccion, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Nro. Casa',
+            cellBuilder: (est) => Text(est.numero_casa),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Barrio',
+            cellBuilder: (est) => Text(est.fk_barrio.nombre_barrio),
+          ),
+          CrudColumn<Establecimiento>(
+            label: 'Estado',
+            cellBuilder: (est) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: est.estado_establecimiento == 'ACTIVO'
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                est.estado_establecimiento,
+                style: TextStyle(
+                  color: est.estado_establecimiento == 'ACTIVO'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],
@@ -399,189 +348,116 @@ class _DialogoEditarEstablecimientoState extends State<_DialogoEditarEstablecimi
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 900,
-        constraints: const BoxConstraints(maxHeight: 700),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
-              ),
-              child: Row(
+    return CrudDialog(
+      icon: Icons.store,
+      title: widget.establecimiento == null ? 'Agregar Establecimiento' : 'Editar Establecimiento',
+      preferredWidth: 900,
+      preferredMaxHeight: 700,
+      onGuardar: _guardarEstablecimiento,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.store, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.establecimiento == null ? 'Agregar Establecimiento' : 'Editar Establecimiento',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  _buildTextField(
+                    controller: _codigoController,
+                    label: 'Código de Establecimiento *',
+                    hint: 'Ej: 001',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildTextField(
+                    controller: _denominacionController,
+                    label: 'Denominación *',
+                    hint: 'Ingrese denominación',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _codigoController,
-                              label: 'Código de Establecimiento *',
-                              hint: 'Ej: 001',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _denominacionController,
-                              label: 'Denominación *',
-                              hint: 'Ingrese denominación',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<DatoEmpresa>(
-                        label: 'Empresa *',
-                        value: _empresaSeleccionada,
-                        items: widget.empresas,
-                        onChanged: (value) => setState(() => _empresaSeleccionada = value!),
-                        itemLabel: (item) => '${item.ruc} - ${item.razon_social}',
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: _buildTextField(
-                              controller: _direccionController,
-                              label: 'Dirección *',
-                              hint: 'Ingrese dirección',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _numeroCasaController,
-                              label: 'Nro. Casa *',
-                              hint: 'Ej: 123',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _complemento1Controller,
-                              label: 'Complemento Dirección 1 *',
-                              hint: 'Ej: Entre calles X e Y',
-                              validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _complemento2Controller,
-                              label: 'Complemento Dirección 2',
-                              hint: 'Información adicional (opcional)',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<Barrio>(
-                        label: 'Barrio *',
-                        value: _barrioSeleccionado,
-                        items: widget.barrios,
-                        onChanged: (value) => setState(() => _barrioSeleccionado = value!),
-                        itemLabel: (item) => item.nombre_barrio,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _telefonoController,
-                              label: 'Teléfono',
-                              hint: 'Ingrese teléfono',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _emailController,
-                              label: 'Email',
-                              hint: 'Ingrese email',
-                              validator: (value) {
-                                if (value != null && value.isNotEmpty) {
-                                  if (!value.contains('@') || !value.contains('.')) return 'Email inválido';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDropdown<String>(
-                        label: 'Estado *',
-                        value: _estadoSeleccionado,
-                        items: _estados,
-                        onChanged: (value) => setState(() => _estadoSeleccionado = value!),
-                        itemLabel: (item) => item,
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 16),
+              _buildDropdown<DatoEmpresa>(
+                label: 'Empresa *',
+                value: _empresaSeleccionada,
+                items: widget.empresas,
+                onChanged: (value) => setState(() => _empresaSeleccionada = value!),
+                itemLabel: (item) => '${item.ruc} - ${item.razon_social}',
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                flexes: const [2, 1],
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
+                  _buildTextField(
+                    controller: _direccionController,
+                    label: 'Dirección *',
+                    hint: 'Ingrese dirección',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardarEstablecimiento,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
+                  _buildTextField(
+                    controller: _numeroCasaController,
+                    label: 'Nro. Casa *',
+                    hint: 'Ej: 123',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildTextField(
+                    controller: _complemento1Controller,
+                    label: 'Complemento Dirección 1 *',
+                    hint: 'Ej: Entre calles X e Y',
+                    validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+                  ),
+                  _buildTextField(
+                    controller: _complemento2Controller,
+                    label: 'Complemento Dirección 2',
+                    hint: 'Información adicional (opcional)',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildDropdown<Barrio>(
+                label: 'Barrio *',
+                value: _barrioSeleccionado,
+                items: widget.barrios,
+                onChanged: (value) => setState(() => _barrioSeleccionado = value!),
+                itemLabel: (item) => item.nombre_barrio,
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildTextField(
+                    controller: _telefonoController,
+                    label: 'Teléfono',
+                    hint: 'Ingrese teléfono',
+                  ),
+                  _buildTextField(
+                    controller: _emailController,
+                    label: 'Email',
+                    hint: 'Ingrese email',
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        if (!value.contains('@') || !value.contains('.')) return 'Email inválido';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildDropdown<String>(
+                label: 'Estado *',
+                value: _estadoSeleccionado,
+                items: _estados,
+                onChanged: (value) => setState(() => _estadoSeleccionado = value!),
+                itemLabel: (item) => item,
+              ),
+            ],
+          ),
         ),
       ),
     );

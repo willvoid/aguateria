@@ -3,6 +3,10 @@ import 'package:myapp/dao/empresadao/datos_transferenciacrudimpl.dart';
 import 'package:myapp/dao/empresadao/establecimientocrudimpl.dart';
 import 'package:myapp/modelo/empresa/datos_transferencia.dart';
 import 'package:myapp/modelo/empresa/establecimiento.dart';
+import 'package:myapp/widget/crud_dialog.dart';
+import 'package:myapp/widget/crud_list_view.dart';
+import 'package:myapp/widget/crud_toolbar.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 
 class DatosTransferenciaPage extends StatefulWidget {
   const DatosTransferenciaPage({Key? key}) : super(key: key);
@@ -204,135 +208,86 @@ class _DatosTransferenciaPageState extends State<DatosTransferenciaPage> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Barra superior ──────────────────────────────────────
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por alias, titular, banco o cuenta...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () => _mostrarDialogo(null),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Agregar Cuenta'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0085FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _cargarDatos,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Recargar',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // ── Tabla ───────────────────────────────────────────────
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
+      child: CrudListView<DatosTransferencia>(
+        items: registrosFiltrados,
+        isLoading: _isLoading,
+        emptyIcon: Icons.account_balance_outlined,
+        emptyText: 'No hay cuentas para mostrar',
+        onEdit: _mostrarDialogo,
+        onDelete: _eliminar,
+        toolbar: CrudToolbar(
+          onRefresh: _cargarDatos,
+          search: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por alias, titular, banco o cuenta...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : registrosFiltrados.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.account_balance_outlined,
-                                  size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No hay cuentas para mostrar',
-                                style: TextStyle(
-                                    color: Color(0xFF6B7280), fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                  const Color(0xFFF9FAFB)),
-                              columns: const [
-                                DataColumn(label: Text('ID')),
-                                DataColumn(label: Text('Alias')),
-                                DataColumn(label: Text('Titular')),
-                                DataColumn(label: Text('Banco')),
-                                DataColumn(label: Text('CI')),
-                                DataColumn(label: Text('Nro. Cuenta')),
-                                DataColumn(label: Text('Nro. Giro')),
-                                DataColumn(label: Text('CI Giro')), // ← nuevo
-                                DataColumn(label: Text('Sucursal')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: registrosFiltrados.map((item) {
-  return DataRow(cells: [
-    DataCell(Text('${item.id}')),
-    DataCell(Text(item.alias ?? '-')),
-    DataCell(Text(item.titular_cuenta)),
-    DataCell(Text(item.banco)),
-    DataCell(Text(item.ci)),
-    DataCell(Text(item.num_cuenta)),
-    DataCell(Text(item.nro_giro ?? '-')),
-    DataCell(Text(item.ci_giro ?? '-')),
-    DataCell(Text(item.fk_sucursal.denominacion)),
-    DataCell(
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.edit, size: 18, color: Color(0xFF0085FF)),
-            onPressed: () => _mostrarDialogo(item),
-            tooltip: 'Editar',
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-            onPressed: () => _eliminar(item),
-            tooltip: 'Eliminar',
-          ),
-        ],
-      ),
-    ),
-  ]);
-}).toList(),
-                            ),
-                          ),
-                        ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 12),
             ),
+          ),
+          action: ElevatedButton.icon(
+            onPressed: () => _mostrarDialogo(null),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar Cuenta'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0085FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        columns: [
+          CrudColumn<DatosTransferencia>(
+            label: 'ID',
+            cellBuilder: (item) => Text('${item.id}'),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Alias',
+            isTitle: true,
+            cellBuilder: (item) => Text(item.alias ?? '-'),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Titular',
+            isSubtitle: true,
+            cellBuilder: (item) => Text(item.titular_cuenta),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Banco',
+            cellBuilder: (item) => Text(item.banco),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'CI',
+            cellBuilder: (item) => Text(item.ci),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Nro. Cuenta',
+            cellBuilder: (item) => Text(item.num_cuenta),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Nro. Giro',
+            cellBuilder: (item) => Text(item.nro_giro ?? '-'),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'CI Giro',
+            cellBuilder: (item) => Text(item.ci_giro ?? '-'),
+          ),
+          CrudColumn<DatosTransferencia>(
+            label: 'Sucursal',
+            cellBuilder: (item) => Text(item.fk_sucursal.denominacion),
           ),
         ],
       ),
@@ -411,179 +366,93 @@ class _DialogoEditarTransferenciaState
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: 700,
-        constraints: const BoxConstraints(maxHeight: 680), // ← ajustado
-        child: Column(
-          children: [
-            // ── Header ──────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0085FF),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
-              ),
-              child: Row(
+    return CrudDialog(
+      icon: Icons.account_balance,
+      title: widget.item == null
+          ? 'Agregar Cuenta de Transferencia'
+          : 'Editar Cuenta de Transferencia',
+      preferredWidth: 700,
+      preferredMaxHeight: 680,
+      onGuardar: _guardar,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ResponsiveFormRow(
                 children: [
-                  const Icon(Icons.account_balance, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.item == null
-                        ? 'Agregar Cuenta de Transferencia'
-                        : 'Editar Cuenta de Transferencia',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600),
+                  _buildTextField(
+                    controller: _titularController,
+                    label: 'Titular de la Cuenta *',
+                    hint: 'Ingrese el titular',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                  _buildTextField(
+                    controller: _aliasController,
+                    label: 'Alias',
+                    hint: 'Ingrese alias (opcional)',
                   ),
                 ],
               ),
-            ),
-
-            // ── Formulario ──────────────────────────────────────
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _titularController,
-                              label: 'Titular de la Cuenta *',
-                              hint: 'Ingrese el titular',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _aliasController,
-                              label: 'Alias',
-                              hint: 'Ingrese alias (opcional)',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _bancoController,
-                              label: 'Banco *',
-                              hint: 'Nombre del banco',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _ciController,
-                              label: 'CI *',
-                              hint: 'Cédula de identidad',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _numCuentaController,
-                              label: 'Nro. de Cuenta *',
-                              hint: 'Ingrese número de cuenta',
-                              validator: (v) =>
-                                  v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _nroGiroController,
-                              label: 'Nro. de Giro',
-                              hint: 'Ingrese nro. de giro (opcional)',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // ── Fila nueva: CI Giro + Sucursal ──────────
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _ciGiroController,
-                              label: 'CI Giro',
-                              hint: 'CI del giro (opcional)',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdown<Establecimiento>(
-                              label: 'Sucursal *',
-                              value: _sucursalSeleccionada,
-                              items: widget.establecimientos,
-                              onChanged: (v) =>
-                                  setState(() => _sucursalSeleccionada = v!),
-                              itemLabel: (e) => e.denominacion,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Footer ──────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
+                  _buildTextField(
+                    controller: _bancoController,
+                    label: 'Banco *',
+                    hint: 'Nombre del banco',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _guardar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0085FF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Guardar'),
+                  _buildTextField(
+                    controller: _ciController,
+                    label: 'CI *',
+                    hint: 'Cédula de identidad',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildTextField(
+                    controller: _numCuentaController,
+                    label: 'Nro. de Cuenta *',
+                    hint: 'Ingrese número de cuenta',
+                    validator: (v) =>
+                        v?.isEmpty ?? true ? 'Campo requerido' : null,
+                  ),
+                  _buildTextField(
+                    controller: _nroGiroController,
+                    label: 'Nro. de Giro',
+                    hint: 'Ingrese nro. de giro (opcional)',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ResponsiveFormRow(
+                children: [
+                  _buildTextField(
+                    controller: _ciGiroController,
+                    label: 'CI Giro',
+                    hint: 'CI del giro (opcional)',
+                  ),
+                  _buildDropdown<Establecimiento>(
+                    label: 'Sucursal *',
+                    value: _sucursalSeleccionada,
+                    items: widget.establecimientos,
+                    onChanged: (v) =>
+                        setState(() => _sucursalSeleccionada = v!),
+                    itemLabel: (e) => e.denominacion,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
