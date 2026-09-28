@@ -464,6 +464,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
 
   final List<String> _estados = [
     'PENDIENTE',
+    'PAGO_PARCIAL',
     'PAGADO',
     'VENCIDO',
     'EN REVISION',
