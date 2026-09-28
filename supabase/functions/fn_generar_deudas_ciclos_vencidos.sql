@@ -35,8 +35,7 @@ BEGIN
             SELECT
                 i.id AS inmueble_id,
                 c.id_concepto AS concepto_id,
-                c.arancel AS monto,
-                cs.nombre AS categoria_nombre
+                c.arancel AS monto
             FROM public.inmuebles i
             JOIN public.categoria_servicio cs ON i.fk_categoria_servicio = cs.id
             JOIN public.conceptos c ON c.fk_servicio = cs.id AND c.estado = 'ACTIVO'
@@ -60,7 +59,7 @@ BEGIN
                 pagado
             ) VALUES (
                 v_inmueble.concepto_id,
-                'Cargo mensual (' || v_inmueble.categoria_nombre || '): ' || v_ciclo.descripcion,
+                'Consumo mes: ' || v_ciclo.descripcion,
                 v_inmueble.monto,
                 'PENDIENTE',
                 v_ciclo.id_ciclos,
