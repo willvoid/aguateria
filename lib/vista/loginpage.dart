@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/usuariodao/usuariocrudimpl.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
+import 'package:myapp/vista/forgot_password_page.dart';
 import 'package:myapp/vista/registro_usuariopage.dart';
 import 'package:myapp/widget/dashboard_widget.dart';
+import 'package:myapp/widget/inactivity_wrapper.dart';
 import 'package:provider/provider.dart' show Provider;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -63,7 +65,9 @@ class _LoginPageState extends State<LoginPage> {
         
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const DashboardWidget()),
+          MaterialPageRoute(
+            builder: (_) => const InactivityWrapper(child: DashboardWidget()),
+          ),
         );
       } else {
         if (mounted) _mostrarError('Error: Empleado no encontrado en la base de datos.');
@@ -71,12 +75,58 @@ class _LoginPageState extends State<LoginPage> {
     }
   } on AuthException catch (e) {
     setState(() => _isLoading = false);
-    if (mounted) _mostrarError('Correo electrónico o contraseña incorrectos');
+    if (!mounted) return;
+
+    final correoNoConfirmado = e.code == 'email_not_confirmed' ||
+        e.message.toLowerCase().contains('email not confirmed') ||
+        e.message.toLowerCase().contains('confirm');
+
+    if (correoNoConfirmado) {
+      _mostrarErrorCorreoNoConfirmado(_usuarioController.text.trim());
+    } else {
+      _mostrarError('Correo electrónico o contraseña incorrectos');
+    }
   } catch (e) {
     setState(() => _isLoading = false);
     if (mounted) _mostrarError('Error inesperado al iniciar sesión');
   }
 }
+
+  Future<void> _reenviarVerificacion(String correo) async {
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: correo,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Correo de verificación reenviado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) _mostrarError('No se pudo reenviar el correo de verificación');
+    }
+  }
+
+  void _mostrarErrorCorreoNoConfirmado(String correo) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Debes confirmar tu correo electrónico antes de iniciar sesión',
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Reenviar',
+          textColor: Colors.white,
+          onPressed: () => _reenviarVerificacion(correo),
+        ),
+      ),
+    );
+  }
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -287,7 +337,26 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 20),
 
-                        
+                        Center(
+                          child: TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const ForgotPasswordPage(),
+                                      ),
+                                    ),
+                            child: const Text(
+                              '¿Olvidaste tu contraseña?',
+                              style: TextStyle(
+                                color: Color(0xFF0085FF),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),

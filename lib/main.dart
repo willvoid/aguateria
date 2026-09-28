@@ -1,11 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/modelo/usuario/authprovider.dart';
 import 'package:myapp/vista/dashboard_clientes/consulta_clientes.dart';
+import 'package:myapp/vista/reset_password_page.dart';
 import 'package:provider/provider.dart';
 import 'package:myapp/dao/configurations.dart';
 import 'package:myapp/vista/loginpage.dart';
 import 'package:myapp/widget/dashboard_widget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   // Asegurarse de que Flutter esté inicializado
@@ -17,21 +21,44 @@ void main() async {
     anonKey: Configurations.mSupabaseKey,
   );
 
+  // Cuando el usuario abre el enlace de recuperación de contraseña del
+  // correo, Supabase deja una sesión temporal y emite este evento: lo usamos
+  // para llevarlo a la pantalla de nueva contraseña sin importar en qué
+  // pantalla esté la app en ese momento.
+  Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    if (data.event == AuthChangeEvent.passwordRecovery) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
+      );
+    }
+  });
+
+  // En web, Supabase puede procesar la sesión de recuperación contenida en la
+  // URL de forma síncrona durante initialize(), antes de que el listener de
+  // arriba alcance a suscribirse (el evento se pierde). Como respaldo,
+  // revisamos la URL con la que arrancó la pestaña: si trae type=recovery,
+  // abrimos la app directamente en la pantalla de nueva contraseña.
+  final abrioParaRecuperarContrasena =
+      kIsWeb && Uri.base.queryParameters['type'] == 'recovery';
+
   runApp(
     // Envolver la app con Provider
     ChangeNotifierProvider(
       create: (_) => AuthProvider(),
-      child: const MyApp(),
+      child: MyApp(mostrarResetPasswordAlInicio: abrioParaRecuperarContrasena),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool mostrarResetPasswordAlInicio;
+
+  const MyApp({super.key, this.mostrarResetPasswordAlInicio = false});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Sistema de Agua',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -40,7 +67,9 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const SplashScreen(), // Cambiar a SplashScreen
+      home: mostrarResetPasswordAlInicio
+          ? const ResetPasswordPage()
+          : const SplashScreen(),
     );
   }
 }

@@ -6,8 +6,12 @@ import 'package:myapp/dao/clientecrudimpl.dart';
 import 'package:myapp/dao/inmueblescrudimpl.dart';
 import 'package:myapp/modelo/cliente.dart';
 import 'package:myapp/modelo/inmuebles.dart';
+import 'package:myapp/modelo/usuario/authprovider.dart';
 import 'package:myapp/vista/dashboard_clientes/dashboard_clientes.dart';
 import 'package:myapp/vista/loginpage.dart';
+import 'package:myapp/widget/dashboard_widget.dart';
+import 'package:myapp/widget/inactivity_wrapper.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -79,6 +83,10 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     _restaurarSesionPendiente();
 
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      // Una sesión de recuperación de contraseña no es un login de cliente:
+      // se maneja aparte en main.dart, que navega a ResetPasswordPage.
+      if (data.event == AuthChangeEvent.passwordRecovery) return;
+
       final session = data.session;
       if (session != null && mounted) {
         final user = session.user;
@@ -926,6 +934,34 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
     );
   }
 
+  // Si ya hay una sesión de Supabase activa (administrador/empleado logueado
+  // previamente), va directo al panel administrativo sin pedir credenciales.
+  Future<void> _abrirAccesoAdministrativo(BuildContext context) async {
+    final session = Supabase.instance.client.auth.currentSession;
+
+    if (session != null) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final restaurada = await authProvider.cargarSesion();
+
+      if (restaurada && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const InactivityWrapper(child: DashboardWidget()),
+          ),
+        );
+        return;
+      }
+    }
+
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    }
+  }
+
   Widget _buildHeader() {
     return Container(
       decoration: const BoxDecoration(
@@ -971,10 +1007,7 @@ class _ClienteConsultaPageState extends State<ClienteConsultaPage> {
             ),
           ),
           IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            ),
+            onPressed: () => _abrirAccesoAdministrativo(context),
             icon: const Icon(Icons.admin_panel_settings,
                 color: Colors.white, size: 24),
             tooltip: 'Acceso Administrativo',

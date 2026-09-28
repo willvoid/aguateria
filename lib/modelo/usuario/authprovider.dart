@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:myapp/modelo/usuario/usuario.dart';
 import 'package:myapp/dao/usuariodao/usuariocrudimpl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthProvider extends ChangeNotifier {
   Usuario? _usuarioActual;
@@ -29,43 +30,52 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     _usuarioActual = null;
     _isAuthenticated = false;
-    
+
+    // Cerrar también la sesión real de Supabase (invalida el JWT/refresh token)
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (e) {
+      print('Error al cerrar sesión de Supabase: $e');
+    }
+
     // Limpiar SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    
+
     notifyListeners();
   }
 
-  // Cargar sesión guardada (al iniciar la app)
+  // Cargar sesión guardada (al iniciar la app), basada en la sesión real de Supabase
   Future<bool> cargarSesion() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final isAuth = prefs.getBool('is_authenticated') ?? false;
-      
-      if (isAuth) {
-        final usuarioId = prefs.getInt('usuario_id');
-        
-        if (usuarioId != null) {
-          // Cargar el usuario completo desde la base de datos
-          final usuario = await _usuarioCrud.leerUsuarioPorId(usuarioId);
-          
-          if (usuario != null) {
-            _usuarioActual = usuario;
-            _isAuthenticated = true;
-            notifyListeners();
-            return true;
-          } else {
-            // Si no se encuentra el usuario, limpiar la sesión
-            await logout();
-          }
+      final session = Supabase.instance.client.auth.currentSession;
+
+      if (session != null) {
+        final correo = session.user.email;
+        final usuario = correo != null
+            ? await _usuarioCrud.obtenerDatosUsuarioPorCorreo(correo)
+            : null;
+
+        if (usuario != null) {
+          _usuarioActual = usuario;
+          _isAuthenticated = true;
+
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('usuario_id', usuario.id_usuario!);
+          await prefs.setBool('is_authenticated', true);
+
+          notifyListeners();
+          return true;
+        } else {
+          // Hay sesión de Supabase pero no hay datos de empleado asociados
+          await logout();
         }
       }
     } catch (e) {
       print('Error al cargar sesión: $e');
       await logout();
     }
-    
+
     return false;
   }
 
