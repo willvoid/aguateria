@@ -8,8 +8,11 @@
 -- cargo del mismo ciclo, y rota el ciclo activo al siguiente.
 --
 -- Requiere que cada categoria_servicio tenga un concepto ACTIVO con
--- fk_servicio = categoria_servicio.id (ver supabase/migrations para el
--- backfill inicial).
+-- fk_servicio = categoria_servicio.id Y arancel = tarifa_fija (ver
+-- supabase/migrations para el backfill inicial). El filtro por arancel
+-- es necesario porque una categoría puede tener varios conceptos con el
+-- mismo fk_servicio (ej. Conexión, Deuda anterior) que no deben cobrarse
+-- todos los meses: solo el que coincide con tarifa_fija es el recurrente.
 -- =====================================================================
 
 CREATE OR REPLACE FUNCTION public.fn_generar_deudas_ciclos_vencidos()
@@ -38,7 +41,10 @@ BEGIN
                 c.arancel AS monto
             FROM public.inmuebles i
             JOIN public.categoria_servicio cs ON i.fk_categoria_servicio = cs.id
-            JOIN public.conceptos c ON c.fk_servicio = cs.id AND c.estado = 'ACTIVO'
+            JOIN public.conceptos c
+                ON c.fk_servicio = cs.id
+               AND c.estado = 'ACTIVO'
+               AND c.arancel = cs.tarifa_fija
             WHERE i.estado = 'CONECTADO'
               AND NOT EXISTS (
                   SELECT 1 FROM public.cuentas_cobrar cc

@@ -4,21 +4,32 @@
 --
 -- Contexto: fn_generar_deudas_ciclos_vencidos generaba todos los cargos
 -- mensuales bajo un fk_concepto=1 fijo, sin importar la categoria_servicio
--- del inmueble. Esta migración crea un concepto por categoría (usando su
--- tarifa_fija) y actualiza la función para usarlo. La definición vigente
--- de la función vive en supabase/functions/fn_generar_deudas_ciclos_vencidos.sql
+-- del inmueble. Además se detectó que el concepto "Consumo Lavadero"
+-- (id_concepto=4, arancel=100000) estaba mal enlazado con fk_servicio=1
+-- (Estandar) en vez de 2 (Lavadero).
+--
+-- La categoría "Estandar" tiene varios conceptos con el mismo fk_servicio
+-- (Consumo $25000, Conexión $300000, Deuda anterior $0), así que no alcanza
+-- con unir por fk_servicio: hay que unir también por arancel = tarifa_fija
+-- de la categoría, para tomar únicamente el concepto que representa el
+-- cargo mensual fijo y no cobrar Conexión/Deuda anterior todos los meses.
+--
+-- La definición vigente de la función vive en
+-- supabase/functions/fn_generar_deudas_ciclos_vencidos.sql
 -- =====================================================================
 
 -- 1) Limpiar job huérfano que falla a diario (función que ya no existe)
+--    (ya ejecutado)
 SELECT cron.unschedule(1);
 
--- 2) Ver IDs disponibles de iva y unidades_medida para elegir los correctos
---    antes de correr el backfill del paso 3.
-SELECT * FROM public.iva;
-SELECT * FROM public.unidades_medida;
+-- 2) Corregir el concepto de Lavadero, que estaba enlazado a la
+--    categoría equivocada.
+UPDATE public.conceptos
+SET fk_servicio = 2
+WHERE id_concepto = 4;
 
--- 3) Backfill: crear un concepto por cada categoría de servicio que
---    todavía no tenga uno asociado (arancel = tarifa_fija de la categoría).
+-- 3) Backfill de seguridad: crear el concepto del cargo mensual para
+--    cualquier categoría futura que no tenga uno con arancel = tarifa_fija.
 --    IVA = 1 (10%) y unidad de medida = 1 (UNI) son las únicas opciones
 --    existentes en esta base.
 INSERT INTO public.conceptos (nombre, arancel, descripcion, fk_iva, fk_unidad_medida, estado, fk_servicio)
@@ -33,16 +44,21 @@ SELECT
 FROM public.categoria_servicio cs
 WHERE NOT EXISTS (
   SELECT 1 FROM public.conceptos c
-  WHERE c.fk_servicio = cs.id AND c.estado = 'ACTIVO'
+  WHERE c.fk_servicio = cs.id
+    AND c.estado = 'ACTIVO'
+    AND c.arancel = cs.tarifa_fija
 );
 
--- Verificar que todas las categorías quedaron con concepto asociado:
-SELECT cs.id, cs.nombre, cs.tarifa_fija, c.id_concepto, c.arancel
+-- Verificar que todas las categorías quedaron con su concepto de cargo
+-- mensual identificado sin ambigüedad:
+SELECT cs.id, cs.nombre, cs.tarifa_fija, c.id_concepto, c.nombre AS concepto_nombre, c.arancel
 FROM public.categoria_servicio cs
-LEFT JOIN public.conceptos c ON c.fk_servicio = cs.id AND c.estado = 'ACTIVO';
+LEFT JOIN public.conceptos c
+  ON c.fk_servicio = cs.id AND c.estado = 'ACTIVO' AND c.arancel = cs.tarifa_fija;
 
--- 4) Reemplazar la función para que use el concepto de cada categoría
---    en lugar del ID fijo 1. Ver el cuerpo completo y comentado en
+-- 4) Reemplazar la función para que use el concepto de cargo mensual de
+--    cada categoría (fk_servicio + arancel = tarifa_fija) en lugar del
+--    ID fijo 1. Ver el cuerpo completo y comentado en
 --    supabase/functions/fn_generar_deudas_ciclos_vencidos.sql
 CREATE OR REPLACE FUNCTION public.fn_generar_deudas_ciclos_vencidos()
 RETURNS void
@@ -67,7 +83,10 @@ BEGIN
                 c.arancel AS monto
             FROM public.inmuebles i
             JOIN public.categoria_servicio cs ON i.fk_categoria_servicio = cs.id
-            JOIN public.conceptos c ON c.fk_servicio = cs.id AND c.estado = 'ACTIVO'
+            JOIN public.conceptos c
+                ON c.fk_servicio = cs.id
+               AND c.estado = 'ACTIVO'
+               AND c.arancel = cs.tarifa_fija
             WHERE i.estado = 'CONECTADO'
               AND NOT EXISTS (
                   SELECT 1 FROM public.cuentas_cobrar cc
@@ -121,8 +140,9 @@ $function$;
 --    a) Forzar un ciclo de prueba con vencimiento = CURRENT_DATE y estado = 'ACTIVO'
 --    b) Ejecutar manualmente:
 --       SELECT public.fn_generar_deudas_ciclos_vencidos();
---    c) Revisar cuentas_cobrar: debe haber una fila por inmueble CONECTADO,
---       con fk_concepto correspondiente a su categoría y monto = tarifa_fija.
+--    c) Revisar cuentas_cobrar: debe haber UNA sola fila por inmueble CONECTADO
+--       (no una por Conexión/Deuda anterior), con fk_concepto correspondiente
+--       al cargo mensual de su categoría y monto = tarifa_fija.
 --    d) Re-ejecutar sobre el mismo ciclo y confirmar que NO se duplica.
 --    e) Confirmar rotación de ciclos (INACTIVO -> siguiente ACTIVO).
 
