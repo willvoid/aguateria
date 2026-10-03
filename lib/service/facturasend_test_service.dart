@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:myapp/modelo/cliente.dart';
+import 'package:myapp/service/facturasend_resultado.dart';
 
 /// PoC aislado: envía documentos de prueba (borrador) a FacturaSend a través
 /// del edge function proxy `facturasend-test`.
@@ -125,27 +126,7 @@ class FacturaSendTestService {
         body: {'documento': documento, 'qr': qr},
       );
 
-      final data = response.data;
-      if (data is! Map) {
-        return FacturaSendTestResultado(
-          ok: false,
-          error: 'Respuesta inesperada del servidor',
-        );
-      }
-
-      final resultado = Map<String, dynamic>.from(data);
-
-      return FacturaSendTestResultado(
-        ok: resultado['ok'] == true,
-        upstreamStatus: resultado['upstreamStatus'] is int
-            ? resultado['upstreamStatus'] as int
-            : null,
-        draft: resultado['draft'] == true,
-        facturasend: resultado['facturasend'] is Map
-            ? Map<String, dynamic>.from(resultado['facturasend'] as Map)
-            : null,
-        error: resultado['error']?.toString(),
-      );
+      return FacturaSendResultado.fromInvokeResponse(response.data);
     } on FunctionException catch (e) {
       return FacturaSendTestResultado(
         ok: false,
@@ -161,45 +142,8 @@ class FacturaSendTestService {
 }
 
 /// Resultado del envío de prueba a FacturaSend.
-class FacturaSendTestResultado {
-  final bool ok;
-  final int? upstreamStatus;
-  final bool draft;
-  final Map<String, dynamic>? facturasend;
-  final String? error;
-
-  FacturaSendTestResultado({
-    required this.ok,
-    this.upstreamStatus,
-    this.draft = true,
-    this.facturasend,
-    this.error,
-  });
-
-  /// CDC del documento generado (dentro de `result.deList[0].cdc`), si existe.
-  String? get cdc {
-    final result = facturasend?['result'];
-    if (result is Map) {
-      final deList = result['deList'];
-      if (deList is List && deList.isNotEmpty) {
-        final primero = deList.first;
-        if (primero is Map) return primero['cdc']?.toString();
-      }
-    }
-    return null;
-  }
-
-  /// ID del lote creado (`result.loteId`), si existe.
-  String? get loteId {
-    final result = facturasend?['result'];
-    if (result is Map) return result['loteId']?.toString();
-    return null;
-  }
-
-  /// Lista de errores de negocio reportados por FacturaSend, si los hay.
-  List<dynamic> get errores {
-    final e = facturasend?['errores'];
-    if (e is List) return e;
-    return [];
-  }
-}
+///
+/// Alias de `FacturaSendResultado` (`facturasend_resultado.dart`), que se
+/// comparte con el flujo real (`FacturaSendService`). Se mantiene este
+/// typedef para no tocar `facturasend_test_page.dart`.
+typedef FacturaSendTestResultado = FacturaSendResultado;
