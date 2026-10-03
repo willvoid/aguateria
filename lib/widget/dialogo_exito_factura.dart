@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/service/facturasend_resultado.dart';
+import 'package:myapp/service/facturasend_service.dart';
 import 'package:myapp/service/ticket_printer_service.dart';
+import 'package:myapp/widget/facturasend_resultado_card.dart';
 
-class FacturaSuccessDialog extends StatelessWidget {
+class FacturaSuccessDialog extends StatefulWidget {
   final Map<String, dynamic> facturaCreada;
   final String clienteNombre;
 
@@ -11,15 +14,30 @@ class FacturaSuccessDialog extends StatelessWidget {
     required this.clienteNombre,
   }) : super(key: key);
 
+  @override
+  State<FacturaSuccessDialog> createState() => _FacturaSuccessDialogState();
+}
+
+class _FacturaSuccessDialogState extends State<FacturaSuccessDialog> {
+  bool _imprimiendo = false;
+  bool _enviandoFS = false;
+  FacturaSendResultado? _resultadoFS;
+  String? _errorPreparacion;
+
+  bool get _bloqueado => _imprimiendo || _enviandoFS;
+
   String _formatearNumeroFactura() {
     try {
-      final establecimiento = (facturaCreada['fk_establecimientos'] ?? 1)
+      final establecimiento =
+          (widget.facturaCreada['fk_establecimientos'] ?? 1)
+              .toString()
+              .padLeft(3, '0');
+      final tipo = (widget.facturaCreada['fk_tipo_factura'] ?? 1)
           .toString()
           .padLeft(3, '0');
-      final tipo =
-          (facturaCreada['fk_tipo_factura'] ?? 1).toString().padLeft(3, '0');
-      final secuencial =
-          (facturaCreada['nro_secuencial'] ?? 0).toString().padLeft(7, '0');
+      final secuencial = (widget.facturaCreada['nro_secuencial'] ?? 0)
+          .toString()
+          .padLeft(7, '0');
       return '$establecimiento-$tipo-$secuencial';
     } catch (e) {
       return 'N/A';
@@ -28,10 +46,56 @@ class FacturaSuccessDialog extends StatelessWidget {
 
   String _formatearFecha() {
     try {
-      final fecha = DateTime.parse(facturaCreada['fecha_emision']);
+      final fecha = DateTime.parse(widget.facturaCreada['fecha_emision']);
       return '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}';
     } catch (e) {
       return 'N/A';
+    }
+  }
+
+  Future<void> _imprimir(int idFactura) async {
+    setState(() => _imprimiendo = true);
+    try {
+      await TicketPrinterService.imprimirTicket(idFactura);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al imprimir: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _imprimiendo = false);
+    }
+  }
+
+  /// Envía la factura a FacturaSend. Un error ANTES de llamar al edge
+  /// function (ej. `construirDocumentoDesdeFactura` lanzando por número de
+  /// secuencia en 0000000 o factura sin pagos) se trata distinto de un
+  /// rechazo del proxy/FacturaSend: el primero es "no pudimos ni preparar el
+  /// documento" (`_errorPreparacion`), el segundo es un resultado normal
+  /// con `ok: false` (`_resultadoFS`).
+  Future<void> _enviarAFacturaSend(int idFactura) async {
+    // Guard sincrónico: setState no reconstruye el frame al instante, así
+    // que un doble tap antes del próximo render podría disparar dos envíos
+    // reales concurrentes para la misma factura si solo dependiéramos del
+    // `onPressed: _bloqueado ? null : ...` del botón.
+    if (_enviandoFS) return;
+    setState(() {
+      _enviandoFS = true;
+      _errorPreparacion = null;
+      _resultadoFS = null;
+    });
+    try {
+      final resultado = await FacturaSendService().enviarFactura(idFactura);
+      if (mounted) {
+        setState(() => _resultadoFS = resultado);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorPreparacion = e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _enviandoFS = false);
     }
   }
 
@@ -39,10 +103,25 @@ class FacturaSuccessDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final numeroFactura = _formatearNumeroFactura();
     final fecha = _formatearFecha();
-    final total = (facturaCreada['total_general'] ?? 0.0).toStringAsFixed(0);
-    final idFactura = facturaCreada['id_factura'] ?? 0;
-    final vuelto = (facturaCreada['vuelto'] ?? 0.0).toStringAsFixed(0);
-    final isPrinting = ValueNotifier<bool>(false);
+    final total =
+        (widget.facturaCreada['total_general'] ?? 0.0).toStringAsFixed(0);
+    final idFacturaRaw = widget.facturaCreada['id_factura'] ?? 0;
+    final idFactura = int.tryParse(idFacturaRaw.toString()) ?? 0;
+    final vuelto = (widget.facturaCreada['vuelto'] ?? 0.0).toStringAsFixed(0);
+
+    final enviadoOk = _resultadoFS != null && _resultadoFS!.ok;
+    final rechazado = _resultadoFS != null && !_resultadoFS!.ok;
+
+    String labelEnviar;
+    if (_enviandoFS) {
+      labelEnviar = 'Enviando...';
+    } else if (enviadoOk) {
+      labelEnviar = 'Enviado';
+    } else if (_errorPreparacion != null || rechazado) {
+      labelEnviar = 'Reintentar';
+    } else {
+      labelEnviar = 'Enviar a FacturaSend';
+    }
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -124,7 +203,7 @@ class FacturaSuccessDialog extends StatelessWidget {
                       const SizedBox(height: 10),
                       _buildInfoRow(
                         'Cliente',
-                        clienteNombre,
+                        widget.clienteNombre,
                         Icons.person,
                         maxLines: 2,
                       ),
@@ -149,62 +228,81 @@ class FacturaSuccessDialog extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Botones
-                ValueListenableBuilder<bool>(
-                  valueListenable: isPrinting,
-                  builder: (context, printing, child) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: printing ? null : () => Navigator.pop(context),
-                            icon: const Icon(Icons.close, size: 18),
-                            label: const Text('Cerrar'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              foregroundColor: Colors.grey.shade700,
-                            ),
-                          ),
+                // Botones Cerrar / Imprimir
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _bloqueado ? null : () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, size: 18),
+                        label: const Text('Cerrar'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          foregroundColor: Colors.grey.shade700,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: printing ? null : () async {
-                              isPrinting.value = true;
-                              try {
-                                await TicketPrinterService.imprimirTicket(int.parse(idFactura.toString()));
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error al imprimir: $e')),
-                                  );
-                                }
-                              } finally {
-                                isPrinting.value = false;
-                              }
-                            },
-                            icon: printing
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(Icons.print, size: 18),
-                            label: Text(printing ? 'Cargando...' : 'Imprimir'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0085FF),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              elevation: 2,
-                            ),
-                          ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed:
+                            _bloqueado ? null : () => _imprimir(idFactura),
+                        icon: _imprimiendo
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.print, size: 18),
+                        label: Text(_imprimiendo ? 'Cargando...' : 'Imprimir'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0085FF),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 2,
                         ),
-                      ],
-                    );
-                  },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Enviar a FacturaSend: fila completa debajo de Cerrar/Imprimir
+                // (con maxWidth: 450 tres botones en una fila se superponen).
+                // Visualmente secundario (OutlinedButton): Imprimir sigue
+                // siendo la acción primaria.
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: (_bloqueado || enviadoOk)
+                        ? null
+                        : () => _enviarAFacturaSend(idFactura),
+                    icon: _enviandoFS
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.cloud_upload_outlined, size: 18),
+                    label: Text(labelEnviar),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      foregroundColor: const Color(0xFF0085FF),
+                      side: const BorderSide(color: Color(0xFF0085FF)),
+                    ),
+                  ),
+                ),
+
+                // Card de resultado: ámbar (error de preparación), rojo
+                // (rechazado por FacturaSend) o verde (aceptado). No ocupa
+                // espacio si todavía no hay nada que mostrar.
+                FacturaSendResultadoCard(
+                  errorPreparacion: _errorPreparacion,
+                  resultado: _resultadoFS,
                 ),
               ],
             ),
@@ -255,7 +353,11 @@ class FacturaSuccessDialog extends StatelessWidget {
                 maxLines: maxLines,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: isTotal ? 20 : isHighlight ? 16 : 14,
+                  fontSize: isTotal
+                      ? 20
+                      : isHighlight
+                          ? 16
+                          : 14,
                   fontWeight: isTotal || isHighlight
                       ? FontWeight.bold
                       : FontWeight.w600,
