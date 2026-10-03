@@ -31,3 +31,6 @@ enable_signup = true
 
 [functions.facturasend-test]
 verify_jwt = true
+
+[functions.facturasend-enviar-factura]
+verify_jwt = true
