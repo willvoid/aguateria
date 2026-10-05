@@ -45,7 +45,9 @@ dependencies:
   image_picker_web: ^3.1.1
   pdf: ^3.11.1      # Para crear el archivo PDF
   printing: ^5.13.0 # Para abrir la ventana de guardar/compartir
+  barcode: ^2.2.0   # Para dibujar el QR del KuDE dentro del PDF (ya la traía pdf/printing de forma transitiva)
   blue_thermal_printer: ^1.2.3 # Para imprimir directo por Bluetooth
+  file_saver: ^0.2.14 # Para descargar el XML de FacturaSend como archivo
 
 dev_dependencies:
   flutter_test:
