@@ -62,6 +62,27 @@ class FacturaSendResultado {
     return null;
   }
 
+  /// Primer elemento de `result.deList`, si existe. Base para [xml]/[qrUrl].
+  Map<String, dynamic>? get _primerDe {
+    final result = facturasend?['result'];
+    if (result is Map) {
+      final deList = result['deList'];
+      if (deList is List && deList.isNotEmpty) {
+        final primero = deList.first;
+        if (primero is Map) return Map<String, dynamic>.from(primero);
+      }
+    }
+    return null;
+  }
+
+  /// XML firmado del documento (`result.deList[0].xml`), solo presente si se
+  /// pidió con `xml: true` al enviar.
+  String? get xml => _primerDe?['xml']?.toString();
+
+  /// URL de verificación del QR en ekuatia.set.gov.py
+  /// (`result.deList[0].qr`), solo presente si se pidió con `qr: true`.
+  String? get qrUrl => _primerDe?['qr']?.toString();
+
   /// Lista cruda de errores de negocio reportados por FacturaSend, si los hay.
   List<dynamic> get errores {
     final e = facturasend?['errores'];

@@ -1,3 +1,4 @@
+import 'package:barcode/barcode.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -63,6 +64,41 @@ class TicketPrinterService {
       }
     }
     await _imprimirPdf(ticket);
+  }
+
+  /// Imprime o muestra el KuDE de una factura ya enviada a FacturaSend.
+  /// Si hay una impresora Bluetooth configurada (solo Android), imprime
+  /// directo por ahí con el ancho ya guardado (58/80mm) — no pregunta nada.
+  /// Si no, cae al PDF (`mostrarKude`), donde sí hace falta elegir el ancho
+  /// porque no hay ninguna config previa de la que inferirlo.
+  static Future<void> imprimirKude(
+    int idFactura, {
+    required String cdc,
+    required String qrUrl,
+    required bool draft,
+    bool papel58mmSiNoHayImpresora = false,
+  }) async {
+    final ticket = await obtenerTicket(idFactura);
+    if (ThermalPrinterService.disponible) {
+      final impresora = await ThermalPrinterService.impresoraGuardada();
+      if (impresora != null) {
+        await ThermalPrinterService.imprimir(
+          ticket,
+          impresora,
+          cdc: cdc,
+          qrUrl: qrUrl,
+          draft: draft,
+        );
+        return;
+      }
+    }
+    await mostrarKude(
+      ticket,
+      cdc: cdc,
+      qrUrl: qrUrl,
+      draft: draft,
+      papel58mm: papel58mmSiNoHayImpresora,
+    );
   }
 
   static Future<TicketData> obtenerTicket(int idFactura) async {
@@ -168,7 +204,95 @@ class TicketPrinterService {
     );
   }
 
+  /// Genera y muestra (diálogo de impresión/guardado) el KuDE — la
+  /// representación gráfica del Documento Electrónico, con el CDC y el QR
+  /// de verificación de SIFEN ya dibujados. Reusa el mismo layout que el
+  /// ticket interno (`_buildContenido`), a diferencia de ese, acá sí es un
+  /// documento con validez fiscal (o un borrador, según [draft]).
+  ///
+  /// [cdc] y [qrUrl] salen de `FacturaSendResultado` después de un envío
+  /// exitoso a FacturaSend (`resultado.cdc`, `resultado.qrUrl`).
+  ///
+  /// [papel58mm] independiente del ancho configurado para la impresora
+  /// Bluetooth (esa config solo aplica a `ThermalPrinterService`, que ni
+  /// existe en web) — es el ancho del PDF generado acá.
+  static Future<void> mostrarKude(
+    TicketData t, {
+    required String cdc,
+    required String qrUrl,
+    required bool draft,
+    bool papel58mm = false,
+  }) async {
+    final pageFormat = papel58mm ? PdfPageFormat.roll57 : PdfPageFormat.roll80;
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: pageFormat,
+        margin: const pw.EdgeInsets.all(8),
+        build: (pw.Context context) => _buildContenido(
+          t,
+          cdc: cdc,
+          qrUrl: qrUrl,
+          draft: draft,
+          compacto: papel58mm,
+        ),
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+      name: 'KuDE_${t.numeroFactura}.pdf',
+      format: pageFormat,
+    );
+  }
+
+  /// Agrupa el CDC de 44 dígitos en bloques de 4 para la presentación
+  /// estándar del KuDE (ej. "0103 4567 8900 ...").
+  static String _formatearCdc(String cdc) {
+    final buffer = StringBuffer();
+    for (var i = 0; i < cdc.length; i += 4) {
+      if (i > 0) buffer.write(' ');
+      buffer.write(cdc.substring(i, i + 4 > cdc.length ? cdc.length : i + 4));
+    }
+    return buffer.toString();
+  }
+
   static Future<void> _imprimirPdf(TicketData t) async {
+    final numeroFactura = t.numeroFactura;
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.roll80,
+        margin: const pw.EdgeInsets.all(10),
+        build: (pw.Context context) => _buildContenido(t),
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+      name: 'Ticket_Factura_$numeroFactura.pdf',
+      format: PdfPageFormat.roll80,
+    );
+  }
+
+  /// Arma el contenido del PDF, compartido entre el ticket interno
+  /// (`_imprimirPdf`, sin valor fiscal) y el KuDE real (`mostrarKude`, con
+  /// CDC + QR). Cuando [cdc] no es null se agrega el bloque de CDC/QR y
+  /// cambia el pie de página para reflejar que es (o será, si [draft]) un
+  /// documento con validez fiscal.
+  static pw.Widget _buildContenido(
+    TicketData t, {
+    String? cdc,
+    String? qrUrl,
+    bool draft = false,
+    bool compacto = false,
+  }) {
+    // En 58mm la tabla de ítems (4 columnas) queda muy ajustada con el
+    // mismo tamaño de 80mm — se achica un punto ahí y el QR, el resto del
+    // layout (textos centrados de una sola línea) entra bien igual.
+    final fsItem = compacto ? 7.0 : 8.0;
+    final qrSize = compacto ? 90.0 : 110.0;
     final razonSocial = t.razonSocial;
     final telefono = t.telefono;
     final direccionCompleta = t.direccionCompleta;
@@ -191,14 +315,7 @@ class TicketPrinterService {
 
     final formatMoneda = NumberFormat.currency(locale: 'es_PY', symbol: '', decimalDigits: 0);
 
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        margin: const pw.EdgeInsets.all(10),
-        build: (pw.Context context) {
-          return pw.Column(
+    return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             mainAxisSize: pw.MainAxisSize.min,
             children: [
@@ -244,7 +361,7 @@ class TicketPrinterService {
                 child: pw.Text('Fecha: ${DateFormat('dd/MM/yyyy HH:mm:ss').format(fecha)}', style: const pw.TextStyle(fontSize: 8)),
               ),
               pw.SizedBox(height: 10),
-              
+
               // Cliente
               pw.Text('RUC/C.I.: $rucCliente', style: const pw.TextStyle(fontSize: 8)),
               pw.Text('Cliente: $nombreCliente', style: const pw.TextStyle(fontSize: 8)),
@@ -257,10 +374,10 @@ class TicketPrinterService {
               // Cabecera de items
               pw.Row(
                 children: [
-                  pw.Expanded(flex: 3, child: pw.Text('DESCRIPCION', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold))),
-                  pw.Expanded(flex: 1, child: pw.Text('CANT', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold))),
-                  pw.Expanded(flex: 2, child: pw.Text('PRECIO', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold))),
-                  pw.Expanded(flex: 2, child: pw.Text('TOTAL', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold))),
+                  pw.Expanded(flex: 3, child: pw.Text('DESCRIPCION', style: pw.TextStyle(fontSize: fsItem, fontWeight: pw.FontWeight.bold))),
+                  pw.Expanded(flex: 1, child: pw.Text('CANT', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem, fontWeight: pw.FontWeight.bold))),
+                  pw.Expanded(flex: 2, child: pw.Text('PRECIO', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem, fontWeight: pw.FontWeight.bold))),
+                  pw.Expanded(flex: 2, child: pw.Text('TOTAL', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem, fontWeight: pw.FontWeight.bold))),
                 ]
               ),
               pw.SizedBox(height: 5),
@@ -271,16 +388,16 @@ class TicketPrinterService {
                 double precio = (item['precioUnitario'] ?? 0).toDouble();
                 double objTotal = cant * precio;
                 String desc = item['descripcion'] ?? 'Item';
-                
+
                 return pw.Padding(
                   padding: const pw.EdgeInsets.only(bottom: 2),
                   child: pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Expanded(flex: 3, child: pw.Text(desc, style: const pw.TextStyle(fontSize: 8))),
-                      pw.Expanded(flex: 1, child: pw.Text(cant.toStringAsFixed(0), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 8))),
-                      pw.Expanded(flex: 2, child: pw.Text(formatMoneda.format(precio), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 8))),
-                      pw.Expanded(flex: 2, child: pw.Text(formatMoneda.format(objTotal), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 8))),
+                      pw.Expanded(flex: 3, child: pw.Text(desc, style: pw.TextStyle(fontSize: fsItem))),
+                      pw.Expanded(flex: 1, child: pw.Text(cant.toStringAsFixed(0), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem))),
+                      pw.Expanded(flex: 2, child: pw.Text(formatMoneda.format(precio), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem))),
+                      pw.Expanded(flex: 2, child: pw.Text(formatMoneda.format(objTotal), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem))),
                     ],
                   ),
                 );
@@ -357,20 +474,48 @@ class TicketPrinterService {
               pw.SizedBox(height: 10),
 
               // Footer
-              pw.Center(
-                child: pw.Text('Ticket sin valor fiscal.', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, fontStyle: pw.FontStyle.italic)),
-              ),
+              if (cdc != null) ...[
+                pw.Center(
+                  child: pw.Text(
+                    'Representación gráfica del Documento Electrónico (KuDE)',
+                    textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                  ),
+                ),
+                if (draft) ...[
+                  pw.SizedBox(height: 3),
+                  pw.Center(
+                    child: pw.Text(
+                      'BORRADOR — SIN VALIDEZ FISCAL',
+                      style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ] else
+                pw.Center(
+                  child: pw.Text('Ticket sin valor fiscal.', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, fontStyle: pw.FontStyle.italic)),
+                ),
+              if (cdc != null && qrUrl != null) ...[
+                pw.SizedBox(height: 10),
+                pw.Center(
+                  child: pw.BarcodeWidget(
+                    barcode: Barcode.qrCode(),
+                    data: qrUrl,
+                    width: qrSize,
+                    height: qrSize,
+                  ),
+                ),
+                pw.SizedBox(height: 5),
+                pw.Center(
+                  child: pw.Text(
+                    'CDC: ${_formatearCdc(cdc)}',
+                    textAlign: pw.TextAlign.center,
+                    style: const pw.TextStyle(fontSize: 7),
+                  ),
+                ),
+              ],
               pw.SizedBox(height: 20),
             ],
           );
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-      name: 'Ticket_Factura_$numeroFactura.pdf',
-      format: PdfPageFormat.roll80,
-    );
   }
 }

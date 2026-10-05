@@ -16,6 +16,7 @@ import { corsHeaders } from "./cors.ts";
 export interface FacturaSendProxyBody {
   documento: Record<string, unknown>;
   qr?: boolean;
+  xml?: boolean;
   [key: string]: unknown;
 }
 
@@ -120,6 +121,7 @@ export async function runFacturaSendProxy(
   // 5. Llamada a FacturaSend.
   const qs = new URLSearchParams({ draft: String(draft) });
   if (body.qr === true) qs.set("qr", "true");
+  if (body.xml === true) qs.set("xml", "true");
   const upstreamUrl = `${baseUrl}/${tenantId}/lote/create?${qs}`;
 
   let upstreamStatus = 0;

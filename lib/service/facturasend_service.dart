@@ -110,18 +110,24 @@ class FacturaSendService {
   }
 
   /// Envía la factura [idFactura] a FacturaSend a través del edge function
-  /// real `facturasend-enviar-factura`. [qr] pide a FacturaSend que incluya
-  /// el QR en la respuesta.
+  /// real `facturasend-enviar-factura`. [qr]/[xml] piden a FacturaSend que
+  /// incluya el QR/XML en la respuesta.
   Future<FacturaSendResultado> enviarFactura(
     int idFactura, {
     bool qr = false,
+    bool xml = false,
   }) async {
     final documento = await construirDocumentoDesdeFactura(idFactura);
 
     try {
       final res = await _supabase.functions.invoke(
         'facturasend-enviar-factura',
-        body: {'idFactura': idFactura, 'documento': documento, 'qr': qr},
+        body: {
+          'idFactura': idFactura,
+          'documento': documento,
+          'qr': qr,
+          'xml': xml,
+        },
       );
       return FacturaSendResultado.fromInvokeResponse(res.data);
     } on FunctionException catch (e) {

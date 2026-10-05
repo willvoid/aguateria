@@ -1,6 +1,11 @@
+import 'dart:convert';
+
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myapp/service/facturasend_resultado.dart';
+import 'package:myapp/service/thermal_printer_service.dart';
+import 'package:myapp/service/ticket_printer_service.dart';
 
 /// Card de resultado del envío a FacturaSend, mostrada debajo del botón
 /// "Enviar a FacturaSend" en `FacturaSuccessDialog`.
@@ -11,11 +16,13 @@ import 'package:myapp/service/facturasend_resultado.dart';
 class FacturaSendResultadoCard extends StatelessWidget {
   final String? errorPreparacion;
   final FacturaSendResultado? resultado;
+  final int idFactura;
 
   const FacturaSendResultadoCard({
     Key? key,
     this.errorPreparacion,
     this.resultado,
+    required this.idFactura,
   }) : super(key: key);
 
   @override
@@ -139,9 +146,206 @@ class FacturaSendResultadoCard extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: Colors.green.shade800),
             ),
           ],
+          if (resultado.xml != null || (cdc != null && resultado.qrUrl != null)) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                if (resultado.xml != null) ...[
+                  OutlinedButton.icon(
+                    onPressed: () => _mostrarXml(
+                      context,
+                      resultado.xml!,
+                      cdc ?? 'documento',
+                    ),
+                    icon: const Icon(Icons.description_outlined, size: 16),
+                    label: const Text('Ver XML'),
+                    style: _estiloBotonSecundario,
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _descargarXml(
+                      context,
+                      resultado.xml!,
+                      cdc ?? 'documento',
+                    ),
+                    icon: const Icon(Icons.download_outlined, size: 16),
+                    label: const Text('Descargar XML'),
+                    style: _estiloBotonSecundario,
+                  ),
+                ],
+                if (cdc != null && resultado.qrUrl != null)
+                  OutlinedButton.icon(
+                    onPressed: () => _mostrarKude(
+                      context,
+                      cdc: cdc,
+                      qrUrl: resultado.qrUrl!,
+                      draft: resultado.draft,
+                    ),
+                    icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                    label: const Text('Ver KuDE'),
+                    style: _estiloBotonSecundario,
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// Guarda el XML como archivo. En web dispara la descarga del navegador;
+  /// en Android/desktop abre el diálogo nativo de guardar/compartir.
+  Future<void> _descargarXml(
+    BuildContext context,
+    String xml,
+    String cdc,
+  ) async {
+    try {
+      await FileSaver.instance.saveFile(
+        name: 'factura_$cdc',
+        bytes: utf8.encode(xml),
+        ext: 'xml',
+        mimeType: MimeType.other,
+        customMimeType: 'application/xml',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo descargar el XML: $e')),
+        );
+      }
+    }
+  }
+
+  void _mostrarXml(BuildContext context, String xml, String cdc) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 650, maxHeight: 600),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'XML del documento',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.download_outlined, size: 18),
+                    tooltip: 'Descargar XML',
+                    onPressed: () => _descargarXml(context, xml, cdc),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    tooltip: 'Copiar XML',
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: xml));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('XML copiado'),
+                            duration: Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    tooltip: 'Cerrar',
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const Divider(),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    xml,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  ButtonStyle get _estiloBotonSecundario => OutlinedButton.styleFrom(
+        foregroundColor: Colors.green.shade800,
+        side: BorderSide(color: Colors.green.shade300),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        visualDensity: VisualDensity.compact,
+      );
+
+  /// Arma y muestra el KuDE (representación gráfica con CDC + QR) de la
+  /// factura ya enviada, reusando el mismo layout del ticket interno
+  /// (`TicketPrinterService`).
+  Future<void> _mostrarKude(
+    BuildContext context, {
+    required String cdc,
+    required String qrUrl,
+    required bool draft,
+  }) async {
+    // Si hay impresora Bluetooth configurada, imprimirKude va directo por
+    // ahí con el ancho que ya está guardado — no hace falta preguntar nada.
+    // Solo se pregunta cuando de verdad va a caer al PDF (sin esa config
+    // previa de la que inferir el ancho).
+    bool papel58mm = false;
+    if (!ThermalPrinterService.disponible ||
+        await ThermalPrinterService.impresoraGuardada() == null) {
+      if (!context.mounted) return;
+      final elegido = await showDialog<bool>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: const Text('Ancho de papel'),
+          children: [
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('80 mm'),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('58 mm'),
+            ),
+          ],
+        ),
+      );
+      if (elegido == null) return;
+      papel58mm = elegido;
+    }
+    if (!context.mounted) return;
+
+    try {
+      await TicketPrinterService.imprimirKude(
+        idFactura,
+        cdc: cdc,
+        qrUrl: qrUrl,
+        draft: draft,
+        papel58mmSiNoHayImpresora: papel58mm,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo generar el KuDE: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildCard({

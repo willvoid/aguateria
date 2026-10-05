@@ -86,7 +86,11 @@ class _FacturaSuccessDialogState extends State<FacturaSuccessDialog> {
       _resultadoFS = null;
     });
     try {
-      final resultado = await FacturaSendService().enviarFactura(idFactura);
+      final resultado = await FacturaSendService().enviarFactura(
+        idFactura,
+        qr: true,
+        xml: true,
+      );
       if (mounted) {
         setState(() => _resultadoFS = resultado);
       }
@@ -303,6 +307,7 @@ class _FacturaSuccessDialogState extends State<FacturaSuccessDialog> {
                 FacturaSendResultadoCard(
                   errorPreparacion: _errorPreparacion,
                   resultado: _resultadoFS,
+                  idFactura: idFactura,
                 ),
               ],
             ),

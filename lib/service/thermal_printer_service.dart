@@ -154,7 +154,18 @@ class ThermalPrinterService {
     });
   }
 
-  static Future<void> imprimir(TicketData t, ImpresoraGuardada impresora) async {
+  /// Imprime el ticket (o el KuDE, si se pasan [cdc]/[qrUrl]) directo por
+  /// Bluetooth vía ESC/POS — distinto del camino PDF
+  /// (`TicketPrinterService.mostrarKude`), que no llega a esta impresora
+  /// porque no tiene driver de sistema, solo el socket directo que usa este
+  /// método.
+  static Future<void> imprimir(
+    TicketData t,
+    ImpresoraGuardada impresora, {
+    String? cdc,
+    String? qrUrl,
+    bool draft = false,
+  }) async {
     final cols = impresora.columnas;
     final moneda = NumberFormat.currency(locale: 'es_PY', symbol: '', decimalDigits: 0);
     final f = TicketTextFormatter.izquierdaDerecha;
@@ -218,7 +229,19 @@ class ThermalPrinterService {
       await par('Total Gral. IVA:', moneda.format(t.importeTotalIva));
       await sep();
 
-      await centrado('Ticket sin valor fiscal.', size: 1);
+      if (cdc != null) {
+        await centrado('Representacion grafica del Documento Electronico (KuDE)', size: 1);
+        if (draft) await centrado('BORRADOR - SIN VALIDEZ FISCAL', size: 1);
+        if (qrUrl != null) {
+          // 58mm (32 cols) imprime más angosto que 80mm (48 cols): QR más
+          // chico para que no se corte en el ancho del rollo.
+          final qrPx = cols <= 32 ? 220 : 300;
+          await _bt.printQRcode(qrUrl, qrPx, qrPx, 1);
+        }
+        await centrado('CDC: $cdc');
+      } else {
+        await centrado('Ticket sin valor fiscal.', size: 1);
+      }
       await _bt.printNewLine();
       await _bt.printNewLine();
       await _bt.printNewLine();

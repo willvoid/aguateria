@@ -114,16 +114,18 @@ class FacturaSendTestService {
 
   /// Envía el [documento] al edge function `facturasend-test`.
   ///
-  /// [qr] pide a FacturaSend que incluya el QR en la respuesta (se manda
-  /// como query flag real hacia FacturaSend, no como campo del documento).
+  /// [qr]/[xml] piden a FacturaSend que incluya el QR/XML en la respuesta
+  /// (se mandan como query flags reales hacia FacturaSend, no como campos
+  /// del documento).
   Future<FacturaSendTestResultado> enviar(
     Map<String, dynamic> documento, {
     bool qr = false,
+    bool xml = false,
   }) async {
     try {
       final response = await _supabase.functions.invoke(
         'facturasend-test',
-        body: {'documento': documento, 'qr': qr},
+        body: {'documento': documento, 'qr': qr, 'xml': xml},
       );
 
       return FacturaSendResultado.fromInvokeResponse(response.data);

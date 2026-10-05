@@ -31,6 +31,7 @@ class _FacturaSendTestPageState extends State<FacturaSendTestPage> {
   Cliente? _clienteSeleccionado;
   bool _buscando = false;
   bool _incluirQr = true;
+  bool _incluirXml = true;
   bool _enviando = false;
 
   FacturaSendTestResultado? _resultado;
@@ -119,7 +120,11 @@ class _FacturaSendTestPageState extends State<FacturaSendTestPage> {
       _resultado = null;
     });
 
-    final resultado = await _service.enviar(documento, qr: _incluirQr);
+    final resultado = await _service.enviar(
+      documento,
+      qr: _incluirQr,
+      xml: _incluirXml,
+    );
 
     if (!mounted) return;
     setState(() {
@@ -156,6 +161,13 @@ class _FacturaSendTestPageState extends State<FacturaSendTestPage> {
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Incluir QR'),
+                ),
+                CheckboxListTile(
+                  value: _incluirXml,
+                  onChanged: (v) => setState(() => _incluirXml = v ?? true),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Incluir XML'),
                 ),
                 const SizedBox(height: 8),
                 _botonEnviar(),
