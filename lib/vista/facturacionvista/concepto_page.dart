@@ -311,6 +311,7 @@ class _DialogoEditarConceptoState extends State<_DialogoEditarConcepto> {
   late Iva _ivaSeleccionado;
   late UnidadMedida _unidadMedidaSeleccionada;
   late CategoriaServicio _categoriaServicioSeleccionada;
+  late bool _permiteCuotas;
 
   final List<String> _estados = ['ACTIVO', 'INACTIVO'];
 
@@ -323,7 +324,8 @@ class _DialogoEditarConceptoState extends State<_DialogoEditarConcepto> {
     _descripcionController = TextEditingController(text: widget.concepto?.descripcion ?? '');
 
     _estadoSeleccionado = widget.concepto?.estado ?? 'ACTIVO';
-    
+    _permiteCuotas = widget.concepto?.permiteCuotas ?? false;
+
     _ivaSeleccionado = widget.concepto != null
         ? widget.ivas.firstWhere(
             (i) => i.id == widget.concepto!.fk_iva.id,
@@ -426,6 +428,17 @@ class _DialogoEditarConceptoState extends State<_DialogoEditarConcepto> {
                 onChanged: (value) => setState(() => _categoriaServicioSeleccionada = value!),
                 itemLabel: (item) => item.nombre,
               ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Permite pago a cuotas',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF374151)),
+                ),
+                subtitle: const Text('El cliente puede abonar montos parciales hasta saldar la deuda'),
+                value: _permiteCuotas,
+                onChanged: (value) => setState(() => _permiteCuotas = value),
+              ),
             ],
           ),
         ),
@@ -515,6 +528,7 @@ class _DialogoEditarConceptoState extends State<_DialogoEditarConcepto> {
         fk_unidad_medida: _unidadMedidaSeleccionada,
         estado: _estadoSeleccionado,
         fk_servicio: _categoriaServicioSeleccionada,
+        permiteCuotas: _permiteCuotas,
       );
 
       widget.onGuardar(concepto);

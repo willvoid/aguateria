@@ -103,6 +103,7 @@ Future<List<Ciclo>> cargarCiclosDisponiblesConsumo(int idInmueble) async {
     required double efectivo,
     required int idUsuario,
     int? idModoPago, // NUEVO: ID del modo de pago seleccionado (opcional)
+    double? montoAPagar, // Abono parcial para conceptos que permiten cuotas
   }) async {
     try {
       // 1. Cargar configuración del sistema
@@ -155,15 +156,22 @@ Future<List<Ciclo>> cargarCiclosDisponiblesConsumo(int idInmueble) async {
           );
         }).toList();
       } else {
-        // CONEXIÓN u OTRO: Un solo detalle con el saldo total de la deuda
-        montoTotal = deuda.saldo;
+        // CONEXIÓN u OTRO: Un solo detalle por el monto a pagar. Si no se
+        // indica un abono parcial, se cobra el saldo total de la deuda.
+        final montoDetalle = montoAPagar ?? deuda.saldo;
+        if (montoDetalle <= 0 || montoDetalle > deuda.saldo) {
+          throw Exception(
+            'El monto a pagar debe ser mayor a 0 y no superar el saldo de la deuda',
+          );
+        }
+        montoTotal = montoDetalle;
         detalles = [
           DetallePayload(
             fkConcepto: deuda.fk_concepto.id!,
-            monto: deuda.saldo,
+            monto: montoDetalle,
             descripcion: deuda.descripcion,
             ivaAplicado: deuda.fk_concepto.fk_iva.valor,
-            subtotal: deuda.saldo,
+            subtotal: montoDetalle,
             estado: 'ACTIVO',
             cantidad: 1.0,
             fkCiclo: deuda.fk_ciclos?.id,
@@ -236,11 +244,16 @@ Future<List<Ciclo>> cargarCiclosDisponiblesConsumo(int idInmueble) async {
     required CuentaCobrar deuda,
     required List<Ciclo> ciclosSeleccionados,
     required double efectivo,
+    double? montoAPagar,
   }) {
     final esConsumo = deuda.fk_concepto.id == 1;
 
     if (esConsumo && ciclosSeleccionados.isEmpty) {
       return 'Debe seleccionar al menos un ciclo para pagar';
+    }
+
+    if (montoAPagar != null && montoAPagar > deuda.saldo) {
+      return 'El monto no puede superar el saldo de la deuda';
     }
 
     double montoTotal = 0.0;

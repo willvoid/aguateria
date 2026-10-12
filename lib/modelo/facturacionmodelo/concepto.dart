@@ -11,6 +11,7 @@ class Concepto {
   UnidadMedida fk_unidad_medida;
   String estado;
   CategoriaServicio fk_servicio;
+  bool permiteCuotas;
 
   Concepto ({
     this.id,
@@ -21,6 +22,7 @@ class Concepto {
     required this.fk_unidad_medida,
     required this.estado,
     required this.fk_servicio,
+    this.permiteCuotas = false,
   });
 
 
@@ -34,6 +36,7 @@ class Concepto {
       fk_unidad_medida: UnidadMedida.fromMap(map['fk_unidad_medida']),
       estado: map['estado'],  
       fk_servicio: CategoriaServicio.fromMap(map['fk_servicio']),
+      permiteCuotas: map['permite_cuotas'] == true,
     );
   }
 
@@ -47,6 +50,7 @@ class Concepto {
       'fk_unidad_medida': fk_unidad_medida.toMap(),
       'estado': estado,
       'fk_servicio': fk_servicio.toMap(),
+      'permite_cuotas': permiteCuotas,
     };
   }
 }

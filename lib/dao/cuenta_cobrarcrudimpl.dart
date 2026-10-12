@@ -447,6 +447,7 @@ class CuentaCobrarCrudImpl {
               datosConcepto['fk_servicio'] as Map<String, dynamic>,
             )
           : CategoriaServicio.vacio(),
+      permiteCuotas: datosConcepto['permite_cuotas'] == true,
     );
 
     // Construir Ciclo (opcional)

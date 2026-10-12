@@ -55,8 +55,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   double _totalIva = 0.0;
 
   bool get _esConsumo => widget.deuda.fk_concepto.id == 1;
-  bool get _esConexion => widget.deuda.fk_concepto.id == 2;
-  bool get _esDeudaAnterior => widget.deuda.fk_concepto.id == 3;
+  bool get _permiteCuotas =>
+      !_esConsumo && widget.deuda.fk_concepto.permiteCuotas;
 
   @override
   void initState() {
@@ -120,7 +120,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         });
       } else {
         setState(() {
-          _totalAPagar = _esConexion ? 0.0 : widget.deuda.saldo;
+          _totalAPagar = _permiteCuotas ? 0.0 : widget.deuda.saldo;
           _calcularTotales();
           _isLoading = false;
         });
@@ -146,7 +146,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     if (_esConsumo) {
       final montoPorCiclo = widget.deuda.fk_concepto.arancel;
       _totalAPagar = montoPorCiclo * _ciclosSeleccionados.length;
-    } else if (!_esConexion) {
+    } else if (!_permiteCuotas) {
       _totalAPagar = double.tryParse(_montoController.text) ?? 0;
     }
     _recalcularIva();
@@ -176,7 +176,7 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Future<void> _procesarPago() async {
-    if (_esConexion || _esDeudaAnterior) {
+    if (_permiteCuotas) {
       final ingresado = double.tryParse(_montoController.text) ?? 0;
       if (ingresado <= 0) {
         _mostrarError('Ingrese un monto a pagar mayor a 0');
@@ -193,9 +193,10 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final error = _pagoService.validarPago(
       deuda: widget.deuda,
       ciclosSeleccionados: _ciclosSeleccionados,
-      efectivo: _esConsumo || _esConexion || _esDeudaAnterior
+      efectivo: _esConsumo || _permiteCuotas
           ? _totalAPagar
           : double.tryParse(_efectivoController.text) ?? 0,
+      montoAPagar: _permiteCuotas ? _totalAPagar : null,
     );
 
     if (error != null) {
@@ -343,11 +344,12 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
         cliente: widget.cliente,
         inmueble: widget.inmueble,
         ciclosSeleccionados: _ciclosSeleccionados,
-        efectivo: _esConsumo || _esConexion
+        efectivo: _esConsumo || _permiteCuotas
             ? _totalAPagar
             : double.parse(_efectivoController.text),
         idUsuario: widget.idUsuario,
         idModoPago: modoPago.id_modo_pago,
+        montoAPagar: _permiteCuotas ? _totalAPagar : null,
       );
 
       if (mounted) Navigator.pop(context);
@@ -572,14 +574,14 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
                           const SizedBox(height: 24),
                           if (_esConsumo)
                             _buildResumenCiclosSeleccionados()
-                          else if (_esConexion || _esDeudaAnterior)
+                          else if (_permiteCuotas)
                             _buildMontoConexion()
                           else
                             _buildMontoFijo(),
                           const SizedBox(height: 24),
                           _buildResumenTotales(),
                           const SizedBox(height: 24),
-                          if (!_esConsumo && !_esConexion && !_esDeudaAnterior) ...[
+                          if (!_esConsumo && !_permiteCuotas) ...[
                             _buildInputEfectivo(),
                             const SizedBox(height: 24),
                           ],
@@ -732,8 +734,8 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
     final montoIngresado = double.tryParse(_montoController.text) ?? 0;
     final excedeLimite = montoIngresado > widget.deuda.saldo;
 
-    final color = _esConexion ? Colors.orange : Colors.teal;
-    final icono = _esConexion ? Icons.edit_note : Icons.history_edu;
+    const color = Colors.orange;
+    const icono = Icons.edit_note;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1192,14 +1194,14 @@ class _PagarDeudaDialogState extends State<PagarDeudaDialog> {
   }
 
   Widget _buildBotones() {
-    final montoConexionValido = (_esConexion || _esDeudaAnterior)
+    final montoConexionValido = (_permiteCuotas)
         ? (_totalAPagar > 0 && _totalAPagar <= widget.deuda.saldo)
         : true;
 
     final puedeProcedar =
         _totalAPagar > 0 &&
         montoConexionValido &&
-        (_esConsumo || _esConexion || _esDeudaAnterior || _vuelto >= 0);
+        (_esConsumo || _permiteCuotas || _vuelto >= 0);
 
     return Row(
       children: [

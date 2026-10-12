@@ -47,7 +47,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
   int _ivaAplicado = 10;
   double _subtotal = 0;
   bool _esConsumo = false;
-  bool _esConexion = false; // ← NUEVO: detecta concepto id=2
+  bool _permiteCuotas = false; // el concepto seleccionado admite abonos parciales
 
   @override
   void initState() {
@@ -162,20 +162,20 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
     );
   }
 
-  // ── NUEVO: consulta el saldo pendiente de conexión del inmueble ──────────────
-  Future<double?> _obtenerSaldoConexion() async {
+  // Consulta el saldo pendiente del concepto (que permite cuotas) del inmueble
+  Future<double?> _obtenerSaldoPendiente(int? idConcepto) async {
     final idInmueble = widget.inmuebleSeleccionado?.id;
-    if (idInmueble == null) return null;
+    if (idInmueble == null || idConcepto == null) return null;
 
     try {
       final supabase = Supabase.instance.client;
 
-      // Busca la deuda de conexión (fk_concepto = 2) del inmueble con saldo > 0
+      // Busca la deuda más reciente del concepto en el inmueble con saldo > 0
       final response = await supabase
           .from('cuentas_cobrar')
           .select('saldo')
           .eq('fk_inmueble', idInmueble)
-          .eq('fk_concepto', 2)
+          .eq('fk_concepto', idConcepto)
           .gt('saldo', 0)
           .order('created_at', ascending: false)
           .limit(1)
@@ -359,17 +359,18 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
       return;
     }
 
-    // ── NUEVO: validación de saldo para concepto Conexión (id=2) ────────────
-    if (_esConexion) {
+    // Validación de saldo para conceptos que permiten pago a cuotas
+    if (_permiteCuotas) {
       final montoIngresado =
           (double.tryParse(_cantidadController.text) ?? 1) *
               (double.tryParse(_montoController.text) ?? 0);
 
-      final saldoPendiente = await _obtenerSaldoConexion();
+      final saldoPendiente =
+          await _obtenerSaldoPendiente(_conceptoSeleccionado?.id);
 
       if (saldoPendiente == null) {
         _mostrarError(
-            'No se encontró una deuda de conexión pendiente para este inmueble');
+            'No se encontró una deuda pendiente de este concepto para este inmueble');
         return;
       }
 
@@ -409,7 +410,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
       _ivaAplicado = 10;
       _subtotal = 0;
       _esConsumo = false;
-      _esConexion = false; // ← NUEVO
+      _permiteCuotas = false;
     });
   }
 
@@ -535,7 +536,7 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
                       _ivaAplicado = concepto.fk_iva.valor;
                       _descripcionController.text = concepto.nombre;
                       _esConsumo = concepto.id == 1;
-                      _esConexion = concepto.id == 2; // ← NUEVO
+                      _permiteCuotas = concepto.permiteCuotas;
                       if (_esConsumo) {
                         _actualizarMontoConsumo();
                       } else {

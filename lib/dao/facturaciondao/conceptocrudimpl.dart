@@ -37,6 +37,7 @@ class ConceptoCrudImpl {
         'fk_unidad_medida': concepto.fk_unidad_medida.id,
         'estado': concepto.estado,
         'fk_servicio': concepto.fk_servicio.id,
+        'permite_cuotas': concepto.permiteCuotas,
       });
 
       return true;
@@ -92,6 +93,7 @@ class ConceptoCrudImpl {
           fk_unidad_medida: unidadMedida,
           estado: mapa['estado'] ?? 'ACTIVO',
           fk_servicio: categoriaServicio,
+          permiteCuotas: mapa['permite_cuotas'] == true,
         );
       }).toList();
 
@@ -135,6 +137,7 @@ class ConceptoCrudImpl {
         'fk_unidad_medida': concepto.fk_unidad_medida.id,
         'estado': concepto.estado,
         'fk_servicio': concepto.fk_servicio.id,
+        'permite_cuotas': concepto.permiteCuotas,
       }).eq('id_concepto', concepto.id!);
 
       return true;
