@@ -180,18 +180,23 @@ class ThermalPrinterService {
       if (t.telefono.isNotEmpty) await centrado('TELEFONO: ${t.telefono}');
       if (t.direccionCompleta.isNotEmpty) await centrado('DIRECCION: ${t.direccionCompleta}');
       if (t.ciudad.isNotEmpty) await centrado('LOCALIDAD ${t.ciudad}');
-      await centrado('RUC: ${t.rucEmisor}');
-      await centrado('IVA INCLUIDO');
-      await centrado('Timbrado: ${t.timbrado}');
-      if (t.timbradoFechaFmt.isNotEmpty) {
-        await centrado('Inicio de vigencia: ${t.timbradoFechaFmt}');
+      if (t.esInterno) {
+        await centrado('TICKET DE USO INTERNO', size: 1);
+        await centrado('N: ${t.numeroTicket}', size: 1);
+      } else {
+        await centrado('RUC: ${t.rucEmisor}');
+        await centrado('IVA INCLUIDO');
+        await centrado('Timbrado: ${t.timbrado}');
+        if (t.timbradoFechaFmt.isNotEmpty) {
+          await centrado('Inicio de vigencia: ${t.timbradoFechaFmt}');
+        }
+        await centrado('FACTURA ELECTRONICA', size: 1);
+        await centrado(t.numeroFactura, size: 1);
       }
-      await centrado('FACTURA ELECTRONICA', size: 1);
-      await centrado(t.numeroFactura, size: 1);
       await centrado('Fecha: ${DateFormat('dd/MM/yyyy HH:mm:ss').format(t.fecha)}');
       await _bt.printNewLine();
 
-      await izq('RUC/C.I.: ${t.rucCliente}');
+      if (!t.esInterno) await izq('RUC/C.I.: ${t.rucCliente}');
       await izq('Cliente: ${t.nombreCliente}');
       await sep();
 
@@ -207,18 +212,27 @@ class ThermalPrinterService {
       await sep();
 
       await _bt.printCustom(f('TOTAL Gs:', moneda.format(t.totalAbono), cols), 1, 0);
+      if (t.mostrarEfectivo) {
+        await par('EFECTIVO Gs:', moneda.format(t.efectivo));
+        await par('VUELTO Gs:', moneda.format(t.vuelto));
+      }
       await sep();
 
-      await centrado('Liquidacion del IVA');
-      await par('Total Exentas:', moneda.format(t.totalExenta));
-      await par('Total Gravadas 5%:', moneda.format(t.totalIva5));
-      await par('Total Gravadas 10%:', moneda.format(t.totalIva10));
-      await par('Total IVA 5%:', moneda.format(t.montoIva5));
-      await par('Total IVA 10%:', moneda.format(t.montoIva10));
-      await par('Total Gral. IVA:', moneda.format(t.importeTotalIva));
-      await sep();
+      if (!t.esInterno) {
+        await centrado('Liquidacion del IVA');
+        await par('Total Exentas:', moneda.format(t.totalExenta));
+        await par('Total Gravadas 5%:', moneda.format(t.totalIva5));
+        await par('Total Gravadas 10%:', moneda.format(t.totalIva10));
+        await par('Total IVA 5%:', moneda.format(t.montoIva5));
+        await par('Total IVA 10%:', moneda.format(t.montoIva10));
+        await par('Total Gral. IVA:', moneda.format(t.importeTotalIva));
+        await sep();
+      }
 
-      await centrado('Ticket sin valor fiscal.', size: 1);
+      await centrado(
+        t.esInterno ? 'Sin valor fiscal. No valido como factura.' : 'Ticket sin valor fiscal.',
+        size: 1,
+      );
       await _bt.printNewLine();
       await _bt.printNewLine();
       await _bt.printNewLine();

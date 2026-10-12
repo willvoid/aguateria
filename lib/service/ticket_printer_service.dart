@@ -3,6 +3,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:myapp/dao/facturaciondao/tipo_facturacrudimpl.dart';
 import 'package:myapp/service/thermal_printer_service.dart';
 
 /// Datos ya procesados de un ticket, independientes del medio de impresión.
@@ -26,6 +27,12 @@ class TicketData {
   final double montoIva5;
   final double montoIva10;
   final double importeTotalIva;
+  final double efectivo;
+  final double vuelto;
+
+  /// Ticket de uso interno: sin RUC, timbrado ni IVA, para que no pase por factura.
+  final bool esInterno;
+  final String numeroTicket;
 
   const TicketData({
     required this.razonSocial,
@@ -47,10 +54,27 @@ class TicketData {
     required this.montoIva5,
     required this.montoIva10,
     required this.importeTotalIva,
+    this.efectivo = 0,
+    this.vuelto = 0,
+    this.esInterno = false,
+    this.numeroTicket = '',
   });
+
+  /// Solo se muestran efectivo y vuelto cuando hubo cobro en efectivo.
+  bool get mostrarEfectivo => efectivo > 0;
 }
 
 class TicketPrinterService {
+  /// El tipo de factura "Ticket" es el documento de uso interno.
+  static bool esTipoTicket(String? descripcion) =>
+      (descripcion ?? '').trim().toLowerCase() == 'ticket';
+
+  /// Número tal como se muestra en pantalla: establecimiento-tipo-secuencial.
+  static String formatearNumero(int establecimiento, int tipo, int secuencial) =>
+      '${establecimiento.toString().padLeft(3, '0')}-'
+      '${tipo.toString().padLeft(3, '0')}-'
+      '${secuencial.toString().padLeft(7, '0')}';
+
   /// Imprime directo por Bluetooth si hay una impresora térmica configurada
   /// (Android); en caso contrario abre el diálogo de impresión con un PDF.
   static Future<void> imprimirTicket(int idFactura) async {
@@ -145,6 +169,23 @@ class TicketPrinterService {
     final montoIva10 = totalIva10 / 11;
     final importeTotalIva = montoIva5 + montoIva10;
 
+    // No se asume que el RPC traiga efectivo/vuelto ni el tipo: se leen de la factura.
+    final fila = await Supabase.instance.client
+        .from('facturas')
+        .select('efectivo, vuelto, nro_secuencial, fk_establecimientos, fk_tipo_factura')
+        .eq('id_factura', idFactura)
+        .single();
+    final idTipo = (fila['fk_tipo_factura'] as num).toInt();
+    final tipo = await TipoFacturaCrudImpl().leerTipoFacturaPorId(idTipo);
+    final esInterno = esTipoTicket(tipo?.descripcion);
+    final numeroTicket = formatearNumero(
+      (fila['fk_establecimientos'] as num).toInt(),
+      idTipo,
+      (fila['nro_secuencial'] as num).toInt(),
+    );
+    final efectivo = (fila['efectivo'] as num?)?.toDouble() ?? 0;
+    final vuelto = (fila['vuelto'] as num?)?.toDouble() ?? 0;
+
     return TicketData(
       razonSocial: razonSocial.toString(),
       telefono: telefono.toString(),
@@ -165,6 +206,10 @@ class TicketPrinterService {
       montoIva5: montoIva5,
       montoIva10: montoIva10,
       importeTotalIva: importeTotalIva,
+      efectivo: efectivo,
+      vuelto: vuelto < 0 ? 0 : vuelto,
+      esInterno: esInterno,
+      numeroTicket: numeroTicket,
     );
   }
 
@@ -188,6 +233,7 @@ class TicketPrinterService {
     final montoIva5 = t.montoIva5;
     final montoIva10 = t.montoIva10;
     final importeTotalIva = t.importeTotalIva;
+    final esInterno = t.esInterno;
 
     final formatMoneda = NumberFormat.currency(locale: 'es_PY', symbol: '', decimalDigits: 0);
 
@@ -222,31 +268,41 @@ class TicketPrinterService {
                 pw.Center(
                   child: pw.Text('LOCALIDAD $ciudad', style: const pw.TextStyle(fontSize: 8)),
                 ),
-              pw.Center(
-                child: pw.Text('RUC: $rucEmisor', style: const pw.TextStyle(fontSize: 8)),
-              ),
-              pw.Center(
-                child: pw.Text('IVA INCLUIDO', style: const pw.TextStyle(fontSize: 8)),
-              ),
-              pw.Center(
-                child: pw.Text('Timbrado: $timbrado', style: const pw.TextStyle(fontSize: 8)),
-              ),
-              pw.SizedBox(height: 5),
-              if (timbradoFechaFmt.isNotEmpty)
+              if (!esInterno) ...[
                 pw.Center(
-                  child: pw.Text('Inicio de vigencia: $timbradoFechaFmt', style: const pw.TextStyle(fontSize: 8)),
+                  child: pw.Text('RUC: $rucEmisor', style: const pw.TextStyle(fontSize: 8)),
                 ),
+                pw.Center(
+                  child: pw.Text('IVA INCLUIDO', style: const pw.TextStyle(fontSize: 8)),
+                ),
+                pw.Center(
+                  child: pw.Text('Timbrado: $timbrado', style: const pw.TextStyle(fontSize: 8)),
+                ),
+                pw.SizedBox(height: 5),
+                if (timbradoFechaFmt.isNotEmpty)
+                  pw.Center(
+                    child: pw.Text('Inicio de vigencia: $timbradoFechaFmt', style: const pw.TextStyle(fontSize: 8)),
+                  ),
+              ],
               pw.SizedBox(height: 2),
               pw.Center(
-                child: pw.Text('FACTURA ELECTRÓNICA: $numeroFactura', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                child: pw.Text(
+                  esInterno ? 'TICKET DE USO INTERNO' : 'FACTURA ELECTRÓNICA: $numeroFactura',
+                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                ),
               ),
+              if (esInterno)
+                pw.Center(
+                  child: pw.Text('N°: ${t.numeroTicket}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                ),
               pw.Center(
                 child: pw.Text('Fecha: ${DateFormat('dd/MM/yyyy HH:mm:ss').format(fecha)}', style: const pw.TextStyle(fontSize: 8)),
               ),
               pw.SizedBox(height: 10),
               
               // Cliente
-              pw.Text('RUC/C.I.: $rucCliente', style: const pw.TextStyle(fontSize: 8)),
+              if (!esInterno)
+                pw.Text('RUC/C.I.: $rucCliente', style: const pw.TextStyle(fontSize: 8)),
               pw.Text('Cliente: $nombreCliente', style: const pw.TextStyle(fontSize: 8)),
               
               // Separador
@@ -300,11 +356,30 @@ class TicketPrinterService {
                 ]
               ),
 
+              if (t.mostrarEfectivo) ...[
+                pw.SizedBox(height: 3),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('EFECTIVO Gs:', style: const pw.TextStyle(fontSize: 9)),
+                    pw.Text(formatMoneda.format(t.efectivo), style: const pw.TextStyle(fontSize: 9)),
+                  ]
+                ),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('VUELTO Gs:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(formatMoneda.format(t.vuelto), style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                  ]
+                ),
+              ],
+
               pw.SizedBox(height: 5),
               pw.Divider(borderStyle: pw.BorderStyle.dashed),
               pw.SizedBox(height: 5),
 
-              // Detalle de IVA
+              // Detalle de IVA (no aplica al ticket interno)
+              if (!esInterno) ...[
               pw.Center(
                 child: pw.Text('Liquidación del IVA', style: const pw.TextStyle(fontSize: 8, decoration: pw.TextDecoration.underline)),
               ),
@@ -354,11 +429,15 @@ class TicketPrinterService {
 
               pw.SizedBox(height: 5),
               pw.Divider(borderStyle: pw.BorderStyle.dashed),
+              ],
               pw.SizedBox(height: 10),
 
               // Footer
               pw.Center(
-                child: pw.Text('Ticket sin valor fiscal.', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, fontStyle: pw.FontStyle.italic)),
+                child: pw.Text(
+                  esInterno ? 'Sin valor fiscal. No válido como factura.' : 'Ticket sin valor fiscal.',
+                  textAlign: pw.TextAlign.center,
+                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, fontStyle: pw.FontStyle.italic)),
               ),
               pw.SizedBox(height: 20),
             ],
@@ -369,7 +448,7 @@ class TicketPrinterService {
 
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
-      name: 'Ticket_Factura_$numeroFactura.pdf',
+      name: esInterno ? 'Ticket_Interno_${t.numeroTicket}.pdf' : 'Ticket_Factura_$numeroFactura.pdf',
       format: PdfPageFormat.roll80,
     );
   }
