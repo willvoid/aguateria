@@ -12,11 +12,21 @@ import 'package:myapp/modelo/facturacionmodelo/ciclo.dart';
 final supabase = Supabase.instance.client;
 
 class PagoDeudaService {
-  final FacturaRpcService _facturaRpcService = FacturaRpcService();
-  final ConfiguracionSistemaCrudImpl _configCrud =
-      ConfiguracionSistemaCrudImpl();
-  final AperturaCierreCajaCrudImpl _aperturaCrud = AperturaCierreCajaCrudImpl();
-  final FacturaCrudImpl _facturaCrud = FacturaCrudImpl();
+  final FacturaRpcService _facturaRpcService;
+  final ConfiguracionSistemaCrudImpl _configCrud;
+  final AperturaCierreCajaCrudImpl _aperturaCrud;
+  final FacturaCrudImpl _facturaCrud;
+
+  /// Las dependencias son opcionales para poder reemplazarlas en los tests.
+  PagoDeudaService({
+    FacturaRpcService? facturaRpcService,
+    ConfiguracionSistemaCrudImpl? configCrud,
+    AperturaCierreCajaCrudImpl? aperturaCrud,
+    FacturaCrudImpl? facturaCrud,
+  })  : _facturaRpcService = facturaRpcService ?? FacturaRpcService(),
+        _configCrud = configCrud ?? ConfiguracionSistemaCrudImpl(),
+        _aperturaCrud = aperturaCrud ?? AperturaCierreCajaCrudImpl(),
+        _facturaCrud = facturaCrud ?? FacturaCrudImpl();
 
   /// Carga los ciclos disponibles para deudas de consumo
   /// Retorna los ciclos que NO han sido facturados aún para este inmueble
