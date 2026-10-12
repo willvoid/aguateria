@@ -252,8 +252,13 @@ Future<List<Ciclo>> cargarCiclosDisponiblesConsumo(int idInmueble) async {
       return 'Debe seleccionar al menos un ciclo para pagar';
     }
 
-    if (montoAPagar != null && montoAPagar > deuda.saldo) {
-      return 'El monto no puede superar el saldo de la deuda';
+    if (montoAPagar != null) {
+      if (montoAPagar <= 0) {
+        return 'El monto a pagar debe ser mayor a 0';
+      }
+      if (montoAPagar > deuda.saldo) {
+        return 'El monto no puede superar el saldo de la deuda';
+      }
     }
 
     double montoTotal = 0.0;

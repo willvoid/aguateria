@@ -11,7 +11,7 @@ UPDATE conceptos
 SET permite_cuotas = true
 WHERE id_concepto IN (2, 3);
 
--- 3) Verify
-SELECT id_concepto, nombre, permite_cuotas
-FROM conceptos
-ORDER BY id_concepto;
+-- 3) Verify (manual check, uncomment to run in the SQL Editor)
+-- SELECT id_concepto, nombre, permite_cuotas
+-- FROM conceptos
+-- ORDER BY id_concepto;
