@@ -5,6 +5,8 @@ class ReporteMensual {
   final String? celular; // Opcional
   final String estadoConexion;
   final double deudaTotal;
+  final double conexion;
+  final double deudaAnterior;
   final List<double> meses;
 
   ReporteMensual({
@@ -14,6 +16,8 @@ class ReporteMensual {
     this.celular,
     required this.estadoConexion,
     required this.deudaTotal,
+    this.conexion = 0,
+    this.deudaAnterior = 0,
     required this.meses,
   });
 
@@ -27,6 +31,8 @@ class ReporteMensual {
       estadoConexion:
           json['estado_conexion']?.toString().toUpperCase() ?? 'CONECTADO',
       deudaTotal: (json['deuda_total'] ?? 0).toDouble(),
+      conexion: (json['conexion'] ?? 0).toDouble(),
+      deudaAnterior: (json['deuda_anterior'] ?? 0).toDouble(),
       meses: [
         (json['enero'] ?? 0).toDouble(),
         (json['febrero'] ?? 0).toDouble(),

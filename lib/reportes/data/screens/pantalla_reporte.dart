@@ -17,6 +17,8 @@ class ReporteScreen extends StatefulWidget {
 class _ReporteScreenState extends State<ReporteScreen> {
   List<ReporteMensual> _datos = [];
   bool _isLoading = true;
+  int _anio = DateTime.now().year;
+  List<int> _aniosDisponibles = [DateTime.now().year];
 
   final List<String> _mesesHeaders = [
     'ENERO',
@@ -36,24 +38,48 @@ class _ReporteScreenState extends State<ReporteScreen> {
   @override
   void initState() {
     super.initState();
+    _cargarAniosDisponibles();
     _cargarDatos();
+  }
+
+  Future<void> _cargarAniosDisponibles() async {
+    final anioActual = DateTime.now().year;
+    final anios = <int>{anioActual};
+    try {
+      final response = await Supabase.instance.client
+          .from('ciclos')
+          .select('vencimiento');
+      for (final item in (response as List)) {
+        final venc = DateTime.tryParse('${item['vencimiento']}');
+        if (venc != null) anios.add(venc.year);
+      }
+    } catch (_) {
+      // Si falla la consulta, se muestra solo el año actual.
+    }
+    if (!mounted) return;
+    setState(() {
+      _aniosDisponibles = anios.toList()..sort((a, b) => b.compareTo(a));
+    });
   }
 
   Future<void> _cargarDatos() async {
     try {
-      final response = await Supabase.instance.client
-          .from('reporte_deudas_mensuales')
-          .select();
+      final response = await Supabase.instance.client.rpc(
+        'reporte_deudas',
+        params: {'p_anio': _anio},
+      );
 
       final lista = (response as List)
           .map((item) => ReporteMensual.fromJson(item))
           .toList();
 
+      if (!mounted) return;
       setState(() {
         _datos = lista;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(
         context,
@@ -94,7 +120,36 @@ class _ReporteScreenState extends State<ReporteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reporte de Deudas')),
+      appBar: AppBar(
+        title: const Text('Reporte de Deudas'),
+        actions: [
+          Theme(
+            data: Theme.of(context).copyWith(canvasColor: Colors.blue[800]),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _anio,
+                iconEnabledColor: Colors.white,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                items: _aniosDisponibles
+                    .map((a) => DropdownMenuItem<int>(
+                          value: a,
+                          child: Text('$a'),
+                        ))
+                    .toList(),
+                onChanged: (a) {
+                  if (a == null || a == _anio) return;
+                  setState(() {
+                    _anio = a;
+                    _isLoading = true;
+                  });
+                  _cargarDatos();
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isLoading ? null : _generarYDescargarPDF,
         backgroundColor: Colors.blue,
@@ -129,6 +184,12 @@ class _ReporteScreenState extends State<ReporteScreen> {
                             _buildCelda('N° DE CEDULA', 100, esCabecera: true),
                             _buildCelda('N° DE CELULAR', 120, esCabecera: true),
                             _buildCelda('DEUDA', 90, esCabecera: true),
+                            _buildCelda('CONEXIÓN', 90, esCabecera: true),
+                            _buildCelda(
+                              'DEUDA ANTERIOR',
+                              110,
+                              esCabecera: true,
+                            ),
                             ..._mesesHeaders.map(
                               (m) => _buildCelda(m, 80, esCabecera: true),
                             ),
@@ -160,6 +221,14 @@ class _ReporteScreenState extends State<ReporteScreen> {
                                 reporte.deudaTotal.toStringAsFixed(0),
                                 90,
                               ),
+                              _buildCelda(
+                                reporte.conexion.toStringAsFixed(0),
+                                90,
+                              ),
+                              _buildCelda(
+                                reporte.deudaAnterior.toStringAsFixed(0),
+                                110,
+                              ),
                               ...reporte.meses.map((monto) {
                                 return _buildCelda(
                                   monto == 0 ? '0' : monto.toStringAsFixed(0),
@@ -189,7 +258,7 @@ class _ReporteScreenState extends State<ReporteScreen> {
     }) {
       return pw.Container(
         alignment: pw.Alignment.center,
-        padding: const pw.EdgeInsets.all(4),
+        padding: const pw.EdgeInsets.all(2),
         color: isHeader ? PdfColors.blue200 : null,
         child: pw.Text(
           texto,
@@ -214,7 +283,7 @@ class _ReporteScreenState extends State<ReporteScreen> {
             pw.Header(
               level: 0,
               child: pw.Text(
-                'Reporte de Deudas Mensuales',
+                'Reporte de Deudas Mensuales $_anio',
                 style: pw.TextStyle(
                   fontSize: 18,
                   fontWeight: pw.FontWeight.bold,
@@ -225,12 +294,16 @@ class _ReporteScreenState extends State<ReporteScreen> {
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey, width: 0.5),
               columnWidths: {
-                0: const pw.FixedColumnWidth(40),
-                1: const pw.FixedColumnWidth(60),
-                2: const pw.FixedColumnWidth(100),
-                3: const pw.FixedColumnWidth(50),
-                4: const pw.FixedColumnWidth(60),
+                // Total: 798pt (A4 landscape 842 - 2*20 de margen = 802)
+                0: const pw.FixedColumnWidth(36),
+                1: const pw.FixedColumnWidth(56),
+                2: const pw.FixedColumnWidth(96),
+                3: const pw.FixedColumnWidth(46),
+                4: const pw.FixedColumnWidth(52),
                 5: const pw.FixedColumnWidth(40),
+                6: const pw.FixedColumnWidth(48),
+                7: const pw.FixedColumnWidth(40),
+                for (int i = 8; i < 20; i++) i: const pw.FixedColumnWidth(32),
               },
               children: [
                 pw.TableRow(
@@ -241,6 +314,8 @@ class _ReporteScreenState extends State<ReporteScreen> {
                     _buildPdfCelda('CÉDULA', isHeader: true),
                     _buildPdfCelda('CELULAR', isHeader: true),
                     _buildPdfCelda('DEUDA', isHeader: true),
+                    _buildPdfCelda('CONEXIÓN', isHeader: true),
+                    _buildPdfCelda('DEUDA ANTERIOR', isHeader: true),
                     ..._mesesHeaders.map(
                       (m) => _buildPdfCelda(m, isHeader: true),
                     ),
@@ -265,6 +340,8 @@ class _ReporteScreenState extends State<ReporteScreen> {
                       _buildPdfCelda(reporte.cedula ?? ''),
                       _buildPdfCelda(reporte.celular ?? ''),
                       _buildPdfCelda(reporte.deudaTotal.toStringAsFixed(0)),
+                      _buildPdfCelda(reporte.conexion.toStringAsFixed(0)),
+                      _buildPdfCelda(reporte.deudaAnterior.toStringAsFixed(0)),
                       ...reporte.meses.map((monto) {
                         return _buildPdfCelda(
                           monto == 0 ? '0' : monto.toStringAsFixed(0),
