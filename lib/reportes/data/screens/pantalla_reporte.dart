@@ -123,28 +123,27 @@ class _ReporteScreenState extends State<ReporteScreen> {
       appBar: AppBar(
         title: const Text('Reporte de Deudas'),
         actions: [
-          Theme(
-            data: Theme.of(context).copyWith(canvasColor: Colors.blue[800]),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: _anio,
-                iconEnabledColor: Colors.white,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-                items: _aniosDisponibles
-                    .map((a) => DropdownMenuItem<int>(
-                          value: a,
-                          child: Text('$a'),
-                        ))
-                    .toList(),
-                onChanged: (a) {
-                  if (a == null || a == _anio) return;
-                  setState(() {
-                    _anio = a;
-                    _isLoading = true;
-                  });
-                  _cargarDatos();
-                },
+          DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _anio,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 16,
               ),
+              items: _aniosDisponibles
+                  .map((a) => DropdownMenuItem<int>(
+                        value: a,
+                        child: Text('$a'),
+                      ))
+                  .toList(),
+              onChanged: (a) {
+                if (a == null || a == _anio) return;
+                setState(() {
+                  _anio = a;
+                  _isLoading = true;
+                });
+                _cargarDatos();
+              },
             ),
           ),
           const SizedBox(width: 16),
