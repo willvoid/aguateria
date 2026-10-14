@@ -5,6 +5,8 @@ import 'package:myapp/dao/usuariodao/usuariocrudimpl.dart';
 import 'package:myapp/modelo/%20tipo_documento.dart';
 import 'package:myapp/modelo/usuario/usuario.dart';
 import 'package:myapp/modelo/usuario/cargo.dart';
+import 'package:myapp/widget/responsive.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RegistroUsuarioPage extends StatefulWidget {
@@ -185,11 +187,16 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      body: Center(
+      body: LayoutBuilder(builder: (context, constraints) {
+        final mobile = isMobile(constraints.maxWidth);
+        final margen = mobile ? 12.0 : 24.0;
+        final padding = mobile ? 16.0 : 32.0;
+        final anchoDisponible = constraints.maxWidth - margen * 2;
+        return Center(
         child: SingleChildScrollView(
           child: Container(
-            width: 600,
-            margin: const EdgeInsets.all(24),
+            width: anchoDisponible < 600 ? anchoDisponible : 600,
+            margin: EdgeInsets.all(margen),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -213,7 +220,7 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                       children: [
                         // Header
                         Container(
-                          padding: const EdgeInsets.all(32),
+                          padding: EdgeInsets.all(padding),
                           decoration: const BoxDecoration(
                             color: Color(0xFF0085FF),
                             borderRadius: BorderRadius.only(
@@ -228,26 +235,28 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                                 onPressed: () => Navigator.pop(context),
                               ),
                               const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    'Crear Nueva Cuenta',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Crear Nueva Cuenta',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: mobile ? 20 : 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Complete los datos para registrarse',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Complete los datos para registrarse',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -255,7 +264,7 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
 
                         // Form
                         Padding(
-                          padding: const EdgeInsets.all(32),
+                          padding: EdgeInsets.all(padding),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -273,59 +282,49 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                               ),
                               const SizedBox(height: 16),
 
-                              Row(
+                              ResponsiveFormRow(
                                 children: [
-                                  Expanded(
-                                    child: _buildDropdown<TipoDocumento>(
-                                      label: 'Tipo Documento *',
-                                      value: _tipoDocumentoSeleccionado,
-                                      items: tiposDocumento,
-                                      onChanged: (value) =>
-                                          setState(() => _tipoDocumentoSeleccionado = value),
-                                      itemLabel: (item) => item.descripcion_tipodoc,
-                                    ),
+                                  _buildDropdown<TipoDocumento>(
+                                    label: 'Tipo Documento *',
+                                    value: _tipoDocumentoSeleccionado,
+                                    items: tiposDocumento,
+                                    onChanged: (value) =>
+                                        setState(() => _tipoDocumentoSeleccionado = value),
+                                    itemLabel: (item) => item.descripcion_tipodoc,
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: _buildTextField(
-                                      controller: _documentoController,
-                                      label: 'Documento *',
-                                      hint: 'Ingrese su documento',
-                                      icon: Icons.badge_outlined,
-                                      validator: (value) =>
-                                          value?.isEmpty ?? true ? 'Campo requerido' : null,
-                                    ),
+                                  _buildTextField(
+                                    controller: _documentoController,
+                                    label: 'Documento *',
+                                    hint: 'Ingrese su documento',
+                                    icon: Icons.badge_outlined,
+                                    validator: (value) =>
+                                        value?.isEmpty ?? true ? 'Campo requerido' : null,
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 16),
 
-                              Row(
+                              ResponsiveFormRow(
                                 children: [
-                                  Expanded(
-                                    child: _buildTextField(
-                                      controller: _correoController,
-                                      label: 'Correo Electrónico',
-                                      hint: 'ejemplo@correo.com',
-                                      icon: Icons.email_outlined,
-                                      validator: (value) {
-                                        if (value != null && value.isNotEmpty) {
-                                          if (!value.contains('@') || !value.contains('.')) {
-                                            return 'Email inválido';
-                                          }
+                                  _buildTextField(
+                                    controller: _correoController,
+                                    label: 'Correo Electrónico',
+                                    hint: 'ejemplo@correo.com',
+                                    icon: Icons.email_outlined,
+                                    validator: (value) {
+                                      if (value != null && value.isNotEmpty) {
+                                        if (!value.contains('@') || !value.contains('.')) {
+                                          return 'Email inválido';
                                         }
-                                        return null;
-                                      },
-                                    ),
+                                      }
+                                      return null;
+                                    },
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: _buildTextField(
-                                      controller: _telefonoController,
-                                      label: 'Teléfono',
-                                      hint: 'Ingrese su teléfono',
-                                      icon: Icons.phone_outlined,
-                                    ),
+                                  _buildTextField(
+                                    controller: _telefonoController,
+                                    label: 'Teléfono',
+                                    hint: 'Ingrese su teléfono',
+                                    icon: Icons.phone_outlined,
                                   ),
                                 ],
                               ),
@@ -447,8 +446,9 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                               const SizedBox(height: 16),
 
                               // Ya tengo cuenta
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   Text(
                                     '¿Ya tienes cuenta? ',
@@ -478,7 +478,8 @@ class _RegistroUsuarioPageState extends State<RegistroUsuarioPage> {
                   ),
           ),
         ),
-      ),
+      );
+      }),
     );
   }
 
