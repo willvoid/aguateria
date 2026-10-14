@@ -359,7 +359,10 @@ class _DashboardWidgetState extends State<DashboardWidget>
                           return Row(
                             children: [
                               if (showUserDetails) ...[
-                                Flexible(
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 220,
+                                  ),
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.end,
