@@ -121,6 +121,7 @@ class _ReporteScreenState extends State<ReporteScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Reporte de Deudas'),
         actions: [
           DropdownButtonHideUnderline(
