@@ -2,9 +2,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/contabilidad/asientos_crud.dart';
 import 'package:myapp/modelo/contabilidad/asiento.dart';
+import 'package:myapp/widget/responsive.dart';
+import 'package:myapp/widget/responsive_form_row.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
+
+/// Ancho mínimo para mostrar las secciones lado a lado.
+const double _kBreakpointContabilidad = 900;
 
 class DashboardResumenPage extends StatefulWidget {
   const DashboardResumenPage({Key? key}) : super(key: key);
@@ -292,107 +297,190 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 24),
-                  _buildTopRow(),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                          flex: 3, child: _buildTablaAsientos()),
-                      const SizedBox(width: 16),
-                      Expanded(
-                          flex: 2, child: _buildResumenCuentas()),
-                    ],
-                  ),
-                ],
+    return LayoutBuilder(builder: (context, constraints) {
+      final mobile = isMobile(constraints.maxWidth);
+      final ancho = constraints.maxWidth >= _kBreakpointContabilidad;
+      return Container(
+        padding: EdgeInsets.all(mobile ? 12 : 24),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(mobile),
+                    SizedBox(height: mobile ? 16 : 24),
+                    _buildTopRow(ancho),
+                    const SizedBox(height: 16),
+                    if (ancho)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                              flex: 3, child: _buildTablaAsientos()),
+                          const SizedBox(width: 16),
+                          Expanded(
+                              flex: 2, child: _buildResumenCuentas()),
+                        ],
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildTablaAsientos(),
+                          const SizedBox(height: 16),
+                          _buildResumenCuentas(),
+                        ],
+                      ),
+                  ],
+                ),
               ),
-            ),
-    );
+      );
+    });
   }
 
-  Widget _buildHeader() {
-    return Row(
+  Widget _buildHeader(bool mobile) {
+    final titulo = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Resumen contable',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Período: $_labelPeriodo',
-              style: const TextStyle(
-                  fontSize: 13, color: Color(0xFF6B7280)),
-            ),
-          ],
-        ),
-        const Spacer(),
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(8),
+        const Text(
+          'Resumen contable',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
           ),
-          padding: const EdgeInsets.all(3),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Período: $_labelPeriodo',
+          style: const TextStyle(
+              fontSize: 13, color: Color(0xFF6B7280)),
+        ),
+      ],
+    );
+    final recargar = IconButton(
+      onPressed: _cargarDatos,
+      icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
+      tooltip: 'Recargar',
+    );
+
+    if (mobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          titulo,
+          const SizedBox(height: 12),
+          Row(
             children: [
-              _PeriodoTab(
-                label: 'Este mes',
-                activo: _periodoSeleccionado == 0,
-                onTap: () {
-                  if (_periodoSeleccionado != 0) {
-                    setState(() => _periodoSeleccionado = 0);
-                    _cargarDatos();
-                  }
-                },
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: _buildPeriodoTabs(),
+                ),
               ),
-              _PeriodoTab(
-                label: 'Mes anterior',
-                activo: _periodoSeleccionado == 1,
-                onTap: () {
-                  if (_periodoSeleccionado != 1) {
-                    setState(() => _periodoSeleccionado = 1);
-                    _cargarDatos();
-                  }
-                },
-              ),
-              _PeriodoTab(
-                label: _periodoSeleccionado == 2
-                    ? 'Personalizado ✓'
-                    : 'Personalizado',
-                activo: _periodoSeleccionado == 2,
-                onTap: _seleccionarRangoPersonalizado,
-              ),
+              const SizedBox(width: 8),
+              recargar,
             ],
           ),
-        ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: titulo),
+        _buildPeriodoTabs(),
         const SizedBox(width: 8),
-        IconButton(
-          onPressed: _cargarDatos,
-          icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
-          tooltip: 'Recargar',
-        ),
+        recargar,
       ],
     );
   }
 
-  Widget _buildTopRow() {
+  Widget _buildPeriodoTabs() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _PeriodoTab(
+            label: 'Este mes',
+            activo: _periodoSeleccionado == 0,
+            onTap: () {
+              if (_periodoSeleccionado != 0) {
+                setState(() => _periodoSeleccionado = 0);
+                _cargarDatos();
+              }
+            },
+          ),
+          _PeriodoTab(
+            label: 'Mes anterior',
+            activo: _periodoSeleccionado == 1,
+            onTap: () {
+              if (_periodoSeleccionado != 1) {
+                setState(() => _periodoSeleccionado = 1);
+                _cargarDatos();
+              }
+            },
+          ),
+          _PeriodoTab(
+            label: _periodoSeleccionado == 2
+                ? 'Personalizado ✓'
+                : 'Personalizado',
+            activo: _periodoSeleccionado == 2,
+            onTap: _seleccionarRangoPersonalizado,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopRow(bool ancho) {
+    final metricas = [
+      _MetricCard(
+        label: 'Total haber',
+        value: _formatGuarani(_totalHaber),
+        icon: Icons.arrow_downward_rounded,
+        iconColor: Colors.green.shade600,
+        iconBg: Colors.green.shade50,
+      ),
+      _MetricCard(
+        label: 'Total debe',
+        value: _formatGuarani(_totalDebe),
+        icon: Icons.arrow_upward_rounded,
+        iconColor: Colors.red.shade600,
+        iconBg: Colors.red.shade50,
+      ),
+      _MetricCard(
+        label: 'Asientos del período',
+        value: '${_asientosDelMes.length}',
+        icon: Icons.receipt_long_rounded,
+        iconColor: const Color(0xFF0085FF),
+        iconBg: const Color(0xFFE6F0FF),
+        subtitle:
+            '$_asientosAsentados asentados · $_asientosPendientes pendientes',
+      ),
+    ];
+
+    if (!ancho) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ResponsiveFormRow(
+            breakpoint: kMobileBreakpoint,
+            spacing: 10,
+            children: metricas,
+          ),
+          const SizedBox(height: 16),
+          _buildGraficoEvolucion(),
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -400,31 +488,11 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
           width: 200,
           child: Column(
             children: [
-              _MetricCard(
-                label: 'Total haber',
-                value: _formatGuarani(_totalHaber),
-                icon: Icons.arrow_downward_rounded,
-                iconColor: Colors.green.shade600,
-                iconBg: Colors.green.shade50,
-              ),
+              metricas[0],
               const SizedBox(height: 10),
-              _MetricCard(
-                label: 'Total debe',
-                value: _formatGuarani(_totalDebe),
-                icon: Icons.arrow_upward_rounded,
-                iconColor: Colors.red.shade600,
-                iconBg: Colors.red.shade50,
-              ),
+              metricas[1],
               const SizedBox(height: 10),
-              _MetricCard(
-                label: 'Asientos del período',
-                value: '${_asientosDelMes.length}',
-                icon: Icons.receipt_long_rounded,
-                iconColor: const Color(0xFF0085FF),
-                iconBg: const Color(0xFFE6F0FF),
-                subtitle:
-                    '$_asientosAsentados asentados · $_asientosPendientes pendientes',
-              ),
+              metricas[2],
             ],
           ),
         ),
@@ -448,15 +516,18 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
         children: [
           Row(
             children: [
-              const Text(
-                'Evolución últimos 6 meses',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
+              const Expanded(
+                child: Text(
+                  'Evolución últimos 6 meses',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111827),
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               _LeyendaPunto(
                   color: const Color(0xFF10B981), label: 'Haber'),
               const SizedBox(width: 16),
@@ -498,15 +569,18 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Row(
               children: [
-                const Text(
-                  'Asientos del período',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
+                const Expanded(
+                  child: Text(
+                    'Asientos del período',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 4),
@@ -599,15 +673,18 @@ class _DashboardResumenPageState extends State<DashboardResumenPage> {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: Row(
               children: [
-                const Text(
-                  'Movimiento por cuenta',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
+                const Expanded(
+                  child: Text(
+                    'Movimiento por cuenta',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 4),
