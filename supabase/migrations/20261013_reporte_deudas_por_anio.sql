@@ -1,7 +1,7 @@
 -- Reporte de deudas por año, con Conexión (concepto 2) y Deuda anterior (concepto 3)
 -- como columnas propias. La vista reporte_deudas_mensuales queda intacta.
 --
--- * Meses: solo Consumo (concepto 1) del año pedido, según el año/mes de ciclos.vencimiento.
+-- * Meses: solo Consumo (concepto 1) de los ciclos con ciclos.anio = año pedido; el mes sale de ciclos.inicio.
 -- * conexion / deuda_anterior: saldo pendiente total, sin filtrar por año.
 -- * deuda_total: saldo pendiente histórico de todos los conceptos y años.
 
@@ -40,18 +40,18 @@ AS $$
     COALESCE(sum(cc.saldo), 0::double precision),
     COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 2), 0::double precision),
     COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 3), 0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 1),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 2),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 3),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 4),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 5),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 6),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 7),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 8),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 9),  0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 10), 0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 11), 0::double precision),
-    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND EXTRACT(year FROM ci.vencimiento) = p_anio AND EXTRACT(month FROM ci.vencimiento) = 12), 0::double precision)
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 1),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 2),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 3),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 4),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 5),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 6),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 7),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 8),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 9),  0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 10), 0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 11), 0::double precision),
+    COALESCE(sum(cc.saldo) FILTER (WHERE cc.fk_concepto = 1 AND ci.anio = p_anio AND EXTRACT(month FROM ci.inicio) = 12), 0::double precision)
   FROM inmuebles i
     LEFT JOIN clientes c ON i.fk_cliente = c.id_cliente
     LEFT JOIN cuentas_cobrar cc ON i.id = cc.fk_inmueble

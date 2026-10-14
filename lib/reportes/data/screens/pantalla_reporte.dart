@@ -48,10 +48,10 @@ class _ReporteScreenState extends State<ReporteScreen> {
     try {
       final response = await Supabase.instance.client
           .from('ciclos')
-          .select('vencimiento');
+          .select('anio');
       for (final item in (response as List)) {
-        final venc = DateTime.tryParse('${item['vencimiento']}');
-        if (venc != null) anios.add(venc.year);
+        final anio = item['anio'];
+        if (anio is int) anios.add(anio);
       }
     } catch (_) {
       // Si falla la consulta, se muestra solo el año actual.
