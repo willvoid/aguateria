@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/dao/categoriaserviciocrudimpl.dart';
 import 'package:myapp/dao/clientecrudimpl.dart';
+import 'package:myapp/dao/cuenta_cobrarcrudimpl.dart';
 import 'package:myapp/dao/inmueblescrudimpl.dart';
 import 'package:myapp/modelo/inmuebles.dart';
 import 'package:myapp/modelo/cliente.dart';
@@ -23,14 +24,28 @@ class _InmueblesPageState extends State<InmueblesPage> {
   final ClienteCrudImpl _clienteCrud = ClienteCrudImpl();
   final CategoriaServicioCrudImpl _categoriaServicioCrud =
       CategoriaServicioCrudImpl();
+  final CuentaCobrarCrudImpl _deudaCrud = CuentaCobrarCrudImpl();
+
+  static const double _umbralRojo = 600000;
+  static const double _umbralAmarillo = 100000;
 
   List<Inmuebles> inmuebles = [];
   List<Inmuebles> inmueblesFiltrados = [];
   List<Cliente> clientes = [];
   List<CategoriaServicio> categoriasServicio = [];
+  Map<int, double> _deudaPorInmueble = {};
 
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
+  bool _ordenarPorDeuda = false;
+
+  double _deudaDe(Inmuebles inmueble) => _deudaPorInmueble[inmueble.id] ?? 0.0;
+
+  Color _colorDeuda(double deuda) {
+    if (deuda > _umbralRojo) return Colors.red.shade700;
+    if (deuda >= _umbralAmarillo) return Colors.amber.shade800;
+    return Colors.green.shade700;
+  }
 
   @override
   void initState() {
@@ -47,15 +62,17 @@ class _InmueblesPageState extends State<InmueblesPage> {
         _inmuebleCrud.leerInmuebles(),
         _clienteCrud.leerClientes(),
         _categoriaServicioCrud.leerCategoriasServicio(),
+        _deudaCrud.leerSaldoPendientePorInmueble(),
       ]);
 
       setState(() {
         inmuebles = resultados[0] as List<Inmuebles>;
         clientes = resultados[1] as List<Cliente>;
         categoriasServicio = resultados[2] as List<CategoriaServicio>;
-        inmueblesFiltrados = inmuebles;
+        _deudaPorInmueble = resultados[3] as Map<int, double>;
         _isLoading = false;
       });
+      _filtrarInmuebles();
     } catch (e) {
       setState(() => _isLoading = false);
       _mostrarError('Error al cargar datos: $e');
@@ -65,16 +82,21 @@ class _InmueblesPageState extends State<InmueblesPage> {
   void _filtrarInmuebles() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      if (query.isEmpty) {
-        inmueblesFiltrados = inmuebles;
-      } else {
-        inmueblesFiltrados = inmuebles.where((inmueble) {
-          return inmueble.cod_inmueble.toLowerCase().contains(query) ||
-              inmueble.direccion.toLowerCase().contains(query) ||
-              (inmueble.cliente?.razonSocial.toLowerCase().contains(query) ??
-                  false);
-        }).toList();
+      final filtrados = query.isEmpty
+          ? List<Inmuebles>.of(inmuebles)
+          : inmuebles.where((inmueble) {
+              return inmueble.cod_inmueble.toLowerCase().contains(query) ||
+                  inmueble.direccion.toLowerCase().contains(query) ||
+                  (inmueble.cliente?.razonSocial
+                          .toLowerCase()
+                          .contains(query) ??
+                      false);
+            }).toList();
+
+      if (_ordenarPorDeuda) {
+        filtrados.sort((a, b) => _deudaDe(b).compareTo(_deudaDe(a)));
       }
+      inmueblesFiltrados = filtrados;
     });
   }
 
@@ -257,6 +279,39 @@ class _InmueblesPageState extends State<InmueblesPage> {
               ),
             ),
           ),
+          filters: [
+            DropdownButtonFormField<bool>(
+              value: _ordenarPorDeuda,
+              isExpanded: true,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              items: const [
+                DropdownMenuItem(value: false, child: Text('Orden por defecto')),
+                DropdownMenuItem(
+                  value: true,
+                  child: Text('Más deudores primero'),
+                ),
+              ],
+              onChanged: (value) {
+                _ordenarPorDeuda = value ?? false;
+                _filtrarInmuebles();
+              },
+            ),
+          ],
           action: ElevatedButton.icon(
             onPressed: () {
               _mostrarDialogoEdicion(null);
@@ -293,8 +348,13 @@ class _InmueblesPageState extends State<InmueblesPage> {
           ),
           CrudColumn<Inmuebles>(
             label: 'Cliente',
-            cellBuilder: (inmueble) =>
-                Text(inmueble.cliente?.razonSocial ?? 'Sin cliente'),
+            cellBuilder: (inmueble) => Text(
+              inmueble.cliente?.razonSocial ?? 'Sin cliente',
+              style: TextStyle(
+                color: _colorDeuda(_deudaDe(inmueble)),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           CrudColumn<Inmuebles>(
             label: 'Categoría',

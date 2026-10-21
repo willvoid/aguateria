@@ -396,6 +396,45 @@ class CuentaCobrarCrudImpl {
     }
   }
 
+  // ==================== SALDO PENDIENTE DE TODOS LOS INMUEBLES ====================
+
+  /// Suma el saldo de las deudas no pagadas agrupado por inmueble, en una
+  /// sola consulta paginada (Supabase corta en 1000 filas por defecto).
+  Future<Map<int, double>> leerSaldoPendientePorInmueble() async {
+    const tamanoPagina = 1000;
+    final saldos = <int, double>{};
+
+    try {
+      var desde = 0;
+      while (true) {
+        final data = await supabase
+            .from('cuentas_cobrar')
+            .select('id_deuda, fk_inmueble, saldo')
+            .neq('estado', 'PAGADO')
+            .order('id_deuda')
+            .range(desde, desde + tamanoPagina - 1);
+
+        final filas = List<Map<String, dynamic>>.from(data);
+        for (final fila in filas) {
+          final idInmueble = fila['fk_inmueble'];
+          if (idInmueble == null) continue;
+          saldos.update(
+            idInmueble as int,
+            (total) => total + _toDouble(fila['saldo']),
+            ifAbsent: () => _toDouble(fila['saldo']),
+          );
+        }
+
+        if (filas.length < tamanoPagina) break;
+        desde += tamanoPagina;
+      }
+    } catch (e) {
+      print('Error al leer saldos pendientes por inmueble: $e');
+    }
+
+    return saldos;
+  }
+
   // ==================== REGISTRAR PAGO ====================
 
   Future<bool> registrarPago(int idDeuda, double montoPago) async {
