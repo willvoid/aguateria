@@ -154,6 +154,10 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
         _cajaAbierta = cajaActiva;
         _isLoading = false;
 
+        // Se maneja una sola sucursal: se preselecciona la primera.
+        if (_establecimientos.isNotEmpty) {
+          _establecimientoSeleccionado = _establecimientos.first;
+        }
         if (_monedas.isNotEmpty) _monedaSeleccionada = _monedas.first;
         if (_modosPago.isNotEmpty) _modoPagoSeleccionado = _modosPago.first;
         if (_tiposFactura.isNotEmpty)
@@ -245,7 +249,8 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
     setState(() {
       _clienteSeleccionado = null;
       _inmuebleSeleccionado = null;
-      _establecimientoSeleccionado = null;
+      _establecimientoSeleccionado =
+          _establecimientos.isNotEmpty ? _establecimientos.first : null;
       _detalles = [];
       _totalGeneral = 0;
       _totalGravado10 = 0;
@@ -574,6 +579,7 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                 children: [
                                   Expanded(
                                     child: DropdownButtonFormField<TipoFactura>(
+                                      isExpanded: true,
                                       value: _tipoFacturaSeleccionado,
                                       decoration: const InputDecoration(
                                         labelText: 'Tipo *',
@@ -582,7 +588,10 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                       items: _tiposFactura.map((tipo) {
                                         return DropdownMenuItem(
                                           value: tipo,
-                                          child: Text(tipo.descripcion ?? ''),
+                                          child: Text(
+                                            tipo.descripcion ?? '',
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         );
                                       }).toList(),
                                       onChanged: (value) {
@@ -593,9 +602,15 @@ class _CrearFacturaPageState extends State<CrearFacturaPage> {
                                       },
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
                                   Expanded(
                                     child: DropdownButtonFormField<int>(
+                                      isExpanded: true,
                                       value: _condicionVenta,
                                       decoration: const InputDecoration(
                                         labelText: 'Condición *',
