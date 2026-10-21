@@ -713,15 +713,29 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
   void _guardarDeuda() {
     if (_formKey.currentState!.validate()) {
       final monto = double.parse(_montoController.text);
-      final saldo = widget.deuda?.saldo ?? monto;
       final pagado = widget.deuda?.pagado ?? 0.0;
+      // El saldo siempre se deriva del monto: si no, al editar el monto
+      // quedaría el saldo anterior y la deuda se vería pagada.
+      final saldo = (monto - pagado).clamp(0.0, double.infinity).toDouble();
+
+      var estado = _estadoSeleccionado;
+      final estadoOriginal = widget.deuda?.estado;
+      const estadosDeCobro = ['PENDIENTE', 'PAGO_PARCIAL', 'PAGADO'];
+      // Solo se recalcula si el usuario no cambió el estado a mano.
+      if (estadoOriginal != null &&
+          estado == estadoOriginal &&
+          estadosDeCobro.contains(estado)) {
+        estado = saldo <= 0
+            ? 'PAGADO'
+            : (pagado > 0 ? 'PAGO_PARCIAL' : 'PENDIENTE');
+      }
 
       final deuda = CuentaCobrar(
         id_deuda: widget.deuda?.id_deuda,
         fk_concepto: _conceptoSeleccionado,
         descripcion: _descripcionController.text,
         monto: monto,
-        estado: _estadoSeleccionado,
+        estado: estado,
         fk_ciclos: _cicloSeleccionado,
         fk_inmueble: widget.inmueble,
         saldo: saldo,
