@@ -153,7 +153,10 @@ class _DetalleFacturaWidgetState extends State<DetalleFacturaWidget> {
       builder: (_) => SelectorCiclosDialog(
         ciclosDisponibles: _ciclos,
         ciclosSeleccionados: _ciclosSeleccionados,
-        montoPorCiclo: _conceptoSeleccionado?.arancel ?? 0,
+        montoPorCiclo: double.tryParse(_montoController.text) ??
+            widget.inmuebleSeleccionado?.categoriaServicio.tarifa_fija ??
+            _conceptoSeleccionado?.arancel ??
+            0,
         onCiclosSeleccionados: (ciclos) {
           setState(() => _ciclosSeleccionados = ciclos);
           _calcularSubtotal();

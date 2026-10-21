@@ -121,7 +121,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
               child: ciclosFiltrados.isEmpty
                   ? _buildSinCiclos()
                   : ListView(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(12),
                       children: ciclosFiltrados.map((ciclo) {
                         final isSelected = ciclo.id != null &&
                             _idsSeleccionados.contains(ciclo.id);
@@ -143,7 +143,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
 
   Widget _buildHeader(int totalSeleccionados, double totalPagar) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.blue.shade600, Colors.blue.shade400],
@@ -160,7 +160,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
@@ -168,10 +168,10 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                 child: const Icon(
                   Icons.calendar_month,
                   color: Colors.white,
-                  size: 28,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 10),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,14 +179,14 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                     Text(
                       'Seleccionar Meses',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
                     Text(
                       'Elige los Meses que deseas pagar',
-                      style: TextStyle(fontSize: 13, color: Colors.white70),
+                      style: TextStyle(fontSize: 10, color: Colors.white70),
                     ),
                   ],
                 ),
@@ -194,12 +194,15 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close, color: Colors.white),
+                iconSize: 18,
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -213,12 +216,12 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                     Text(
                       'Meses seleccionados',
                       style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade600),
+                          fontSize: 9, color: Colors.grey.shade600),
                     ),
                     Text(
                       '$totalSeleccionados',
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,
                       ),
@@ -226,19 +229,19 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                   ],
                 ),
                 Container(
-                    height: 40, width: 1, color: Colors.grey.shade300),
+                    height: 22, width: 1, color: Colors.grey.shade300),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       'Total a pagar',
                       style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade600),
+                          fontSize: 9, color: Colors.grey.shade600),
                     ),
                     Text(
                       '${totalPagar.toStringAsFixed(0)} Gs.',
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Colors.green,
                       ),
@@ -255,7 +258,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
 
   Widget _buildFiltroAnio() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
@@ -263,20 +266,6 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.filter_list, size: 13, color: Colors.grey.shade400),
-              const SizedBox(width: 4),
-              Text(
-                'Filtrar por año',
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade400),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -286,6 +275,8 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
                     label: Text(anio.toString()),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {
@@ -298,22 +289,27 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
                           ? Colors.white
                           : Colors.grey.shade700,
                       fontWeight: FontWeight.w600,
+                      fontSize: 13,
                     ),
                   ),
                 );
               }).toList(),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _seleccionarTodos,
-                  icon: const Icon(Icons.check_box, size: 18),
+                  icon: const Icon(Icons.check_box, size: 16),
                   label: const Text('Seleccionar todos'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    minimumSize: const Size(0, 28),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                    textStyle: const TextStyle(fontSize: 11),
                     side: BorderSide(color: Colors.blue.shade300),
                     foregroundColor: Colors.blue.shade700,
                   ),
@@ -323,10 +319,14 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _deseleccionarTodos,
-                  icon: const Icon(Icons.check_box_outline_blank, size: 18),
+                  icon: const Icon(Icons.check_box_outline_blank, size: 16),
                   label: const Text('Deseleccionar todos'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    minimumSize: const Size(0, 28),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                    textStyle: const TextStyle(fontSize: 11),
                     side: BorderSide(color: Colors.grey.shade300),
                     foregroundColor: Colors.grey.shade700,
                   ),
@@ -367,7 +367,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
 
   Widget _buildFooter() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.only(
@@ -388,7 +388,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
             child: OutlinedButton(
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 side: BorderSide(color: Colors.grey.shade300),
               ),
               child: const Text('Cancelar'),
@@ -406,7 +406,7 @@ class _SelectorCiclosDialogState extends State<SelectorCiclosDialog> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0085FF),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 disabledBackgroundColor: Colors.grey.shade300,
               ),
             ),
