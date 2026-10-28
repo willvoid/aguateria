@@ -1,0 +1,151 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:myapp/modelo/cliente.dart';
+import 'package:myapp/service/facturasend_resultado.dart';
+
+/// PoC aislado: envía documentos de prueba (borrador) a FacturaSend a través
+/// del edge function proxy `facturasend-test`.
+///
+/// No integrado al flujo real de facturación (`FacturaRpcService`).
+class FacturaSendTestService {
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  /// Construye un documento de ejemplo para probar el envío a FacturaSend.
+  ///
+  /// Shape confirmado contra la API real de FacturaSend (sin wrapper
+  /// `data`/`params` — el body va plano en la raíz, ver
+  /// https://facturasend.com.py/documentacion/ejemplo-de-json-por-tipo-de-documento/).
+  ///
+  /// Si se pasa un [cliente] real, mapea sus campos al bloque `cliente` del
+  /// JSON. Si no, usa un consumidor final ficticio de ejemplo.
+  Map<String, dynamic> construirDocumentoDePrueba({Cliente? cliente}) {
+    const precioUnitario = 50000;
+    const cantidad = 1;
+    const totalItem = precioUnitario * cantidad;
+
+    return {
+      'tipoDocumento': 1,
+      'establecimiento': '001',
+      'punto': '001',
+      'numero': 1,
+      'descripcion': 'Documento de prueba PoC FacturaSend',
+      'observacion': 'Prueba de conexión',
+      'fecha': DateTime.now().toIso8601String().split('.').first,
+      'tipoEmision': 1,
+      'tipoTransaccion': 1,
+      'tipoImpuesto': 1,
+      'moneda': 'PYG',
+      'cliente': _mapearCliente(cliente),
+      'factura': {'presencia': 1},
+      'condicion': {
+        'tipo': 1,
+        'entregas': [
+          {
+            'tipo': 1,
+            'monto': totalItem.toString(),
+            'moneda': 'PYG',
+            'cambio': 0,
+          },
+        ],
+      },
+      'items': [
+        {
+          'codigo': 'SERV-AGUA',
+          'descripcion': 'Servicio de agua potable (prueba)',
+          'unidadMedida': 77,
+          'cantidad': cantidad,
+          'precioUnitario': precioUnitario,
+          'ivaTipo': 1,
+          'ivaProporcion': 100,
+          'iva': 10,
+        },
+      ],
+    };
+  }
+
+  /// Mapea un [Cliente] real al bloque `cliente` esperado por FacturaSend.
+  /// Si [cliente] es null, devuelve un consumidor final ficticio de ejemplo.
+  ///
+  /// `tipoOperacion` sigue el enum de FacturaSend (no el `codigo_tipo_operacion`
+  /// del modelo local, que es otra cosa): 1=B2B, 2=B2C, 4=B2F. Un receptor
+  /// "No Contribuyente" exige 2 o 4 — acá se usa 1 solo si el cliente también
+  /// es contribuyente.
+  ///
+  /// Los códigos geográficos (ciudad/país) no tienen equivalente en el
+  /// modelo `Cliente` (que guarda `barrio`, no códigos DGEEC de SIFEN), así
+  /// que quedan con un valor de ejemplo editable en la pantalla.
+  Map<String, dynamic> _mapearCliente(Cliente? cliente) {
+    if (cliente == null) {
+      return {
+        'contribuyente': false,
+        'tipoOperacion': 2,
+        'razonSocial': 'Cliente de Prueba',
+        'direccion': 'Dirección de prueba',
+        'numeroCasa': '0',
+        'ciudad': 3344,
+        'ciudadDescripcion': 'PASO ITA (INDIGENA)',
+        'pais': 'PRY',
+        'paisDescripcion': 'Paraguay',
+        'documentoTipo': 1,
+        'documentoNumero': '0',
+        'email': 'prueba@aguateria.com.py',
+      };
+    }
+
+    final esContribuyente = cliente.tieneContribuyente;
+
+    return {
+      'contribuyente': esContribuyente,
+      'tipoOperacion': esContribuyente ? 1 : 2,
+      'razonSocial': cliente.razonSocial,
+      if (cliente.nombreFantasia != null)
+        'nombreFantasia': cliente.nombreFantasia,
+      'direccion': cliente.direccion ?? 'Sin dirección registrada',
+      'numeroCasa': cliente.nroCasa.toString(),
+      'ciudad': 3344,
+      'ciudadDescripcion': 'PASO ITA (INDIGENA)',
+      'pais': 'PRY',
+      'paisDescripcion': 'Paraguay',
+      if (esContribuyente) 'ruc': cliente.documento,
+      'documentoTipo': cliente.tipoDocumento?.cod_tipo_documento ?? 1,
+      'documentoNumero': cliente.documento,
+      if (cliente.email != null) 'email': cliente.email,
+    };
+  }
+
+  /// Envía el [documento] al edge function `facturasend-test`.
+  ///
+  /// [qr]/[xml] piden a FacturaSend que incluya el QR/XML en la respuesta
+  /// (se mandan como query flags reales hacia FacturaSend, no como campos
+  /// del documento).
+  Future<FacturaSendTestResultado> enviar(
+    Map<String, dynamic> documento, {
+    bool qr = false,
+    bool xml = false,
+  }) async {
+    try {
+      final response = await _supabase.functions.invoke(
+        'facturasend-test',
+        body: {'documento': documento, 'qr': qr, 'xml': xml},
+      );
+
+      return FacturaSendResultado.fromInvokeResponse(response.data);
+    } on FunctionException catch (e) {
+      return FacturaSendTestResultado(
+        ok: false,
+        error: 'Error del edge function (${e.status}): ${e.details ?? e.reasonPhrase}',
+      );
+    } catch (e) {
+      return FacturaSendTestResultado(
+        ok: false,
+        error: 'Error inesperado al enviar a FacturaSend: $e',
+      );
+    }
+  }
+}
+
+/// Resultado del envío de prueba a FacturaSend.
+///
+/// Alias de `FacturaSendResultado` (`facturasend_resultado.dart`), que se
+/// comparte con el flujo real (`FacturaSendService`). Se mantiene este
+/// typedef para no tocar `facturasend_test_page.dart`.
+typedef FacturaSendTestResultado = FacturaSendResultado;

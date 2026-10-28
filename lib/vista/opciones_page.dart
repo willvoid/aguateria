@@ -11,6 +11,7 @@ import 'package:myapp/modelo/empresa/establecimiento.dart';
 import 'package:myapp/modelo/facturacionmodelo/moneda.dart';
 import 'package:myapp/modelo/facturacionmodelo/modo_pago.dart';
 import 'package:myapp/modelo/facturacionmodelo/tipo_factura.dart';
+import 'package:myapp/vista/facturacionvista/facturasend_test_page.dart';
 import 'package:myapp/widget/impresora_termica_card.dart';
 
 class OpcionesPage extends StatefulWidget {
@@ -349,6 +350,42 @@ class _ConfiguracionSistemaTabState extends State<_ConfiguracionSistemaTab> {
 
               const ImpresoraTermicaCard(),
               const SizedBox(height: 24),
+
+              if (const bool.fromEnvironment('FACTURASEND_POC')) ...[
+                _SectionCard(
+                  titulo: 'PoC — FacturaSend',
+                  icon: Icons.science_outlined,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const FacturaSendTestPage(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0085FF),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.science_outlined, size: 18),
+                      label: const Text(
+                        'Prueba FacturaSend (PoC)',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // Botón Guardar
               _BotonGuardar(
