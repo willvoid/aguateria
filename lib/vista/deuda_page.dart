@@ -458,6 +458,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _descripcionController;
   late TextEditingController _montoController;
+  late TextEditingController _pagadoController;
 
   late String _estadoSeleccionado;
   late Concepto _conceptoSeleccionado;
@@ -481,6 +482,9 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
     );
     _montoController = TextEditingController(
       text: widget.deuda?.monto.toString() ?? '',
+    );
+    _pagadoController = TextEditingController(
+      text: (widget.deuda?.pagado ?? 0).toString(),
     );
     _estadoSeleccionado = widget.deuda?.estado ?? 'PENDIENTE';
 
@@ -605,6 +609,25 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _pagadoController,
+                label: 'Pagado',
+                hint: 'Monto que ya pagó el cliente',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  final texto = value?.trim() ?? '';
+                  if (texto.isEmpty) return null;
+                  final pagado = double.tryParse(texto);
+                  if (pagado == null) return 'Debe ser un número';
+                  if (pagado < 0) return 'No puede ser negativo';
+                  final monto = double.tryParse(_montoController.text);
+                  if (monto != null && pagado > monto) {
+                    return 'No puede superar el monto';
+                  }
+                  return null;
+                },
+              ),
             ],
           ),
         ),
@@ -713,18 +736,16 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
   void _guardarDeuda() {
     if (_formKey.currentState!.validate()) {
       final monto = double.parse(_montoController.text);
-      final pagado = widget.deuda?.pagado ?? 0.0;
-      // El saldo siempre se deriva del monto: si no, al editar el monto
-      // quedaría el saldo anterior y la deuda se vería pagada.
+      final pagado = double.tryParse(_pagadoController.text.trim()) ?? 0.0;
+      // El saldo siempre se deriva del monto y lo pagado: si no, al editar
+      // el monto quedaría el saldo anterior y la deuda se vería pagada.
       final saldo = (monto - pagado).clamp(0.0, double.infinity).toDouble();
 
       var estado = _estadoSeleccionado;
-      final estadoOriginal = widget.deuda?.estado;
+      final estadoOriginal = widget.deuda?.estado ?? 'PENDIENTE';
       const estadosDeCobro = ['PENDIENTE', 'PAGO_PARCIAL', 'PAGADO'];
       // Solo se recalcula si el usuario no cambió el estado a mano.
-      if (estadoOriginal != null &&
-          estado == estadoOriginal &&
-          estadosDeCobro.contains(estado)) {
+      if (estado == estadoOriginal && estadosDeCobro.contains(estado)) {
         estado = saldo <= 0
             ? 'PAGADO'
             : (pagado > 0 ? 'PAGO_PARCIAL' : 'PENDIENTE');
@@ -751,6 +772,7 @@ class _DialogoEditarDeudaState extends State<_DialogoEditarDeuda> {
   void dispose() {
     _descripcionController.dispose();
     _montoController.dispose();
+    _pagadoController.dispose();
     super.dispose();
   }
 }
