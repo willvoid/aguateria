@@ -88,10 +88,10 @@ class _ClientesPageState extends State<ClientesPage> {
     });
   }
 
-  /// Solo se verifica duplicado si el cliente tiene tipo de documento
-  /// asignado Y el número de documento no es '0'.
+  /// Solo se verifica duplicado si el documento no es '0' ("Sin tipo de
+  /// documento"); los clientes con RUC también se verifican.
   bool _debeVerificarDocumento(Cliente cliente) {
-    return cliente.tipoDocumento != null && cliente.documento != '0';
+    return cliente.documento != '0';
   }
 
   void _mostrarDialogoEdicion(Cliente? cliente) {
@@ -350,7 +350,21 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
 
   late bool _esProveedorEstado;
   late String _estadoSeleccionado;
-  late TipoDocumento? _tipoDocumentoSeleccionado;
+  // Opciones que no existen en la tabla tipo_documento: ambas se guardan con
+  // tipoDocumento = null y se distinguen por el documento ('0' = sin tipo).
+  static final TipoDocumento _opcionSinTipo = TipoDocumento(
+    cod_tipo_documento: -1,
+    descripcion_tipodoc: 'Sin tipo de documento',
+  );
+  static final TipoDocumento _opcionRuc = TipoDocumento(
+    cod_tipo_documento: -2,
+    descripcion_tipodoc: 'RUC',
+  );
+
+  late TipoDocumento _tipoDocumentoSeleccionado;
+
+  bool get _esSinTipo => identical(_tipoDocumentoSeleccionado, _opcionSinTipo);
+  bool get _esRuc => identical(_tipoDocumentoSeleccionado, _opcionRuc);
   late TipoOperacion _tipoOperacionSeleccionado;
   late Barrio _barrioSeleccionado;
   TipoContribuyente? _tipoContribuyenteSeleccionado;
@@ -381,16 +395,21 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
     _esProveedorEstado = widget.cliente?.es_proveedor_del_estado ?? false;
     _estadoSeleccionado = widget.cliente?.estado ?? 'ACTIVO';
 
-    _tipoDocumentoSeleccionado = widget.cliente != null &&
-            widget.cliente!.tipoDocumento != null &&
-            widget.tiposDocumento.isNotEmpty
-        ? widget.tiposDocumento.firstWhere(
-            (t) =>
-                t.cod_tipo_documento ==
-                widget.cliente!.tipoDocumento!.cod_tipo_documento,
-            orElse: () => widget.tiposDocumento.first,
-          )
-        : null;
+    if (widget.cliente != null &&
+        widget.cliente!.tipoDocumento != null &&
+        widget.tiposDocumento.isNotEmpty) {
+      _tipoDocumentoSeleccionado = widget.tiposDocumento.firstWhere(
+        (t) =>
+            t.cod_tipo_documento ==
+            widget.cliente!.tipoDocumento!.cod_tipo_documento,
+        orElse: () => widget.tiposDocumento.first,
+      );
+    } else if (widget.cliente == null || widget.cliente!.documento == '0') {
+      _tipoDocumentoSeleccionado = _opcionSinTipo;
+      if (widget.cliente == null) _documentoController.text = '0';
+    } else {
+      _tipoDocumentoSeleccionado = _opcionRuc;
+    }
 
     _tipoOperacionSeleccionado = widget.cliente != null
         ? widget.tiposOperacion.firstWhere(
@@ -408,8 +427,10 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
           )
         : widget.barrios.first;
 
+    // El tipo de contribuyente solo aplica a clientes con RUC.
     _tipoContribuyenteSeleccionado =
-        widget.cliente?.tipo_contribuyente != null &&
+        _esRuc &&
+                widget.cliente?.tipo_contribuyente != null &&
                 widget.tiposContribuyente.isNotEmpty
             ? widget.tiposContribuyente.firstWhere(
                 (t) =>
@@ -466,25 +487,35 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<TipoDocumento?>(
+                      DropdownButtonFormField<TipoDocumento>(
                         value: _tipoDocumentoSeleccionado,
                         items: [
-                          const DropdownMenuItem<TipoDocumento?>(
-                            value: null,
-                            child: Text('— Sin tipo documento —'),
+                          DropdownMenuItem<TipoDocumento>(
+                            value: _opcionSinTipo,
+                            child: Text(_opcionSinTipo.descripcion_tipodoc),
+                          ),
+                          DropdownMenuItem<TipoDocumento>(
+                            value: _opcionRuc,
+                            child: Text(_opcionRuc.descripcion_tipodoc),
                           ),
                           ...widget.tiposDocumento.map(
-                            (t) => DropdownMenuItem<TipoDocumento?>(
+                            (t) => DropdownMenuItem<TipoDocumento>(
                               value: t,
                               child: Text(t.descripcion_tipodoc),
                             ),
                           ),
                         ],
                         onChanged: (v) => setState(() {
+                          if (v == null) return;
                           _tipoDocumentoSeleccionado = v;
-                          // Limpiar el campo documento al cambiar
-                          // el tipo para evitar valores residuales
-                          _documentoController.clear();
+                          // Sin tipo de documento => documento '0'; en otro
+                          // caso se limpia para evitar valores residuales.
+                          _documentoController.text = _esSinTipo ? '0' : '';
+                          // Sin RUC no puede haber tipo de contribuyente.
+                          if (!_esRuc) {
+            _tipoContribuyenteSeleccionado = null;
+            _esProveedorEstado = false;
+          }
                         }),
                         decoration: InputDecoration(
                           filled: true,
@@ -510,14 +541,13 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                     controller: _documentoController,
                     label: 'Documento *',
                     hint: 'Ingrese documento',
+                    readOnly: _esSinTipo,
                     validator: (v) {
                       if (v?.isEmpty ?? true) {
                         return 'Campo requerido';
                       }
-                      // Solo validar que no sea '0' si tiene
-                      // tipo de documento seleccionado
-                      if (_tipoDocumentoSeleccionado != null &&
-                          v == '0') {
+                      // '0' solo es válido para "Sin tipo de documento"
+                      if (!_esSinTipo && v == '0') {
                         return 'Ingrese un documento válido';
                       }
                       return null;
@@ -639,11 +669,17 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
                       ),
                     ),
                   ],
-                  onChanged: (v) => setState(
-                      () => _tipoContribuyenteSeleccionado = v),
+                  // Solo se puede marcar si el cliente tiene RUC.
+                  onChanged: _esRuc
+                      ? (v) => setState(
+                          () => _tipoContribuyenteSeleccionado = v)
+                      : null,
                   decoration: InputDecoration(
+                    helperText: _esRuc
+                        ? null
+                        : 'Disponible solo para clientes con RUC',
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: _esRuc ? Colors.white : Colors.grey.shade100,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
                       borderSide:
@@ -663,9 +699,14 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
 
               CheckboxListTile(
                 title: const Text('¿Es proveedor del estado?'),
-                value: _esProveedorEstado,
-                onChanged: (v) =>
-                    setState(() => _esProveedorEstado = v ?? false),
+                subtitle: _esRuc
+                    ? null
+                    : const Text('Disponible solo para clientes con RUC'),
+                value: _esRuc && _esProveedorEstado,
+                // Solo se puede marcar si el cliente tiene RUC.
+                onChanged: _esRuc
+                    ? (v) => setState(() => _esProveedorEstado = v ?? false)
+                    : null,
                 controlAffinity: ListTileControlAffinity.leading,
               ),
             ],
@@ -681,6 +722,7 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
     required String hint,
     String? Function(String?)? validator,
     TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,10 +737,11 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
           controller: controller,
           validator: validator,
           keyboardType: keyboardType,
+          readOnly: readOnly,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -773,14 +816,15 @@ class _DialogoEditarClienteState extends State<_DialogoEditarCliente> {
         direccion: _direccionController.text.isEmpty
             ? null
             : _direccionController.text,
-        es_proveedor_del_estado: _esProveedorEstado,
+        es_proveedor_del_estado: _esRuc && _esProveedorEstado,
         email: _emailController.text.isEmpty ? null : _emailController.text,
         nroCasa: int.parse(_nroCasaController.text),
         tipoOperacion: _tipoOperacionSeleccionado,
         estado: _estadoSeleccionado,
-        tipoDocumento: _tipoDocumentoSeleccionado,
+        // "Sin tipo" y "RUC" no existen en la tabla: se guardan como null.
+        tipoDocumento: (_esSinTipo || _esRuc) ? null : _tipoDocumentoSeleccionado,
         barrio: _barrioSeleccionado,
-        tipo_contribuyente: _tipoContribuyenteSeleccionado,
+        tipo_contribuyente: _esRuc ? _tipoContribuyenteSeleccionado : null,
       );
 
       widget.onGuardar(cliente);
