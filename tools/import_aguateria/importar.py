@@ -8,7 +8,8 @@ con las mismas reglas del reporte `reporte_deudas` y escribe en --salida:
                     (mismo formato que decisiones.csv; se pasa también con --decisiones)
   adelantos.csv     notas de la col. V (pagos adelantados) para tratar a mano
   resumen.txt       totales de control por concepto y por mes
-  normalizado.json  datos listos para generar el staging (solo sin bloqueantes)
+  normalizado.json  datos normalizados (solo sin bloqueantes)
+  staging.sql       carga a las tablas import_aguateria_* (solo sin bloqueantes)
 
 Uso:
   python3 importar.py ARCHIVO.xlsx [--decisiones decisiones.csv [otro.csv ...]] [--tarifa 25000]
@@ -19,6 +20,7 @@ import json
 import re
 import sys
 import unicodedata
+import uuid
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -297,7 +299,58 @@ def totales(resultado):
     return por_concepto, por_mes
 
 
-def escribir_salida(resultado, salida):
+def sql_lit(valor):
+    """Literal SQL: texto entre comillas simples escapadas, None como NULL, números tal cual."""
+    if valor is None:
+        return 'NULL'
+    if isinstance(valor, (int, float)):
+        return repr(valor)
+    return "'" + str(valor).replace("'", "''") + "'"
+
+
+def generar_staging(datos, archivo, lote=None, bloque=250):
+    """SQL que carga el resultado normalizado en las tablas import_aguateria_*."""
+    lote = lote or str(uuid.uuid4())
+    L = sql_lit(lote)
+
+    def insertar(tabla, columnas, filas):
+        salida = []
+        for i in range(0, len(filas), bloque):
+            valores = ',\n  '.join('(' + ', '.join(sql_lit(v) for v in f) + ')'
+                                   for f in filas[i:i + bloque])
+            salida.append(f'INSERT INTO public.{tabla} ({", ".join(columnas)}) VALUES\n  {valores};')
+        return salida
+
+    partes = [
+        '-- Generado por importar.py. Contiene cédulas y teléfonos: NO versionar.',
+        f'-- Lote: {lote}',
+        'BEGIN;',
+        f'INSERT INTO public.import_aguateria_lote (id, archivo) VALUES ({L}, {sql_lit(archivo)});',
+    ]
+    partes += insertar('import_aguateria_ciclos', ['lote', 'mes'], [[lote, m] for m in datos['meses']])
+    partes += insertar('import_aguateria_clientes',
+                       ['lote', 'clave', 'razon_social', 'documento', 'tipo_documento', 'celular'],
+                       [[lote, c['clave'], c['razon_social'], c['documento'], c['tipo_documento'], c['celular']]
+                        for c in datos['clientes']])
+    partes += insertar('import_aguateria_inmuebles',
+                       ['lote', 'cod_inmueble', 'estado', 'tarifa', 'clave_cliente'],
+                       [[lote, i['cod_inmueble'], i['estado'], float(i['tarifa']), i['cliente']]
+                        for i in datos['inmuebles']])
+    partes += insertar('import_aguateria_deudas',
+                       ['lote', 'cod_inmueble', 'concepto', 'ciclo', 'monto', 'saldo'],
+                       [[lote, d['cod_inmueble'], d['concepto'], d['ciclo'], float(d['monto']), float(d['saldo'])]
+                        for d in datos['deudas']])
+    partes += [
+        'COMMIT;',
+        '',
+        '-- Siguiente paso: prueba (no cambia nada) y, si el informe está bien, aplicar.',
+        f"-- SELECT public.fn_importar_aguateria({L}, false, <cod_barrio>);",
+        f"-- SELECT public.fn_importar_aguateria({L}, true,  <cod_barrio>);",
+    ]
+    return '\n'.join(partes) + '\n'
+
+
+def escribir_salida(resultado, salida, archivo='', lote=None):
     salida = Path(salida)
     salida.mkdir(parents=True, exist_ok=True)
 
@@ -334,12 +387,14 @@ def escribir_salida(resultado, salida):
     ] + [f'  {m}: {por_mes[m]:>12,}' for m in resultado['meses']]
     (salida / 'resumen.txt').write_text('\n'.join(lineas) + '\n', encoding='utf-8')
 
-    normalizado = salida / 'normalizado.json'
+    normalizado, staging = salida / 'normalizado.json', salida / 'staging.sql'
     if bloqueantes:
         normalizado.unlink(missing_ok=True)
+        staging.unlink(missing_ok=True)
     else:
         datos = {k: resultado[k] for k in ('meses', 'inmuebles', 'clientes', 'deudas')}
         normalizado.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding='utf-8')
+        staging.write_text(generar_staging(datos, archivo, lote), encoding='utf-8')
     return bloqueantes
 
 
@@ -357,11 +412,11 @@ def main(argv=None):
         for cod, campos in leer_decisiones(ruta).items():
             decisiones[cod].update(campos)
     resultado = procesar(ws, decisiones, args.tarifa)
-    bloqueantes = escribir_salida(resultado, args.salida)
+    bloqueantes = escribir_salida(resultado, args.salida, Path(args.xlsx).name)
     print((Path(args.salida) / 'resumen.txt').read_text(encoding='utf-8'))
     if bloqueantes:
         print(f'{bloqueantes} problemas bloqueantes: ver {args.salida}/problemas.csv. '
-              'No se generó normalizado.json.')
+              'No se generó staging.sql.')
         return 1
     return 0
 

@@ -178,5 +178,34 @@ class Reglas(unittest.TestCase):
             self.assertFalse((Path(tmp) / 'normalizado.json').exists())
 
 
+class Staging(unittest.TestCase):
+    def test_staging_sql(self):
+        res = correr([[1, "O'BRIEN", 4125450 , '0985582258', None, *meses(i13=25000)],
+                      [2, ' CONEXIÓN CORTADA']])
+        datos = {k: res[k] for k in ('meses', 'inmuebles', 'clientes', 'deudas')}
+        sql = imp.generar_staging(datos, 'x.xlsx', lote='11111111-1111-1111-1111-111111111111')
+        self.assertIn("'O''BRIEN'", sql)
+        self.assertIn('BEGIN;', sql)
+        self.assertIn('COMMIT;', sql)
+        self.assertIn("NULL", sql)  # inmueble cortado sin cliente
+        self.assertEqual(sql.count('INSERT INTO public.import_aguateria_ciclos'), 1)
+        self.assertLess(sql.index('import_aguateria_clientes'), sql.index('import_aguateria_inmuebles'))
+        self.assertLess(sql.index('import_aguateria_inmuebles'), sql.index('import_aguateria_deudas'))
+
+    def test_sql_lit(self):
+        self.assertEqual(imp.sql_lit(None), 'NULL')
+        self.assertEqual(imp.sql_lit(25000.0), '25000.0')
+        self.assertEqual(imp.sql_lit("a'b"), "'a''b'")
+
+    def test_staging_en_salida_solo_sin_bloqueantes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ok = correr([[1, 'A', 1, '0985426867', None, *meses(i13=25000)]])
+            imp.escribir_salida(ok, tmp, 'x.xlsx')
+            self.assertTrue((Path(tmp) / 'staging.sql').exists())
+            mal = correr([[1, 'A', 1, '0985426867', 100, *meses()]])
+            imp.escribir_salida(mal, tmp, 'x.xlsx')
+            self.assertFalse((Path(tmp) / 'staging.sql').exists())
+
+
 if __name__ == '__main__':
     unittest.main()

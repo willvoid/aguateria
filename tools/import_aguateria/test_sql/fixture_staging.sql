@@ -1,0 +1,23 @@
+-- Lote sintético para probar la migración (sin datos personales).
+BEGIN;
+INSERT INTO public.import_aguateria_lote (id, archivo) VALUES ('00000000-0000-0000-0000-000000000001', 'fixture');
+INSERT INTO public.import_aguateria_ciclos (lote, mes) VALUES
+  ('00000000-0000-0000-0000-000000000001', '2026-08'),
+  ('00000000-0000-0000-0000-000000000001', '2026-09'),
+  ('00000000-0000-0000-0000-000000000001', '2026-10');
+INSERT INTO public.import_aguateria_clientes (lote, clave, razon_social, documento, tipo_documento, celular) VALUES
+  ('00000000-0000-0000-0000-000000000001', '1111111|ANA', 'ANA', '1111111', 'CI', '0981111111'),
+  ('00000000-0000-0000-0000-000000000001', '2222222-3|BETO SA', 'BETO SA', '2222222-3', 'RUC', ''),
+  ('00000000-0000-0000-0000-000000000001', '0|4', 'CARLA', '0', 'SIN_TIPO', '0982222222');
+INSERT INTO public.import_aguateria_inmuebles (lote, cod_inmueble, estado, tarifa, clave_cliente) VALUES
+  ('00000000-0000-0000-0000-000000000001', '1',   'CONECTADO',    25000, '1111111|ANA'),
+  ('00000000-0000-0000-0000-000000000001', '2',   'CONECTADO',    25000, '2222222-3|BETO SA'),
+  ('00000000-0000-0000-0000-000000000001', '3',   'DESCONECTADO', 25000, NULL),
+  ('00000000-0000-0000-0000-000000000001', '4/1', 'CONECTADO',    50000, '0|4');
+INSERT INTO public.import_aguateria_deudas (lote, cod_inmueble, concepto, ciclo, monto, saldo) VALUES
+  ('00000000-0000-0000-0000-000000000001', '1',   1, '2026-09', 25000, 25000),
+  ('00000000-0000-0000-0000-000000000001', '1',   1, '2026-10', 25000, 25000),
+  ('00000000-0000-0000-0000-000000000001', '1',   3, NULL,     875000, 875000),
+  ('00000000-0000-0000-0000-000000000001', '4/1', 1, '2026-10', 50000, 20000),
+  ('00000000-0000-0000-0000-000000000001', '4/1', 2, NULL,     450000, 450000);
+COMMIT;
