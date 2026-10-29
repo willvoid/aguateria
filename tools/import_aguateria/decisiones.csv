@@ -1,0 +1,7 @@
+# Decisiones del usuario sobre casos que el Excel no resuelve. Una por línea.
+# cod_inmueble: el de la col. A del Excel. Campos:
+#   documento   cédula o RUC correcto (cuando el Excel trae dos números)
+#   concepto_E  2 (Conexión) o 3 (Deuda anterior) para un monto suelto en DEUDA
+#   tarifa      tarifa mensual propia del inmueble si no es la estándar
+#   exceso_mes  deuda_anterior: lo que pase de la tarifa en un mes va a Deuda anterior
+cod_inmueble,campo,valor

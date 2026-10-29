@@ -47,3 +47,9 @@ app.*.map.json
 
 # Android build output
 /android/build/
+
+# Importación aguatería: datos personales, no se versionan
+/tools/import_aguateria/out/
+/tools/import_aguateria/data/
+*.xlsx
+__pycache__/
