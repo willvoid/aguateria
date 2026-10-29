@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/dao/facturaciondao/tipo_facturacrudimpl.dart';
 import 'package:myapp/service/thermal_printer_service.dart';
+import 'package:myapp/util/numero_a_letras.dart';
 
 /// Datos ya procesados de un ticket, independientes del medio de impresión.
 class TicketData {
@@ -35,6 +36,21 @@ class TicketData {
   final bool esInterno;
   final String numeroTicket;
 
+  /// Condición de venta ("Contado" / "Credito"); vacío si la RPC no la trae.
+  final String condicionVenta;
+
+  /// Código ISO de la moneda del documento (PYG por defecto).
+  final String moneda;
+
+  /// Descripciones de las actividades económicas del emisor.
+  final List<String> actividadesEconomicas;
+
+  /// Correo del emisor; vacío si la RPC no lo trae.
+  final String emailEmisor;
+
+  /// Fin de vigencia del timbrado ya formateado (dd/MM/yyyy); vacío si no viene.
+  final String timbradoFechaFinFmt;
+
   const TicketData({
     required this.razonSocial,
     required this.telefono,
@@ -59,10 +75,35 @@ class TicketData {
     this.vuelto = 0,
     this.esInterno = false,
     this.numeroTicket = '',
+    this.condicionVenta = '',
+    this.moneda = 'PYG',
+    this.actividadesEconomicas = const [],
+    this.emailEmisor = '',
+    this.timbradoFechaFinFmt = '',
   });
 
   /// Solo se muestran efectivo y vuelto cuando hubo cobro en efectivo.
   bool get mostrarEfectivo => efectivo > 0;
+
+  bool get esGuaranies => moneda.trim().isEmpty || moneda.trim().toUpperCase() == 'PYG';
+
+  /// Nombre de la moneda para imprimir. [acentos] false para papel térmico (ASCII).
+  String monedaTexto({bool acentos = false}) {
+    if (esGuaranies) return acentos ? 'Guaraníes' : 'Guaranies';
+    return moneda.trim().toUpperCase();
+  }
+
+  /// "SON GUARANIES ..."; vacío si la moneda no es PYG o el importe no se puede escribir.
+  String get totalEnLetras => esGuaranies ? guaraniesALetras(totalAbono) : '';
+
+  /// "IVA 10%", "IVA 5%" o "Exenta" según la tasa del ítem; vacío si el ítem no la trae.
+  static String textoIvaItem(dynamic item) {
+    if (item is! Map) return '';
+    final raw = item['iva'];
+    final tasa = raw is num ? raw.toInt() : int.tryParse(raw?.toString() ?? '');
+    if (tasa == null) return '';
+    return tasa == 0 ? 'Exenta' : 'IVA $tasa%';
+  }
 }
 
 class TicketPrinterService {
@@ -125,6 +166,70 @@ class TicketPrinterService {
     );
   }
 
+  /// Texto no vacío o null. Convierte cualquier valor de la RPC a String limpio.
+  static String? _texto(dynamic v) {
+    if (v == null) return null;
+    final s = v.toString().trim();
+    return (s.isEmpty || s == 'null') ? null : s;
+  }
+
+  /// Primer valor no vacío entre [claves] de [mapa] (que puede no ser un Map).
+  static String? _primero(dynamic mapa, List<String> claves) {
+    if (mapa is! Map) return null;
+    for (final k in claves) {
+      final v = _texto(mapa[k]);
+      if (v != null) return v;
+    }
+    return null;
+  }
+
+  /// dd/MM/yyyy si [v] es una fecha ISO; si no se puede parsear, el texto original.
+  static String _fechaCorta(String? v) {
+    if (v == null) return '';
+    try {
+      return DateFormat('dd/MM/yyyy').format(DateTime.parse(v));
+    } catch (_) {
+      return v;
+    }
+  }
+
+  /// Descripciones de actividad económica. Acepta una lista de {codigo, descripcion},
+  /// una lista de textos, un mapa suelto o un texto.
+  static List<String> _actividades(dynamic params) {
+    if (params is! Map) return const [];
+    dynamic crudo;
+    for (final k in const [
+      'actividadesEconomicas',
+      'actividades_economicas',
+      'actividadEconomica',
+      'actividad_economica',
+    ]) {
+      if (params[k] != null) {
+        crudo = params[k];
+        break;
+      }
+    }
+    final lista = crudo is List ? crudo : (crudo == null ? const [] : [crudo]);
+    final res = <String>[];
+    for (final a in lista) {
+      final d = a is Map
+          ? _primero(a, const ['descripcion', 'actividadEconomicaDescripcion', 'nombre'])
+          : _texto(a);
+      if (d != null && !res.contains(d)) res.add(d);
+    }
+    return res;
+  }
+
+  /// 1 = Contado, 2 = Crédito (campo `condicion.tipo` de la factura).
+  static String _condicionVenta(dynamic condicion) {
+    if (condicion is! Map) return '';
+    final raw = condicion['tipo'];
+    final tipo = raw is num ? raw.toInt() : int.tryParse(raw?.toString() ?? '');
+    if (tipo == 1) return 'Contado';
+    if (tipo == 2) return 'Credito';
+    return '';
+  }
+
   static Future<TicketData> obtenerTicket(int idFactura) async {
     // 1. Obtener JSON desde la BD
     final response = await Supabase.instance.client.rpc(
@@ -179,6 +284,23 @@ class TicketPrinterService {
 
     final rucCliente = cliente['ruc'] ?? '';
     final nombreCliente = cliente['razonSocial'] ?? 'Consumidor Final';
+
+    // Campos extra del KuDE. Las claves exactas de la RPC no están confirmadas,
+    // así que se prueban varias; si ninguna existe el campo queda vacío y no se imprime.
+    final est0 = establecimientos.isNotEmpty ? establecimientos[0] : null;
+    final emailEmisor = _primero(est0, const ['email', 'correo', 'correoElectronico']) ??
+        _primero(params, const ['email', 'correo', 'emailEmisor', 'correoElectronico']) ??
+        '';
+    final timbradoFechaFinFmt = _fechaCorta(_primero(params, const [
+      'timbradoFechaFin',
+      'timbradoFechaVencimiento',
+      'timbradoVencimiento',
+      'timbradoFechaFinVigencia',
+      'timbradoFin',
+    ]));
+    final moneda = _primero(data, const ['moneda']) ?? _primero(params, const ['moneda']) ?? 'PYG';
+    final condicionVenta = _condicionVenta(data['condicion']);
+    final actividadesEconomicas = _actividades(params);
 
     // Totales
     double totalAbono = 0;
@@ -246,6 +368,11 @@ class TicketPrinterService {
       vuelto: vuelto < 0 ? 0 : vuelto,
       esInterno: esInterno,
       numeroTicket: numeroTicket,
+      condicionVenta: condicionVenta,
+      moneda: moneda,
+      actividadesEconomicas: actividadesEconomicas,
+      emailEmisor: emailEmisor,
+      timbradoFechaFinFmt: timbradoFechaFinFmt,
     );
   }
 
@@ -301,6 +428,16 @@ class TicketPrinterService {
     }
     return buffer.toString();
   }
+
+  /// Restituye los acentos a la frase de [guaraniesALetras] (que es ASCII para
+  /// papel térmico) para el PDF.
+  static String _letrasConAcentos(String texto) => texto
+      .replaceAll('GUARANIES', 'GUARANÍES')
+      .replaceAll('DIECISEIS', 'DIECISÉIS')
+      .replaceAll('VEINTIDOS', 'VEINTIDÓS')
+      .replaceAll('VEINTITRES', 'VEINTITRÉS')
+      .replaceAll('VEINTISEIS', 'VEINTISÉIS')
+      .replaceAll(RegExp(r'\bMILLON\b'), 'MILLÓN');
 
   static Future<void> _imprimirPdf(TicketData t) async {
     final numeroFactura = t.numeroFactura;
@@ -377,6 +514,10 @@ class TicketPrinterService {
                 pw.Center(
                   child: pw.Text('TELEFONO: $telefono', style: const pw.TextStyle(fontSize: 8)),
                 ),
+              if (!esInterno && t.emailEmisor.isNotEmpty)
+                pw.Center(
+                  child: pw.Text('EMAIL: ${t.emailEmisor}', style: const pw.TextStyle(fontSize: 8)),
+                ),
               if (direccionCompleta.isNotEmpty)
                 pw.Center(
                   child: pw.Text('DIRECCION: $direccionCompleta', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 8)),
@@ -386,6 +527,14 @@ class TicketPrinterService {
                   child: pw.Text('LOCALIDAD $ciudad', style: const pw.TextStyle(fontSize: 8)),
                 ),
               if (!esInterno) ...[
+                if (t.actividadesEconomicas.isNotEmpty)
+                  pw.Center(
+                    child: pw.Text(
+                      'ACTIVIDAD ECONÓMICA: ${t.actividadesEconomicas.join(' / ')}',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ),
                 pw.Center(
                   child: pw.Text('RUC: $rucEmisor', style: const pw.TextStyle(fontSize: 8)),
                 ),
@@ -399,6 +548,10 @@ class TicketPrinterService {
                 if (timbradoFechaFmt.isNotEmpty)
                   pw.Center(
                     child: pw.Text('Inicio de vigencia: $timbradoFechaFmt', style: const pw.TextStyle(fontSize: 8)),
+                  ),
+                if (t.timbradoFechaFinFmt.isNotEmpty)
+                  pw.Center(
+                    child: pw.Text('Fin de vigencia: ${t.timbradoFechaFinFmt}', style: const pw.TextStyle(fontSize: 8)),
                   ),
               ],
               pw.SizedBox(height: 2),
@@ -421,6 +574,14 @@ class TicketPrinterService {
               if (!esInterno)
                 pw.Text('RUC/C.I.: $rucCliente', style: const pw.TextStyle(fontSize: 8)),
               pw.Text('Cliente: $nombreCliente', style: const pw.TextStyle(fontSize: 8)),
+              if (!esInterno) ...[
+                if (t.condicionVenta.isNotEmpty)
+                  pw.Text(
+                    'Condición de venta: ${t.condicionVenta == 'Credito' ? 'Crédito' : t.condicionVenta}',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                pw.Text('Moneda: ${t.monedaTexto(acentos: true)}', style: const pw.TextStyle(fontSize: 8)),
+              ],
               
               // Separador
               pw.SizedBox(height: 5),
@@ -444,13 +605,25 @@ class TicketPrinterService {
                 double precio = (item['precioUnitario'] ?? 0).toDouble();
                 double objTotal = cant * precio;
                 String desc = item['descripcion'] ?? 'Item';
+                final iva = esInterno ? '' : TicketData.textoIvaItem(item);
 
                 return pw.Padding(
                   padding: const pw.EdgeInsets.only(bottom: 2),
                   child: pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Expanded(flex: 3, child: pw.Text(desc, style: pw.TextStyle(fontSize: fsItem))),
+                      pw.Expanded(
+                        flex: 3,
+                        child: iva.isEmpty
+                            ? pw.Text(desc, style: pw.TextStyle(fontSize: fsItem))
+                            : pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text(desc, style: pw.TextStyle(fontSize: fsItem)),
+                                  pw.Text(iva, style: pw.TextStyle(fontSize: fsItem - 1)),
+                                ],
+                              ),
+                      ),
                       pw.Expanded(flex: 1, child: pw.Text(cant.toStringAsFixed(0), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem))),
                       pw.Expanded(flex: 2, child: pw.Text(formatMoneda.format(precio), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem))),
                       pw.Expanded(flex: 2, child: pw.Text(formatMoneda.format(objTotal), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: fsItem))),
@@ -472,6 +645,10 @@ class TicketPrinterService {
                   pw.Text(formatMoneda.format(totalAbono), style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
                 ]
               ),
+              if (!esInterno && t.totalEnLetras.isNotEmpty) ...[
+                pw.SizedBox(height: 3),
+                pw.Text(_letrasConAcentos(t.totalEnLetras), style: const pw.TextStyle(fontSize: 8)),
+              ],
 
               if (t.mostrarEfectivo) ...[
                 pw.SizedBox(height: 3),
@@ -567,6 +744,16 @@ class TicketPrinterService {
                     ),
                   ),
                 ],
+                if (!esInterno) ...[
+                  pw.SizedBox(height: 3),
+                  pw.Center(
+                    child: pw.Text(
+                      'Consulte la validez de este Documento Electrónico con el número de CDC impreso abajo en https://ekuatia.set.gov.py/consultas',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 7),
+                    ),
+                  ),
+                ],
               ] else
                 pw.Center(
                   child: pw.Text(
@@ -589,6 +776,16 @@ class TicketPrinterService {
                 pw.Center(
                   child: pw.Text(
                     'CDC: ${_formatearCdc(cdc)}',
+                    textAlign: pw.TextAlign.center,
+                    style: const pw.TextStyle(fontSize: 7),
+                  ),
+                ),
+              ],
+              if (cdc != null && !esInterno) ...[
+                pw.SizedBox(height: 5),
+                pw.Center(
+                  child: pw.Text(
+                    'ESTE DOCUMENTO ES UNA REPRESENTACIÓN GRÁFICA DE UN DOCUMENTO ELECTRÓNICO (XML)',
                     textAlign: pw.TextAlign.center,
                     style: const pw.TextStyle(fontSize: 7),
                   ),

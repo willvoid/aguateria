@@ -166,12 +166,20 @@ class ThermalPrinterService {
     String? qrUrl,
     bool draft = false,
   }) async {
-    final cols = impresora.columnas;
+    // Se deja una columna libre: una línea de exactamente `columnas` caracteres
+    // puede hacer que la impresora auto-envuelva y descuadre el renglón siguiente
+    // (visto en el papel de 58 mm). Causa NO confirmada: requiere prueba física.
+    // El ticket interno conserva el ancho original (no debe cambiar).
+    final cols = t.esInterno ? impresora.columnas : impresora.columnas - 1;
     final moneda = NumberFormat.currency(locale: 'es_PY', symbol: '', decimalDigits: 0);
     final f = TicketTextFormatter.izquierdaDerecha;
 
+    // Ancho útil según el tamaño de texto: de 2 en adelante los glifos son más
+    // anchos (doble ancho), así que entran la mitad de caracteres.
+    int anchoPara(int size) => size >= 2 ? cols ~/ 2 : cols;
+
     Future<void> centrado(String texto, {int size = 0}) async {
-      for (final linea in TicketTextFormatter.envolver(texto, cols)) {
+      for (final linea in TicketTextFormatter.envolver(texto, anchoPara(size))) {
         await _bt.printCustom(linea, size, 1);
       }
     }
@@ -189,17 +197,27 @@ class ThermalPrinterService {
     await _enviar(impresora, () async {
       await centrado(t.razonSocial, size: 1);
       if (t.telefono.isNotEmpty) await centrado('TELEFONO: ${t.telefono}');
+      if (!t.esInterno && t.emailEmisor.isNotEmpty) await centrado('EMAIL: ${t.emailEmisor}');
       if (t.direccionCompleta.isNotEmpty) await centrado('DIRECCION: ${t.direccionCompleta}');
       if (t.ciudad.isNotEmpty) await centrado('LOCALIDAD ${t.ciudad}');
       if (t.esInterno) {
         await centrado('TICKET DE USO INTERNO', size: 1);
         await centrado('N: ${t.numeroTicket}', size: 1);
       } else {
+        if (t.actividadesEconomicas.isNotEmpty) {
+          await centrado('ACTIVIDAD ECONOMICA:');
+          for (final a in t.actividadesEconomicas) {
+            await centrado(a);
+          }
+        }
         await centrado('RUC: ${t.rucEmisor}');
         await centrado('IVA INCLUIDO');
         await centrado('Timbrado: ${t.timbrado}');
         if (t.timbradoFechaFmt.isNotEmpty) {
           await centrado('Inicio de vigencia: ${t.timbradoFechaFmt}');
+        }
+        if (t.timbradoFechaFinFmt.isNotEmpty) {
+          await centrado('Fin de vigencia: ${t.timbradoFechaFinFmt}');
         }
         await centrado('FACTURA ELECTRONICA', size: 1);
         await centrado(t.numeroFactura, size: 1);
@@ -209,20 +227,32 @@ class ThermalPrinterService {
 
       if (!t.esInterno) await izq('RUC/C.I.: ${t.rucCliente}');
       await izq('Cliente: ${t.nombreCliente}');
+      if (!t.esInterno) {
+        if (t.condicionVenta.isNotEmpty) await izq('Condicion de venta: ${t.condicionVenta}');
+        await izq('Moneda: ${t.monedaTexto()}');
+      }
       await sep();
 
       for (final item in t.items) {
         final cant = ((item['cantidad'] ?? 0) as num).toDouble();
         final precio = ((item['precioUnitario'] ?? 0) as num).toDouble();
         await izq((item['descripcion'] ?? 'Item').toString());
-        await par(
-          '${cant.toStringAsFixed(0)} x ${moneda.format(precio)}',
-          moneda.format(cant * precio),
-        );
+        final detalle = '${cant.toStringAsFixed(0)} x ${moneda.format(precio)}';
+        final totalItem = moneda.format(cant * precio);
+        final iva = t.esInterno ? '' : TicketData.textoIvaItem(item);
+        if (iva.isEmpty) {
+          await par(detalle, totalItem);
+        } else if (detalle.length + 2 + iva.length + 1 + totalItem.length <= cols) {
+          await par('$detalle  $iva', totalItem);
+        } else {
+          await par(detalle, totalItem);
+          await izq(iva);
+        }
       }
       await sep();
 
-      await _bt.printCustom(f('TOTAL Gs:', moneda.format(t.totalAbono), cols), 1, 0);
+      await _bt.printCustom(f('TOTAL Gs:', moneda.format(t.totalAbono), anchoPara(1)), 1, 0);
+      if (!t.esInterno && t.totalEnLetras.isNotEmpty) await izq(t.totalEnLetras);
       if (t.mostrarEfectivo) {
         await par('EFECTIVO Gs:', moneda.format(t.efectivo));
         await par('VUELTO Gs:', moneda.format(t.vuelto));
@@ -243,6 +273,11 @@ class ThermalPrinterService {
       if (cdc != null) {
         await centrado('Representacion grafica del Documento Electronico (KuDE)', size: 1);
         if (draft) await centrado('BORRADOR - SIN VALIDEZ FISCAL', size: 1);
+        if (!t.esInterno) {
+          await centrado(
+            'Consulte la validez de este Documento Electronico con el numero de CDC impreso abajo en https://ekuatia.set.gov.py/consultas',
+          );
+        }
         if (qrUrl != null) {
           // 58mm (32 cols) imprime más angosto que 80mm (48 cols): QR más
           // chico para que no se corte en el ancho del rollo.
@@ -250,6 +285,9 @@ class ThermalPrinterService {
           await _bt.printQRcode(qrUrl, qrPx, qrPx, 1);
         }
         await centrado('CDC: $cdc');
+        if (!t.esInterno) {
+          await centrado('ESTE DOCUMENTO ES UNA REPRESENTACION GRAFICA DE UN DOCUMENTO ELECTRONICO (XML)');
+        }
       } else {
         await centrado(
           t.esInterno ? 'Sin valor fiscal. No valido como factura.' : 'Ticket sin valor fiscal.',
