@@ -2,6 +2,14 @@
 -- Ejecutar sección por sección en el SQL Editor, primero en PRUEBAS y luego en
 -- PRODUCCIÓN, y pasar los resultados (el repo no trae el DDL base).
 
+-- 0) ¿Existen en este servidor las tablas que usa la app? (los servidores de
+--    desarrollo pueden ir por detrás del código)
+SELECT n.tabla, to_regclass('public.' || n.tabla) IS NOT NULL AS existe
+FROM (VALUES ('clientes'), ('inmuebles'), ('cuentas_cobrar'), ('ciclos'), ('conceptos'),
+             ('categoria_servicio'), ('barrios'), ('tipo_operacion'), ('tipo_documento'),
+             ('pago_detalle_deuda'), ('detalle_factura'), ('facturas'), ('pagos')) AS n(tabla)
+ORDER BY existe, n.tabla;
+
 -- 1) Columnas, NOT NULL y defaults de las tablas que se van a escribir
 SELECT table_name, column_name, data_type, is_nullable, column_default
 FROM information_schema.columns
@@ -45,10 +53,19 @@ SELECT fk_concepto, estado, count(*) AS filas, sum(saldo) AS saldo
 FROM public.cuentas_cobrar
 GROUP BY 1, 2 ORDER BY 1, 2;
 
--- 7) Deudas ya cobradas desde el sistema (no se pueden pisar con el Excel)
-SELECT count(*) AS deudas_con_pago
-FROM public.cuentas_cobrar cc
-WHERE EXISTS (SELECT 1 FROM public.pago_detalle_deuda p WHERE p.fk_deuda = cc.id_deuda);
+-- 7) Deudas ya cobradas desde el sistema (no se pueden pisar con el Excel).
+--    Tolera servidores desactualizados: si una tabla no existe devuelve 'NO EXISTE'
+--    en vez de fallar (el código de la app usa pago_detalle_deuda y detalle_factura.fk_deudas).
+SELECT t.tabla,
+       CASE WHEN to_regclass('public.' || t.tabla) IS NULL THEN 'NO EXISTE'
+            ELSE (xpath('/row/n/text()', query_to_xml(t.consulta, false, true, '')))[1]::text
+       END AS deudas_con_registros
+FROM (VALUES
+  ('pago_detalle_deuda',
+   'SELECT count(DISTINCT fk_deuda) AS n FROM public.pago_detalle_deuda'),
+  ('detalle_factura',
+   'SELECT count(DISTINCT fk_deudas) AS n FROM public.detalle_factura WHERE fk_deudas IS NOT NULL')
+) AS t(tabla, consulta);
 
 -- 8) Cron: el job de deudas (jobid 2) no debe correr a mitad de la carga
 SELECT jobid, schedule, command, active FROM cron.job;
