@@ -11,6 +11,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class FacturaSendService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  /// Dígito verificador del RUC (módulo 11, pesos 2..11 de derecha a izquierda).
+  /// Ej.: 2005001 -> 1 (ejemplo oficial de FacturaSend: "2005001-1").
+  static int _digitoVerificadorRuc(String numero) {
+    var suma = 0;
+    var peso = 2;
+    for (var i = numero.length - 1; i >= 0; i--) {
+      suma += int.parse(numero[i]) * peso;
+      peso = peso == 11 ? 2 : peso + 1;
+    }
+    final resto = suma % 11;
+    return resto > 1 ? 11 - resto : 0;
+  }
+
   /// Arma el documento SIFEN de la factura [idFactura] reusando
   /// `get_factura_json_sifen` (la misma RPC que usa `TicketPrinterService`
   /// para imprimir el ticket), así el documento enviado nunca se
@@ -57,6 +70,30 @@ class FacturaSendService {
     clienteData['numeroCasa'] = cliente.nroCasa.toString();
     clienteData['pais'] = 'PRY';
     clienteData['paisDescripcion'] = 'Paraguay';
+
+    // Receptor innominado (documento vacío o "0"). SIFEN (Nota Técnica 23,
+    // D208/D210): iTipIDRec=5 y dNumIDRec="0"; FacturaSend pide además
+    // razonSocial="Sin Nombre". Solo es válido en B2C (D202=2, validación
+    // 1333), por eso se fuerza no contribuyente y se descarta el RUC.
+    final documento = cliente.documento.trim();
+    if (documento.isEmpty || documento == '0') {
+      clienteData['contribuyente'] = false;
+      clienteData['tipoOperacion'] = 2;
+      clienteData['documentoTipo'] = 5;
+      clienteData['documentoNumero'] = '0';
+      clienteData['razonSocial'] = 'Sin Nombre';
+      clienteData.remove('ruc');
+      clienteData.remove('nombreFantasia');
+    }
+
+    // Contribuyente: FacturaSend exige el RUC como "numero-DV". La base solo
+    // guarda el número (sin DV), así que se completa con el DV calculado.
+    if (clienteData['contribuyente'] == true) {
+      final ruc = (clienteData['ruc'] ?? cliente.documento).toString().trim();
+      if (RegExp(r'^\d+$').hasMatch(ruc)) {
+        clienteData['ruc'] = '$ruc-${_digitoVerificadorRuc(ruc)}';
+      }
+    }
     data['cliente'] = clienteData;
 
     data['tipoTransaccion'] =
