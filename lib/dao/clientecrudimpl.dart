@@ -232,13 +232,9 @@ class ClienteCrudImpl {
         'estado_cliente': cliente.estado,
         'fk_tipo_documento': cliente.tipoDocumento?.cod_tipo_documento,
         'fk_barrios': cliente.barrio.cod_barrio,
+        // Se envía siempre: null limpia el tipo ("Sin tipo contribuyente").
+        'tipo_contribuyente': cliente.tipo_contribuyente?.id_tipo_contribuyente,
       };
-
-      // Solo agregar tipo_contribuyente si no es null
-      if (cliente.tipo_contribuyente != null) {
-        updateData['tipo_contribuyente'] =
-            cliente.tipo_contribuyente!.id_tipo_contribuyente;
-      }
 
       await supabase
           .from('clientes')
