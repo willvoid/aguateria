@@ -256,6 +256,27 @@ class Staging(unittest.TestCase):
         self.assertLess(sql.index('import_aguateria_clientes'), sql.index('import_aguateria_inmuebles'))
         self.assertLess(sql.index('import_aguateria_inmuebles'), sql.index('import_aguateria_deudas'))
 
+    def test_partes_acotadas_y_en_orden(self):
+        filas = [[i, f'CLIENTE {i}', 1000000 + i, '0985582258', None, *meses(i12=25000, i13=25000)]
+                 for i in range(1, 80)]
+        res = correr(filas)
+        datos = {k: res[k] for k in ('meses', 'inmuebles', 'clientes', 'deudas')}
+        lote = '22222222-2222-2222-2222-222222222222'
+        unico = imp.generar_staging(datos, 'x.xlsx', lote=lote)
+        partes = imp.generar_staging_partes(datos, 'x.xlsx', lote=lote, max_bytes=3000, bloque=10)
+        self.assertGreater(len(partes), 3)
+        for n, p in enumerate(partes, start=1):
+            self.assertIn(f'PARTE {n} DE {len(partes)}', p)
+            self.assertTrue(p.count('BEGIN;') == 1 and p.count('COMMIT;') == 1)
+        # las mismas sentencias que el archivo único, en el mismo orden
+        sentencias = imp.sentencias_staging(datos, 'x.xlsx', lote, 10)
+        unidas = '\n'.join(partes)
+        pos = [unidas.index(s) for s in sentencias]
+        self.assertEqual(pos, sorted(pos))
+        self.assertIn('El staging está incompleto', partes[-1])
+        self.assertNotIn('El staging está incompleto', ''.join(partes[:-1]))
+        self.assertIn('El staging está incompleto', unico)
+
     def test_sql_lit(self):
         self.assertEqual(imp.sql_lit(None), 'NULL')
         self.assertEqual(imp.sql_lit(25000.0), '25000.0')

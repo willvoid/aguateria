@@ -350,9 +350,8 @@ def sql_lit(valor):
     return "'" + str(valor).replace("'", "''") + "'"
 
 
-def generar_staging(datos, archivo, lote=None, bloque=250):
-    """SQL que carga el resultado normalizado en las tablas import_aguateria_*."""
-    lote = lote or str(uuid.uuid4())
+def sentencias_staging(datos, archivo, lote, bloque=250):
+    """Sentencias SQL (cada una completa) que cargan el lote, en el orden que exigen las FK."""
     L = sql_lit(lote)
 
     def insertar(tabla, columnas, filas):
@@ -363,36 +362,79 @@ def generar_staging(datos, archivo, lote=None, bloque=250):
             salida.append(f'INSERT INTO public.{tabla} ({", ".join(columnas)}) VALUES\n  {valores};')
         return salida
 
-    partes = [
-        '-- Generado por importar.py. Contiene cédulas y teléfonos: NO versionar.',
-        f'-- Lote: {lote}',
-        'BEGIN;',
-        f'INSERT INTO public.import_aguateria_lote (id, archivo) VALUES ({L}, {sql_lit(archivo)});',
-    ]
-    partes += insertar('import_aguateria_ciclos', ['lote', 'mes'], [[lote, m] for m in datos['meses']])
-    partes += insertar('import_aguateria_clientes',
-                       ['lote', 'clave', 'razon_social', 'documento', 'tipo_documento', 'celular'],
-                       [[lote, c['clave'], c['razon_social'], c['documento'], c['tipo_documento'], c['celular']]
-                        for c in datos['clientes']])
-    partes += insertar('import_aguateria_inmuebles',
-                       ['lote', 'cod_inmueble', 'estado', 'tarifa', 'clave_cliente'],
-                       [[lote, i['cod_inmueble'], i['estado'], float(i['tarifa']), i['cliente']]
-                        for i in datos['inmuebles']])
-    partes += insertar('import_aguateria_deudas',
-                       ['lote', 'cod_inmueble', 'concepto', 'ciclo', 'monto', 'saldo'],
-                       [[lote, d['cod_inmueble'], d['concepto'], d['ciclo'], float(d['monto']), float(d['saldo'])]
-                        for d in datos['deudas']])
-    partes += [
-        'COMMIT;',
-        '',
+    sentencias = [f'INSERT INTO public.import_aguateria_lote (id, archivo) VALUES ({L}, {sql_lit(archivo)});']
+    sentencias += insertar('import_aguateria_ciclos', ['lote', 'mes'], [[lote, m] for m in datos['meses']])
+    sentencias += insertar('import_aguateria_clientes',
+                           ['lote', 'clave', 'razon_social', 'documento', 'tipo_documento', 'celular'],
+                           [[lote, c['clave'], c['razon_social'], c['documento'], c['tipo_documento'], c['celular']]
+                            for c in datos['clientes']])
+    sentencias += insertar('import_aguateria_inmuebles',
+                           ['lote', 'cod_inmueble', 'estado', 'tarifa', 'clave_cliente'],
+                           [[lote, i['cod_inmueble'], i['estado'], float(i['tarifa']), i['cliente']]
+                            for i in datos['inmuebles']])
+    sentencias += insertar('import_aguateria_deudas',
+                           ['lote', 'cod_inmueble', 'concepto', 'ciclo', 'monto', 'saldo'],
+                           [[lote, d['cod_inmueble'], d['concepto'], d['ciclo'], float(d['monto']), float(d['saldo'])]
+                            for d in datos['deudas']])
+    # Comprobación de integridad: falla si falta alguna parte o alguna fila.
+    saldo = sum(d['saldo'] for d in datos['deudas'])
+    sentencias.append(
+        'DO $$ BEGIN\n'
+        f'  IF (SELECT count(*) FROM public.import_aguateria_clientes WHERE lote = {L}) <> {len(datos["clientes"])}\n'
+        f'  OR (SELECT count(*) FROM public.import_aguateria_inmuebles WHERE lote = {L}) <> {len(datos["inmuebles"])}\n'
+        f'  OR (SELECT count(*) FROM public.import_aguateria_deudas WHERE lote = {L}) <> {len(datos["deudas"])}\n'
+        f'  OR (SELECT COALESCE(sum(saldo), 0) FROM public.import_aguateria_deudas WHERE lote = {L}) <> {float(saldo)}\n'
+        "  THEN RAISE EXCEPTION 'El staging está incompleto: faltan partes o filas. Revise que ejecutó todos los archivos en orden.';\n"
+        '  END IF;\n'
+        f"  RAISE NOTICE 'Staging completo: {len(datos['clientes'])} clientes, {len(datos['inmuebles'])} inmuebles, {len(datos['deudas'])} deudas.';\n"
+        'END $$;')
+    return sentencias
+
+
+def pie_staging(lote):
+    L = sql_lit(lote)
+    return [
         '-- Siguiente paso: prueba (no cambia nada) y, si el informe está bien, aplicar.',
         f"-- SELECT public.fn_importar_aguateria({L}, false, <cod_barrio>);",
         f"-- SELECT public.fn_importar_aguateria({L}, true,  <cod_barrio>);",
     ]
+
+
+def generar_staging(datos, archivo, lote=None, bloque=250):
+    """Un solo SQL que carga el resultado normalizado en las tablas import_aguateria_*."""
+    lote = lote or str(uuid.uuid4())
+    partes = ['-- Generado por importar.py. Contiene cédulas y teléfonos: NO versionar.',
+              f'-- Lote: {lote}', 'BEGIN;']
+    partes += sentencias_staging(datos, archivo, lote, bloque)
+    partes += ['COMMIT;', ''] + pie_staging(lote)
     return '\n'.join(partes) + '\n'
 
 
-def escribir_salida(resultado, salida, archivo='', lote=None):
+def generar_staging_partes(datos, archivo, lote=None, max_bytes=40000, bloque=250):
+    """Lo mismo, repartido en archivos de tamaño acotado que se ejecutan en orden."""
+    lote = lote or str(uuid.uuid4())
+    grupos, actual, tam = [], [], 0
+    for sent in sentencias_staging(datos, archivo, lote, bloque):
+        if actual and tam + len(sent) > max_bytes:
+            grupos.append(actual)
+            actual, tam = [], 0
+        actual.append(sent)
+        tam += len(sent) + 1
+    grupos.append(actual)
+    total = len(grupos)
+    archivos = []
+    for n, grupo in enumerate(grupos, start=1):
+        partes = ['-- Generado por importar.py. Contiene cédulas y teléfonos: NO versionar.',
+                  f'-- Lote: {lote}',
+                  f'-- PARTE {n} DE {total}: ejecutar todas las partes, en orden, una por una.',
+                  'BEGIN;'] + grupo + ['COMMIT;']
+        if n == total:
+            partes += [''] + pie_staging(lote)
+        archivos.append('\n'.join(partes) + '\n')
+    return archivos
+
+
+def escribir_salida(resultado, salida, archivo='', lote=None, partes_kb=0):
     salida = Path(salida)
     salida.mkdir(parents=True, exist_ok=True)
 
@@ -438,7 +480,13 @@ def escribir_salida(resultado, salida, archivo='', lote=None):
     else:
         datos = {k: resultado[k] for k in ('meses', 'inmuebles', 'clientes', 'deudas')}
         normalizado.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding='utf-8')
+        lote = lote or str(uuid.uuid4())
         staging.write_text(generar_staging(datos, archivo, lote), encoding='utf-8')
+        for viejo in salida.glob('staging_*.sql'):
+            viejo.unlink()
+        if partes_kb:
+            for n, sql in enumerate(generar_staging_partes(datos, archivo, lote, partes_kb * 1000), start=1):
+                (salida / f'staging_{n}.sql').write_text(sql, encoding='utf-8')
     return bloqueantes
 
 
@@ -447,6 +495,8 @@ def main(argv=None):
     ap.add_argument('xlsx')
     ap.add_argument('--decisiones', nargs='+', default=[str(Path(__file__).with_name('decisiones.csv'))])
     ap.add_argument('--salida', default=str(Path(__file__).with_name('out')))
+    ap.add_argument('--partes-kb', type=int, default=0,
+                    help='además de staging.sql, escribe staging_1.sql... de este tamaño máximo en KB')
     ap.add_argument('--tarifa', type=int, default=25000, help='tarifa mensual estándar (default 25000)')
     args = ap.parse_args(argv)
 
@@ -456,7 +506,7 @@ def main(argv=None):
         for cod, campos in leer_decisiones(ruta).items():
             decisiones[cod].update(campos)
     resultado = procesar(ws, decisiones, args.tarifa)
-    bloqueantes = escribir_salida(resultado, args.salida, Path(args.xlsx).name)
+    bloqueantes = escribir_salida(resultado, args.salida, Path(args.xlsx).name, partes_kb=args.partes_kb)
     print((Path(args.salida) / 'resumen.txt').read_text(encoding='utf-8'))
     if bloqueantes:
         print(f'{bloqueantes} problemas bloqueantes: ver {args.salida}/problemas.csv. '
