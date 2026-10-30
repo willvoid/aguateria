@@ -4,7 +4,7 @@ No toca la base de datos. Lee el .xlsx, normaliza clientes, inmuebles y deudas
 con las mismas reglas del reporte `reporte_deudas` y escribe en --salida:
 
   problemas.csv     todo lo que no se pudo resolver solo (bloqueante o aviso)
-  revision_E.csv    celdas DEUDA (col. E) con un solo monto: completar 'valor' con 2 o 3
+  revision_E.csv    celdas DEUDA (col. E) cuyo color no es negro ni rojo: completar 'valor' con 2 o 3
                     (mismo formato que decisiones.csv; se pasa también con --decisiones)
   adelantos.csv     notas de la col. V (pagos adelantados) para tratar a mano
   resumen.txt       totales de control por concepto y por mes
@@ -37,15 +37,19 @@ COL_NOTA = 22  # V: notas de pagos adelantados
 CONCEPTO_CONSUMO, CONCEPTO_CONEXION, CONCEPTO_DEUDA_ANTERIOR = 1, 2, 3
 
 # Campos que el usuario puede fijar en decisiones.csv (cod_inmueble,campo,valor)
+# Tarifa: con 'tarifa' distinta de la estándar (p. ej. Lavadero 50000) el monto del Consumo es la
+# estándar en los meses anteriores al primero cuya celda supera la estándar, y la tarifa desde ahí.
 CAMPOS_DECISION = {
     'documento',      # cédula/RUC correcto cuando el Excel trae dos números
     'concepto_E',     # 2 (Conexión) o 3 (Deuda anterior) para un monto suelto en DEUDA
     'tarifa',         # tarifa mensual propia del inmueble si no es la estándar
     'exceso_mes',     # 'deuda_anterior': el exceso sobre la tarifa pasa a Deuda anterior
+    'cod_nuevo',      # nuevo cod_inmueble; la clave es 'fila:N' (el código repetido no sirve de clave)
 }
 
 RE_MARCA_ESTADO = re.compile(r'\s*\(?\s*(USUARIO\s+CORTADO|TAPONADO)\s*\)?', re.I)
 RE_CORTADA = re.compile(r'^CONEXI[ÓO]N\s+CORTADA$', re.I)
+COLOR_ROJO = 'FFFF0000'
 RE_RUC = re.compile(r'^\d{5,9}-\d$')
 
 
@@ -125,6 +129,24 @@ def montos_en_texto(valor):
     return [int(m) for m in re.findall(r'\d+', str(valor).replace('.', ''))]
 
 
+def concepto_por_color(celda):
+    """Concepto de un monto suelto en DEUDA según el color de la fuente.
+
+    Rojo = Deuda anterior (3); negro (color de tema, sin color o FF000000) = Conexión (2).
+    Cualquier otro color devuelve None: no se adivina.
+    """
+    color = celda.font.color if celda.font is not None else None
+    if color is None:
+        return CONCEPTO_CONEXION
+    if color.type == 'rgb':
+        if color.rgb == COLOR_ROJO:
+            return CONCEPTO_DEUDA_ANTERIOR
+        return CONCEPTO_CONEXION if color.rgb == 'FF000000' else None
+    if color.type == 'theme' and color.theme == 1 and not color.tint:
+        return CONCEPTO_CONEXION
+    return None
+
+
 def leer_decisiones(ruta):
     decisiones = defaultdict(dict)
     if not ruta or not Path(ruta).exists():
@@ -158,6 +180,7 @@ def procesar(ws, decisiones, tarifa_estandar=25000):
     inmuebles, deudas = [], []
     clientes = {}
     cods_vistos = {}
+    por_color = defaultdict(int)  # concepto -> celdas de DEUDA clasificadas por el color
     por_doc = defaultdict(list)  # documento -> [(clave_nombre, cod, fila)]
 
     def problema(fila, cod, tipo, detalle, bloqueante=False):
@@ -172,9 +195,13 @@ def procesar(ws, decisiones, tarifa_estandar=25000):
         if not cod or crudo_nombre is None:
             problema(fila, cod, 'FILA_INCOMPLETA', 'falta el n° de inmueble o el nombre', True)
             continue
+        nuevo = decisiones.get(f'fila:{fila}', {}).get('cod_nuevo')
+        if nuevo:
+            problema(fila, nuevo, 'COD_RENUMERADO', f'el código {cod} de la fila {fila} pasa a {nuevo}')
+            cod = nuevo
         if cod in cods_vistos:
             problema(fila, cod, 'COD_DUPLICADO',
-                     f'ya usado en la fila {cods_vistos[cod]}: corregir en el Excel', True)
+                     f'ya usado en la fila {cods_vistos[cod]}: corregir en el Excel o renumerar en decisiones.csv', True)
             continue
         cods_vistos[cod] = fila
         dec = decisiones.get(cod, {})
@@ -229,23 +256,33 @@ def procesar(ws, decisiones, tarifa_estandar=25000):
 
         # ---- deudas de consumo (F:S)
         tarifa = inmueble['tarifa']
+        # primer mes (sin contar sep-2025, que trae arrastre) cuya celda supera la tarifa estándar
+        cambio = next((i for i, v in enumerate(celdas)
+                       if i > 0 and isinstance(v, (int, float)) and v > tarifa_estandar), None)
+
+        def monto_mes(i):
+            if tarifa == tarifa_estandar or (cambio is not None and i >= cambio):
+                return tarifa
+            return tarifa_estandar
+
         exceso_anterior = 0
         for i, valor in enumerate(celdas):
             if not isinstance(valor, (int, float)) or valor <= 0:
                 continue
             valor = int(valor)
-            if valor > tarifa:
+            monto = monto_mes(i)
+            if valor > monto:
                 if i == 0 or dec.get('exceso_mes') == 'deuda_anterior':
                     # sep-2025 trae arrastre de deuda vieja: tarifa a Consumo, resto a Deuda anterior
-                    exceso_anterior += valor - tarifa
-                    valor = tarifa
+                    exceso_anterior += valor - monto
+                    valor = monto
                 else:
                     problema(fila, cod, 'MES_MAYOR_TARIFA',
-                             f'{meses[i]} = {valor} supera la tarifa {tarifa} ({nombre}). '
+                             f'{meses[i]} = {valor} supera la tarifa {monto} ({nombre}). '
                              'Indicar tarifa o exceso_mes=deuda_anterior en decisiones.csv', True)
                     continue
             deudas.append({'cod_inmueble': cod, 'concepto': CONCEPTO_CONSUMO, 'ciclo': meses[i],
-                           'saldo': valor, 'monto': tarifa})
+                           'saldo': valor, 'monto': monto})
         if estado == 'CONECTADO' and celdas[-1] is None:
             problema(fila, cod, 'ULTIMO_MES_VACIO', f'{meses[-1]} vacío ({nombre}): se toma como sin cargo')
         if not any(isinstance(x, (int, float)) for x in celdas) and estado == 'CONECTADO':
@@ -253,18 +290,22 @@ def procesar(ws, decisiones, tarifa_estandar=25000):
 
         # ---- columna DEUDA (E): Deuda anterior y Conexión
         anterior, conexion = exceso_anterior, 0
-        e = ws.cell(fila, COL_DEUDA).value
+        celda_e = ws.cell(fila, COL_DEUDA)
+        e = celda_e.value
         if isinstance(e, (int, float)) and e > 0:
             concepto = dec.get('concepto_E')
-            if concepto in (str(CONCEPTO_DEUDA_ANTERIOR), str(CONCEPTO_CONEXION)):
-                if int(concepto) == CONCEPTO_DEUDA_ANTERIOR:
-                    anterior += int(e)
-                else:
-                    conexion += int(e)
+            concepto = int(concepto) if concepto else concepto_por_color(celda_e)
+            if concepto == CONCEPTO_DEUDA_ANTERIOR:
+                anterior += int(e)
+            elif concepto == CONCEPTO_CONEXION:
+                conexion += int(e)
             else:
                 revision_e.append([cod, 'concepto_E', '', fila, nombre, int(e)])
                 problema(fila, cod, 'DEUDA_SIN_CONCEPTO',
-                         f'monto suelto {int(e)} en DEUDA ({nombre}): indicar concepto_E 2 o 3', True)
+                         f'monto suelto {int(e)} en DEUDA ({nombre}) con un color que no es negro ni rojo: '
+                         'indicar concepto_E 2 o 3', True)
+            if concepto and not dec.get('concepto_E'):
+                por_color[concepto] += 1
         elif isinstance(e, str) and e.strip() and e.strip().upper() != 'PAGADO':
             montos = montos_en_texto(e)
             if len(montos) == 2:
@@ -287,7 +328,8 @@ def procesar(ws, decisiones, tarifa_estandar=25000):
                      f'documento {documento}: {detalle}')
 
     return {'meses': meses, 'inmuebles': inmuebles, 'clientes': list(clientes.values()),
-            'deudas': deudas, 'problemas': problemas, 'revision_E': revision_e, 'adelantos': adelantos}
+            'deudas': deudas, 'problemas': problemas, 'revision_E': revision_e, 'adelantos': adelantos,
+            'por_color': dict(por_color)}
 
 
 def totales(resultado):
@@ -376,6 +418,8 @@ def escribir_salida(resultado, salida, archivo='', lote=None):
         f'Clientes: {len(resultado["clientes"])}',
         f'Deudas: {len(resultado["deudas"])}',
         f'Problemas: {bloqueantes} bloqueantes, {len(resultado["problemas"]) - bloqueantes} avisos',
+        f'DEUDA por color: negro -> Conexión {resultado["por_color"].get(2, 0)}, '
+        f'rojo -> Deuda anterior {resultado["por_color"].get(3, 0)}',
         '',
         'Saldo por concepto:',
         f'  Consumo (1):        {por_concepto[1]:>12,}',

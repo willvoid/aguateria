@@ -121,14 +121,6 @@ class Reglas(unittest.TestCase):
         por = {d['concepto']: d['saldo'] for d in res['deudas']}
         self.assertEqual(por, {3: 30000, 2: 450000})
 
-    def test_deuda_un_monto_pide_concepto(self):
-        fila = [8, 'JOSÉ', 1, '0985426867', 600000, *meses()]
-        res = correr([fila])
-        self.assertIn('DEUDA_SIN_CONCEPTO', tipos(res))
-        self.assertEqual(res['revision_E'][0][:3], ['8', 'concepto_E', ''])
-        res = correr([fila], {'8': {'concepto_E': '2'}})
-        self.assertEqual([(d['concepto'], d['saldo']) for d in res['deudas']], [(2, 600000)])
-
     def test_deuda_pagado_no_genera_deuda(self):
         res = correr([[9, 'MIRIAN', 1, '0985426867', 'PAGADO', *meses()]])
         self.assertEqual(res['deudas'], [])
@@ -173,9 +165,81 @@ class Reglas(unittest.TestCase):
             self.assertEqual(imp.escribir_salida(ok, tmp), 0)
             self.assertTrue((Path(tmp) / 'normalizado.json').exists())
             self.assertIn('25,000', (Path(tmp) / 'resumen.txt').read_text(encoding='utf-8'))
-            mal = correr([[1, 'A', 1, '0985426867', 100, *meses()]])
+            mal = correr([[1, 'A', 1, '0985426867', None, *meses()], [1, 'B', 2, '0985426868', None, *meses()]])
             self.assertEqual(imp.escribir_salida(mal, tmp), 1)
             self.assertFalse((Path(tmp) / 'normalizado.json').exists())
+
+
+class ColorYRenumeracion(unittest.TestCase):
+    def libro_con_color(self, color_rgb=None, tema=None, monto=600000):
+        from openpyxl.styles import Font
+        from openpyxl.styles.colors import Color
+        ws = libro([[8, 'JOSÉ', 1, '0985426867', monto, *meses()]])
+        if color_rgb:
+            ws['E3'].font = Font(color=color_rgb)
+        elif tema is not None:
+            ws['E3'].font = Font(color=Color(theme=tema))
+        return ws
+
+    def conceptos(self, ws, decisiones=None):
+        res = imp.procesar(ws, decisiones or {})
+        return res, {d['concepto']: d['saldo'] for d in res['deudas']}
+
+    def test_deuda_roja_es_deuda_anterior(self):
+        res, por = self.conceptos(self.libro_con_color(color_rgb='FFFF0000'))
+        self.assertEqual(por, {3: 600000})
+        self.assertEqual(res['por_color'], {3: 1})
+
+    def test_deuda_negra_o_sin_color_es_conexion(self):
+        self.assertEqual(self.conceptos(self.libro_con_color())[1], {2: 600000})
+        self.assertEqual(self.conceptos(self.libro_con_color(tema=1))[1], {2: 600000})
+        self.assertEqual(self.conceptos(self.libro_con_color(color_rgb='FF000000'))[1], {2: 600000})
+
+    def test_otro_color_bloquea_y_decision_lo_resuelve(self):
+        ws = self.libro_con_color(color_rgb='FF0000FF')
+        res, por = self.conceptos(ws)
+        self.assertIn('DEUDA_SIN_CONCEPTO', tipos(res))
+        self.assertEqual(por, {})
+        res, por = self.conceptos(ws, {'8': {'concepto_E': '3'}})
+        self.assertEqual(por, {3: 600000})
+
+    def test_decision_pisa_al_color(self):
+        ws = self.libro_con_color(color_rgb='FFFF0000')
+        self.assertEqual(self.conceptos(ws, {'8': {'concepto_E': '2'}})[1], {2: 600000})
+
+    def test_renumerar_por_fila(self):
+        filas = [[302, 'A', 1, None, None, *meses()], [302, 'B', 2, None, None, *meses()]]
+        res = correr(filas, {'fila:4': {'cod_nuevo': '338'}})
+        self.assertEqual([i['cod_inmueble'] for i in res['inmuebles']], ['302', '338'])
+        self.assertIn('COD_RENUMERADO', tipos(res))
+        self.assertFalse(any(p.bloqueante for p in res['problemas']))
+
+    def test_renumerar_a_un_codigo_existente_sigue_bloqueando(self):
+        filas = [[302, 'A', 1, None, None, *meses()], [302, 'B', 2, None, None, *meses()]]
+        res = correr(filas, {'fila:4': {'cod_nuevo': '302'}})
+        self.assertIn('COD_DUPLICADO', tipos(res))
+
+    def test_lavadero_meses_previos_a_25000(self):
+        # 315: 25.000 hasta jul-2026 y 50.000 desde ago-2026
+        fila = [315, 'NELSY', 1, '0985426867', None,
+                *meses(i9=25000, i10=25000, i11=50000, i12=50000, i13=50000)]
+        res = correr([fila], {'315': {'tarifa': '50000'}})
+        self.assertFalse(any(p.bloqueante for p in res['problemas']))
+        por = {d['ciclo']: (d['monto'], d['saldo']) for d in res['deudas']}
+        self.assertEqual(por, {'2026-06': (25000, 25000), '2026-07': (25000, 25000),
+                               '2026-08': (50000, 50000), '2026-09': (50000, 50000),
+                               '2026-10': (50000, 50000)})
+        self.assertEqual(res['inmuebles'][0]['tarifa'], 50000)
+
+    def test_lavadero_pago_parcial_despues_del_cambio(self):
+        fila = [196, 'DELCI', 1, '0985426867', None, *meses(i12=50000, i13=25000)]
+        res = correr([fila], {'196': {'tarifa': '50000'}})
+        por = {d['ciclo']: (d['monto'], d['saldo']) for d in res['deudas']}
+        self.assertEqual(por, {'2026-09': (50000, 50000), '2026-10': (50000, 25000)})
+
+    def test_lavadero_sin_meses_altos_queda_a_25000(self):
+        res = correr([[1, 'X', 1, '0985426867', None, *meses(i13=25000)]], {'1': {'tarifa': '50000'}})
+        self.assertEqual(res['deudas'][0]['monto'], 25000)
 
 
 class Staging(unittest.TestCase):
@@ -202,7 +266,7 @@ class Staging(unittest.TestCase):
             ok = correr([[1, 'A', 1, '0985426867', None, *meses(i13=25000)]])
             imp.escribir_salida(ok, tmp, 'x.xlsx')
             self.assertTrue((Path(tmp) / 'staging.sql').exists())
-            mal = correr([[1, 'A', 1, '0985426867', 100, *meses()]])
+            mal = correr([[1, 'A', 1, '0985426867', None, *meses()], [1, 'B', 2, '0985426868', None, *meses()]])
             imp.escribir_salida(mal, tmp, 'x.xlsx')
             self.assertFalse((Path(tmp) / 'staging.sql').exists())
 

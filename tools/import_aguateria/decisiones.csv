@@ -1,7 +1,18 @@
 # Decisiones del usuario sobre casos que el Excel no resuelve. Una por línea.
-# cod_inmueble: el de la col. A del Excel. Campos:
+# cod_inmueble: el de la col. A del Excel (o 'fila:N' para renumerar). Campos:
 #   documento   cédula o RUC correcto (cuando el Excel trae dos números)
-#   concepto_E  2 (Conexión) o 3 (Deuda anterior) para un monto suelto en DEUDA
-#   tarifa      tarifa mensual propia del inmueble si no es la estándar
+#   concepto_E  2 (Conexión) o 3 (Deuda anterior); sustituye al color de la col. DEUDA
+#   tarifa      tarifa mensual propia del inmueble (50000 = categoría Lavadero)
 #   exceso_mes  deuda_anterior: lo que pase de la tarifa en un mes va a Deuda anterior
+#   cod_nuevo   nuevo cod_inmueble; clave 'fila:N' porque el código está repetido
 cod_inmueble,campo,valor
+# Códigos 302-306 repetidos (filas 346-350): son otras casas, reciben los números siguientes al último (337)
+fila:346,cod_nuevo,338
+fila:347,cod_nuevo,339
+fila:348,cod_nuevo,340
+fila:349,cod_nuevo,341
+fila:350,cod_nuevo,342
+# Lavadero: 50.000 desde el primer mes con 50.000; antes se carga a 25.000
+196,tarifa,50000
+311,tarifa,50000
+315,tarifa,50000
