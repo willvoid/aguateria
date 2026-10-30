@@ -109,6 +109,7 @@ DECLARE
   v_txt      text;
   v_n        bigint;
   v_num      double precision;
+  v_n_aux    double precision;
   v_id       bigint;
   v_cand     bigint[];
   v_exactos  bigint[];
@@ -121,6 +122,9 @@ DECLARE
   v_aviso    jsonb := '[]'::jsonb;
   v_rep_ok   boolean := false;
   v_anio_rep integer := extract(year FROM current_date)::integer;
+  v_y        integer;
+  v_y_min    integer;
+  v_y_max    integer;
 BEGIN
   -- 0. Lote y parámetros
   SELECT estado INTO v_estado FROM public.import_aguateria_lote WHERE id = p_lote FOR UPDATE;
@@ -351,16 +355,24 @@ BEGIN
       RAISE EXCEPTION 'reporte_deudas(%) no coincide con el Excel en estos inmuebles (máx. 10): %', v_anio_rep, v_txt;
     END IF;
 
-    -- el Consumo por mes del año del reporte también debe coincidir
-    EXECUTE format($q$
-      SELECT COALESCE(sum(r.enero + r.febrero + r.marzo + r.abril + r.mayo + r.junio + r.julio
-                          + r.agosto + r.septiembre + r.octubre + r.noviembre + r.diciembre), 0)
-      FROM public.reporte_deudas(%1$s) r JOIN tmp_esp_imp e ON e.cod = r.id_inmueble$q$, v_anio_rep)
-      INTO v_num;
+    -- El Consumo total que muestra el reporte, sumando los años que cubren los ciclos
+    -- del lote, debe ser el del Excel. Sumar todos los años evita depender de cómo
+    -- agrupa el reporte (por ciclos.anio o por el año del vencimiento).
+    SELECT min(c.anio), max(c.anio) + 1 INTO v_y_min, v_y_max
+    FROM tmp_ciclos_imp t JOIN public.ciclos c ON c.id_ciclos = t.id_ciclos;
+    v_num := 0;
+    FOR v_y IN SELECT generate_series(LEAST(v_y_min, v_anio_rep), GREATEST(v_y_max, v_anio_rep)) LOOP
+      EXECUTE format($q$
+        SELECT COALESCE(sum(r.enero + r.febrero + r.marzo + r.abril + r.mayo + r.junio + r.julio
+                            + r.agosto + r.septiembre + r.octubre + r.noviembre + r.diciembre), 0)
+        FROM public.reporte_deudas(%1$s) r JOIN tmp_esp_imp e ON e.cod = r.id_inmueble$q$, v_y)
+        INTO v_n_aux;
+      v_num := v_num + v_n_aux;
+    END LOOP;
     IF abs(v_num - COALESCE((SELECT sum(d.saldo) FROM public.import_aguateria_deudas d
-                           WHERE d.lote = p_lote AND d.concepto = 1
-                             AND d.ciclo LIKE v_anio_rep::text || '-%'), 0)) > 0.5 THEN
-      RAISE EXCEPTION 'El Consumo del año % en reporte_deudas (%) no coincide con el Excel', v_anio_rep, v_num;
+                             WHERE d.lote = p_lote AND d.concepto = 1), 0)) > 0.5 THEN
+      RAISE EXCEPTION 'El Consumo total en reporte_deudas (años % a %: %) no coincide con el Excel',
+        LEAST(v_y_min, v_anio_rep), GREATEST(v_y_max, v_anio_rep), v_num;
     END IF;
     v_rep_ok := true;
   ELSE
@@ -368,6 +380,14 @@ BEGIN
   END IF;
 
   -- Avisos (no abortan)
+  SELECT string_agg(t.mes || ' (ciclo ' || c.id_ciclos || ': anio ' || c.anio || ', inicio ' || c.inicio || ')', ', ')
+    INTO v_txt
+  FROM tmp_ciclos_imp t JOIN public.ciclos c ON c.id_ciclos = t.id_ciclos
+  WHERE c.anio <> split_part(t.mes, '-', 1)::integer
+     OR extract(month FROM c.inicio) <> split_part(t.mes, '-', 2)::integer;
+  IF v_txt IS NOT NULL THEN
+    v_aviso := v_aviso || to_jsonb('Ciclos cuyo año/mes de inicio no coincide con el mes del Excel (el reporte los mostrará en otro mes): ' || v_txt);
+  END IF;
   SELECT string_agg(c.ciclo, ', ') INTO v_txt
   FROM public.ciclos c
   WHERE c.estado = 'ACTIVO' AND c.vencimiento <= current_date

@@ -30,6 +30,14 @@ chequear "prueba exige barrio" "ERROR" "$(da_error "SELECT fn_importar_aguateria
 
 $P -c "SELECT fn_importar_aguateria('$L', false, 447)" >/dev/null 2>&1
 chequear "prueba no deja clientes" 0 "$(contar clientes)"
+
+# Un reporte_deudas que agrupa por el AÑO DEL VENCIMIENTO (el diciembre 2025 vence en 2026) no debe
+# romper la verificación: el control suma todos los años.
+sed 's/ci\.anio = p_anio/EXTRACT(year FROM ci.vencimiento) = p_anio/g' supabase/migrations/20261013_reporte_deudas_por_anio.sql \
+  | $P -f - >/dev/null 2>&1
+chequear "prueba con reporte agrupado por vencimiento" false \
+  "$($P -c "SELECT (fn_importar_aguateria('$L', false, 447)) ->> 'aplicado'" 2>/dev/null)"
+$P -f supabase/migrations/20261013_reporte_deudas_por_anio.sql >/dev/null 2>&1
 chequear "prueba no deja ciclos nuevos" 10 "$(contar ciclos)"
 
 informe=$($P -c "SELECT fn_importar_aguateria('$L', true, 447, 1, 1, '{\"2026-02\":3}')" 2>/dev/null)
@@ -37,8 +45,8 @@ chequear "aplica" true "$(echo "$informe" | python3 -c 'import json,sys;print(st
 chequear "clientes" 3 "$(contar clientes)"
 chequear "inmuebles" 4 "$(contar inmuebles)"
 chequear "ciclos creados (ago y sep)" 12 "$(contar ciclos)"
-# 5 del Excel + 1 PAGADO de octubre (el inmueble 2 es conectado y no tiene cargo en el Excel)
-chequear "deudas" 6 "$(contar cuentas_cobrar)"
+# 6 del Excel + 1 PAGADO de octubre (el inmueble 2 es conectado y no tiene cargo en el Excel)
+chequear "deudas" 7 "$(contar cuentas_cobrar)"
 chequear "inmueble 2 queda con Consumo octubre PAGADO" PAGADO \
   "$($P -c "SELECT cc.estado FROM cuentas_cobrar cc JOIN inmuebles i ON i.id=cc.fk_inmueble WHERE i.cod_inmueble='2'")"
 chequear "pago parcial" "PAGO_PARCIAL|30000" \
@@ -46,7 +54,7 @@ chequear "pago parcial" "PAGO_PARCIAL|30000" \
 chequear "RUC y sin documento sin tipo_documento" 2 "$($P -c "SELECT count(*) FROM clientes WHERE fk_tipo_documento IS NULL")"
 chequear "inmueble cortado sin cliente" 1 "$($P -c "SELECT count(*) FROM inmuebles WHERE estado='DESCONECTADO' AND fk_cliente IS NULL")"
 chequear "categoría Lavadero por tarifa" 2 "$($P -c "SELECT fk_categoria_servicio FROM inmuebles WHERE cod_inmueble='4/1'")"
-chequear "reporte_deudas coincide (total)" 1395000 "$($P -c "SELECT sum(deuda_total)::int FROM reporte_deudas(2026)")"
+chequear "reporte_deudas coincide (total)" 1420000 "$($P -c "SELECT sum(deuda_total)::int FROM reporte_deudas(2026)")"
 
 antes=$(contar cuentas_cobrar)
 $P -c "UPDATE ciclos SET vencimiento = current_date WHERE id_ciclos = 14" -c "SELECT fn_generar_deudas_ciclos_vencidos()" >/dev/null 2>&1
